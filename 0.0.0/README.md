@@ -1,4 +1,4 @@
-# ZzBasic v0.0.0
+# ZzBasic
 
 ### **Versão 0.0.0 - Esqueleto e REPL Básico**
 **Objetivo:** Ter um programa que compila, roda e lê entrada.
