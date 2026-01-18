@@ -1,11 +1,3 @@
-Excelente plano! O **desenvolvimento incremental** é absolutamente o caminho correto, especialmente para um primeiro interpretador. A versão 0.0.0 já é um marco importante.
-
-Vou estruturar seu plano em uma **roadmap técnica mais detalhada**, incorporando o REPL, a extensão `.zz`, e quebrando cada versão em tarefas menores e muito específicas, focando na simplicidade e profissionalismo em C.
-
-Abaixo está o plano expandido e com sugestões concretas.
-
----
-
 # 🗺️ ZzBasic - Plano de Implementação Técnica (Incremental)
 
 ## 📁 Estrutura do Projeto (Desde o Início)
@@ -107,5 +99,6 @@ Seguir a mesma lógica para cada comando:
 2.  **Use `union` e `enum` em C para a AST:** Isso tornará o código do eval muito mais limpo.
 3.  **Escreva MUITOS testes:** Para cada versão, crie um arquivo `testes_v0.1.0.zz` e verifique se a saída é a esperada.
 4.  **Comprometa-se com as versões:** A beleza do plano incremental é que **cada versão é uma vitória**. A versão 0.0.0 já é um produto funcional (o REPL).
+
 
 **Próximo passo concreto:** Começar a implementar a **estrutura do projeto (Makefile, `src/`)** e a **Versão 0.0.0**. Posso te ajudar com um esboço do código C inicial se desejar.
