@@ -183,7 +183,7 @@ print matematica.pi
 from matematica import pi, seno
 ```
 
-## 8. Sugestões para Decisões de Design (Pontos a Definir)
+## 8. Decisões de Design (Pontos a Definir)
 
 1.  **`number` único vs. `int`/`float`**: Manter `number` é mais simples para iniciantes, mas pode mascarar diferenças importantes. **Sugestão:** Manter `number` como tipo único, mas oferecer funções `int()`, `float()` para conversão explícita.
 2.  **Strings (`string` vs `text`)**: A distinção é interessante para otimização. **Sugestão:** Usar `string` para literais e dados pequenos/fixos; `text` para construção dinâmica (ex: `t = text("")` e `t.append(...)`).
@@ -192,3 +192,5 @@ from matematica import pi, seno
 5.  **Métodos vs. Funções Globais**: Para `list`, `dict`, `stack`, seguir o estilo Python (`.append(valor)`) é mais intuitivo que funções globais (`append(lista, valor)`).
 
 ---
+
+arataca89@gmail.com

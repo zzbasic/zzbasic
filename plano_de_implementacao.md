@@ -1,25 +1,5 @@
 # 🗺️ ZzBasic - Plano de Implementação Técnica (Incremental)
 
-## 📁 Estrutura do Projeto (Desde o Início)
-Sugiro criar esta estrutura de pastas no repositório `zzbasic/zzbasic` para manter a organização profissional desde o início:
-```
-zzbasic/                   # Raiz do repositório
-├── sources.txt            # Lista de arquivos para a a89alloc compilar
-├── zzbasic.h              # Cabeçalho principal
-├── main.c                 # Ponto de entrada, REPL
-├── lexer.c                # Análise léxica
-├── parser.c               # Análise sintática
-├── ast.c                  # Definição e funções da AST
-├── evaluator.c            # Avaliação
-├── builtins.c             # print, input, cores
-├── environment.c          # Tabela de símbolos
-├── a89alloc.c             # SUA biblioteca de alocação
-├── a89alloc.h             # Header da sua biblioteca
-├── utils.c                # (Opcional) Funções auxiliares gerais
-└── examples/              # Pasta para scripts .zz
-    └── hello.zz
-```
-
 ## 🔤 Convenções e Decisões Técnicas Iniciais
 *   **Extensão de Arquivo:** `.zz` é **perfeito**. Curta, única e óbvia.
 *   **Comando REPL:** `zzbasic` (sem argumentos) inicia o REPL. `zzbasic script.zz` executa o arquivo.
@@ -93,12 +73,7 @@ Seguir a mesma lógica para cada comando:
 *   [ ] Após a execução, todas as variáveis/funções **globais** definidas naquele escopo são **copiadas** para o escopo atual.
 *   [ ] **Isso é um início funcional e compreensível.** Mais tarde pode-se evoluir para um sistema de cache de módulos e caminhos de busca.
 
-## 💡 Dicas para Cada Etapa
+---
 
-1.  **Comece pelo Lexer e Parser Simples:** Não tente fazer um parser para a linguagem completa de uma vez. Faça para **uma única funcionalidade por vez** (ex: só expressões, depois só `LET`).
-2.  **Use `union` e `enum` em C para a AST:** Isso tornará o código do eval muito mais limpo.
-3.  **Escreva MUITOS testes:** Para cada versão, crie um arquivo `testes_v0.1.0.zz` e verifique se a saída é a esperada.
-4.  **Comprometa-se com as versões:** A beleza do plano incremental é que **cada versão é uma vitória**. A versão 0.0.0 já é um produto funcional (o REPL).
+arataca89@gmail.com
 
-
-**Próximo passo concreto:** Começar a implementar a **estrutura do projeto (Makefile, `src/`)** e a **Versão 0.0.0**. Posso te ajudar com um esboço do código C inicial se desejar.
