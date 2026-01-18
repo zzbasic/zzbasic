@@ -57,6 +57,7 @@ static Token lexer_report_error(Lexer* lexer,
                                 const char* format,
                                 ...);
 
+static int lexer_read_digits(Lexer* lexer, char* buffer, int* index);
 static Token lexer_read_number(Lexer* lexer);
 
 // ============================================
@@ -82,6 +83,10 @@ static void lexer_advance(Lexer* lexer)
 
 static char lexer_peek(Lexer* lexer)
 {
+    if (lexer->source[lexer->position] == '\0')
+    {
+        return '\0';
+    }
     return lexer->source[lexer->position + 1];
 }
 
@@ -140,9 +145,8 @@ static Token lexer_check_buffer_overflow(Lexer* lexer,
                                   MAX_NUMBER_LENGTH);      
     }
     
-    // Retorna um token EOF para indicar que não há erro
     return lexer_make_token(lexer,
-                            TOKEN_EOF,
+                            TOKEN_NOERROR,
                             0,
                             ' ',
                             "");
@@ -177,20 +181,41 @@ static Token lexer_report_error(Lexer* lexer,
                             error_text);
 }
 
+// ============================================
+// Função auxiliar para ler uma sequência de dígitos
+// ============================================
+static int lexer_read_digits(Lexer* lexer,
+                             char* buffer,
+                             int* index)
+{
+    while (isdigit(lexer->current_char) && lexer->current_char != '\0')
+    {
+        Token error_check = lexer_check_buffer_overflow(lexer, __func__, buffer, *index);
+        if (error_check.type == TOKEN_ERROR)
+        {
+            return 0;
+        }
+
+        buffer[(*index)++] = lexer->current_char;
+        lexer_advance(lexer);
+    }
+    
+    return 1;
+}
+
 static Token lexer_read_number(Lexer* lexer)
 {
     char buffer[MAX_NUMBER_LENGTH + 1];
     int i = 0;
-    int count_dot = 0;
 
     // Parte inteira
-    while (isdigit(lexer->current_char) && lexer->current_char != '\0')
+    if (!lexer_read_digits(lexer, buffer, &i))
     {
-        Token error_check = lexer_check_buffer_overflow(lexer, __func__, buffer, i);
-        if (error_check.type == TOKEN_ERROR) return error_check;
-
-        buffer[i++] = lexer->current_char;
-        lexer_advance(lexer);
+        // Se houver erro, lexer_check_buffer_overflow já reportou
+        // Precisamos retornar o erro
+        // Mas como? Veja a solução 2 para uma abordagem melhor
+        return lexer_report_error(lexer, __func__,
+                                 "Buffer overflow ao ler parte inteira");
     }
 
     // Parte decimal (opcional)
@@ -205,15 +230,9 @@ static Token lexer_read_number(Lexer* lexer)
             buffer[i++] = lexer->current_char;
             lexer_advance(lexer);
 
-            while (isdigit(lexer->current_char) &&
-                   lexer->current_char != '\0')
-            {
-                Token error_check = lexer_check_buffer_overflow(lexer, __func__, buffer, i);
-                if (error_check.type == TOKEN_ERROR) return error_check;
-
-                buffer[i++] = lexer->current_char;
-                lexer_advance(lexer);
-            }
+            // Tenta ler mais dígitos (para capturar o padrão inválido completo)
+            lexer_read_digits(lexer, buffer, &i);  // Ignora erro aqui, só quer capturar}
+            
             buffer[i] = '\0';
 
             return lexer_report_error(lexer,
@@ -222,14 +241,10 @@ static Token lexer_read_number(Lexer* lexer)
                                   buffer);     
         }
 
-        while (isdigit(lexer->current_char) &&
-               lexer->current_char != '\0')
+        // Lê os dígitos após o ponto decimal
+        if (!lexer_read_digits(lexer, buffer, &i))
         {
-            Token error_check = lexer_check_buffer_overflow(lexer, __func__, buffer, i);
-            if (error_check.type == TOKEN_ERROR) return error_check;
-
-            buffer[i++] = lexer->current_char;
-            lexer_advance(lexer);
+            return lexer_report_error(lexer, __func__, "Buffer overflow ao ler parte decimal");
         }
     }
     // Fim da parte decimal
@@ -244,15 +259,9 @@ static Token lexer_read_number(Lexer* lexer)
         buffer[i++] = lexer->current_char;
         lexer_advance(lexer);
 
-        while (isdigit(lexer->current_char) &&
-               lexer->current_char != '\0')
-        {
-            Token error_check = lexer_check_buffer_overflow(lexer, __func__, buffer, i);
-            if (error_check.type == TOKEN_ERROR) return error_check;
+        // Tenta ler mais dígitos (para capturar o padrão inválido completo)
+        lexer_read_digits(lexer, buffer, &i);  // Ignora erro aqui, só quer capturar
 
-            buffer[i++] = lexer->current_char;
-            lexer_advance(lexer);
-        }
         buffer[i] = '\0';
         return lexer_report_error(lexer,
                                   __func__,
@@ -388,7 +397,7 @@ Token lexer_get_next_token(Lexer* lexer)
             
         default:
         {
-            char error_msg[64];
+            char error_msg[BUFFER_SIZE];
             snprintf(error_msg,
                      sizeof(error_msg),
                      "Caractere inesperado: '%c' (ASCII %d)",
