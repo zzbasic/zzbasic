@@ -28,6 +28,8 @@ typedef enum {
     TOKEN_PERCENT,      // %
     TOKEN_LPAREN,       // (
     TOKEN_RPAREN,       // )
+
+    TOKEN_NOERROR
     
     // Palavras-chave (reservadas para versões futuras)
     // TOKEN_LET, TOKEN_PRINT, TOKEN_IF, etc.
