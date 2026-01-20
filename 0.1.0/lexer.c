@@ -36,13 +36,12 @@ static const char* TOKEN_STRINGS[] =
 // ============================================
 // PROTÓTIPOS das Funções Privadas (static)
 // ============================================
-
 static void lexer_advance(Lexer* lexer);
 static char lexer_peek(Lexer* lexer);
 static void lexer_skip_whitespace(Lexer* lexer);
 
 static Token lexer_make_token(Lexer* lexer,
-                              TokenType type,
+                              Token_type type,
                               double number_value,
                               char operator_char,
                               const char* text);
@@ -53,17 +52,25 @@ static Token lexer_check_buffer_overflow(Lexer* lexer,
                                          int current_index);
 
 static Token lexer_report_error(Lexer* lexer,
-                                const char* function_name,
                                 const char* format,
                                 ...);
 
 static int lexer_read_digits(Lexer* lexer, char* buffer, int* index);
 static Token lexer_read_number(Lexer* lexer);
 
+
+//============================================
+// FUNÇÕES PÚBLICAS NO FINAL
+//============================================
+// void lexer_init(Lexer* lexer, const char* source);
+// Token lexer_get_next_token(Lexer* lexer);
+// void lexer_print_token(Token token);
+// void lexer_print_all_tokens(const char* source);
+
+
 // ============================================
 // Implementação das Funções Privadas
 // ============================================
-
 static void lexer_advance(Lexer* lexer)
 {
     if (lexer->current_char != '\0')
@@ -99,7 +106,7 @@ static void lexer_skip_whitespace(Lexer* lexer)
 }
 
 static Token lexer_make_token(Lexer* lexer,
-                              TokenType type,
+                              Token_type type,
                               double number_value,
                               char operator_char,
                               const char* text)
@@ -141,7 +148,7 @@ static Token lexer_check_buffer_overflow(Lexer* lexer,
         buffer[MAX_NUMBER_LENGTH] = '\0';
         return lexer_report_error(lexer,
                                   function_name,
-                                  "buffer overflow (máximo %d caracteres)",
+                                  "buffer overflow (maximum %d characters)",
                                   MAX_NUMBER_LENGTH);      
     }
     
@@ -153,7 +160,6 @@ static Token lexer_check_buffer_overflow(Lexer* lexer,
 }
 
 static Token lexer_report_error(Lexer* lexer,
-                                const char* function_name,
                                 const char* format,
                                 ...)
 {
@@ -168,10 +174,7 @@ static Token lexer_report_error(Lexer* lexer,
     char error_text[BUFFER_SIZE];
     snprintf(error_text,
              sizeof(error_text),
-             "Erro (%d:%d) %s: %s",
-             lexer->line,
-             lexer->column,
-             function_name,
+             "Error: %s",
              message);
     
     return lexer_make_token(lexer,
@@ -181,9 +184,6 @@ static Token lexer_report_error(Lexer* lexer,
                             error_text);
 }
 
-// ============================================
-// Função auxiliar para ler uma sequência de dígitos
-// ============================================
 static int lexer_read_digits(Lexer* lexer,
                              char* buffer,
                              int* index)
@@ -214,8 +214,8 @@ static Token lexer_read_number(Lexer* lexer)
         // Se houver erro, lexer_check_buffer_overflow já reportou
         // Precisamos retornar o erro
         // Mas como? Veja a solução 2 para uma abordagem melhor
-        return lexer_report_error(lexer, __func__,
-                                 "Buffer overflow ao ler parte inteira");
+        return lexer_report_error(lexer, 
+                                 "buffer overflow while reading integer part");
     }
 
     // Parte decimal (opcional)
@@ -231,20 +231,17 @@ static Token lexer_read_number(Lexer* lexer)
             lexer_advance(lexer);
 
             // Tenta ler mais dígitos (para capturar o padrão inválido completo)
-            lexer_read_digits(lexer, buffer, &i);  // Ignora erro aqui, só quer capturar}
+            lexer_read_digits(lexer, buffer, &i);  // Ignora erro aqui, só quer capturar
             
             buffer[i] = '\0';
 
-            return lexer_report_error(lexer,
-                                      __func__,
-                                  "Número inválido '%s'",
-                                  buffer);     
+            return lexer_report_error(lexer,"invalid number '%s'", buffer);     
         }
 
         // Lê os dígitos após o ponto decimal
         if (!lexer_read_digits(lexer, buffer, &i))
         {
-            return lexer_report_error(lexer, __func__, "Buffer overflow ao ler parte decimal");
+            return lexer_report_error(lexer, "buffer overflow while reading decimal part");
         }
     }
     // Fim da parte decimal
@@ -263,10 +260,7 @@ static Token lexer_read_number(Lexer* lexer)
         lexer_read_digits(lexer, buffer, &i);  // Ignora erro aqui, só quer capturar
 
         buffer[i] = '\0';
-        return lexer_report_error(lexer,
-                                  __func__,
-                                  "Número inválido '%s'",
-                                  buffer);           
+        return lexer_report_error(lexer, "invalid number '%s'", buffer);           
     } 
 
     // Termina string
@@ -278,9 +272,7 @@ static Token lexer_read_number(Lexer* lexer)
     
     if (*endptr != '\0')
     {
-        return lexer_report_error(lexer,
-                                  __func__,
-                                  "Erro interno na conversão do número '%s'",
+        return lexer_report_error(lexer, "internal error converting number '%s'",
                                   buffer);
     }
 
@@ -291,10 +283,10 @@ static Token lexer_read_number(Lexer* lexer)
                             buffer);
 }
 
+
 // ============================================
 // Implementação das Funções Públicas
 // ============================================
-
 void lexer_init(Lexer* lexer,
                 const char* source)
 {
@@ -400,13 +392,10 @@ Token lexer_get_next_token(Lexer* lexer)
             char error_msg[BUFFER_SIZE];
             snprintf(error_msg,
                      sizeof(error_msg),
-                     "Caractere inesperado: '%c' (ASCII %d)",
+                     "Unexpected character: '%c' (ASCII %d)",
                      c,
                      (int)c);
-            return lexer_report_error(lexer,
-                                      __func__,
-                                      "%s",
-                                      error_msg);
+            return lexer_report_error(lexer, "%s", error_msg);
         }
     }
 }
@@ -462,3 +451,4 @@ void lexer_print_all_tokens(const char* source)
     printf("\nTotal de tokens: %d\n", token_count);
     printf("=== FIM DA ANÁLISE ===\n");
 }
+// fim de lexer.c

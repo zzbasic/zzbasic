@@ -33,13 +33,13 @@ typedef enum {
     
     // Palavras-chave (reservadas para versões futuras)
     // TOKEN_LET, TOKEN_PRINT, TOKEN_IF, etc.
-} TokenType;
+} Token_type;
 
 // ============================================
 // Estrutura do Token (Expandida)
 // ============================================
 typedef struct {
-    TokenType type;             // Tipo enumerado
+    Token_type type;            // Tipo enumerado
     const char* type_string;    // String do tipo (para debug)
     
     // Valor do token (depende do tipo)
@@ -48,8 +48,7 @@ typedef struct {
         char operator_char;     // Para operadores (+, -, etc.)
     } value;
     
-    // Texto original do token (útil para erros, debugging)
-    char text[TOKEN_TEXT_SIZE];              // Texto original do token
+    char text[TOKEN_TEXT_SIZE]; // Texto original do token
     
     int line;                   // Número da linha
     int column;                 // Coluna
@@ -79,3 +78,4 @@ void lexer_print_token(Token token);
 void lexer_print_all_tokens(const char* source);
 
 #endif // LEXER_H
+// fim de lexer.h

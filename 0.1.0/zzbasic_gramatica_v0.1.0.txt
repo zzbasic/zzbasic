@@ -1,0 +1,35 @@
+# ============================================
+# ZzBasic - GRAMÁTICA v0.1.0
+# ============================================
+
+# ---------- PROGRAMA ESTRUTURAL ----------
+program     := expression |  E
+expression  := term (('+' | '-') term)*
+term        := factor (('*' | '/') factor)*
+factor      := ('+' | '-')? atom
+atom        := (NUMBER | '(' expression ')')
+
+
+# Literais 
+NUMBER         := [0-9]+ ('.' [0-9]+)? 
+
+
+## Hierarquia de expressões:
+
+expression (aritmética)       
+    |                            
+    v                             
+term                        
+    |                             
+    v                             
+factor                  
+    |                             
+    v                             
+NUMBER | '(' expression ')'    
+    |                             
+    v                             
+not_expr                     
+    |
+    v
+'NOT' factor
+
