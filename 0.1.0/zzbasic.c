@@ -154,8 +154,7 @@ void run_repl(void)
             }
             else
             {
-                printf("%s(%d, &d)%s%s\n",
-                    COLOR_ERROR, result.error_message, COLOR_RESET);
+                 printf("%s\n", result.error_message);
             }
             
             free_ast(ast);
