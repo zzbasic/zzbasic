@@ -95,6 +95,13 @@ static ASTNode* parse_expression(Parser* parser)
     int column = parser->column;
 
     ASTNode* node = parse_term(parser);
+
+    #ifdef DEBUG
+    printf("parse_expression() - node\n");
+    print_ast(node, 0);
+    wait();
+    #endif
+
     if (parser->has_error) return NULL;    
     while (parser->current_token.type == TOKEN_PLUS ||
            parser->current_token.type == TOKEN_MINUS)
@@ -102,6 +109,13 @@ static ASTNode* parse_expression(Parser* parser)
         char op = parser->current_token.value.operator_char;
         parser_advance(parser);
         ASTNode* right = parse_term(parser);
+
+        #ifdef DEBUG
+        printf("parse_expression() - right\n");
+        print_ast(node, 0);
+        wait();
+        #endif
+
         if (parser->has_error)
         {
             free_ast(node);
@@ -121,6 +135,13 @@ static ASTNode* parse_term(Parser* parser)
     int column = parser->column;
 
     ASTNode* node = parse_factor(parser);
+
+    #ifdef DEBUG
+    printf("parse_term() - node\n");
+    print_ast(node, 0);
+    wait();
+    #endif
+
     if (parser->has_error) return NULL;    
     while (parser->current_token.type == TOKEN_STAR ||
            parser->current_token.type == TOKEN_SLASH)
@@ -128,6 +149,13 @@ static ASTNode* parse_term(Parser* parser)
         char op = parser->current_token.value.operator_char;
         parser_advance(parser);
         ASTNode* right = parse_factor(parser);
+
+        #ifdef DEBUG
+        printf("parse_term() - right\n");
+        print_ast(node, 0);
+        wait();
+        #endif
+
         if (parser->has_error)
         {
             free_ast(node);
@@ -163,6 +191,13 @@ static ASTNode* parse_factor(Parser* parser)
     
     // Parsing do atom (número ou expressao entre parenteses)
     ASTNode* node = parse_atom(parser);
+
+    #ifdef DEBUG
+    printf("parse_factor() - node\n");
+    print_ast(node, 0);
+    wait();
+    #endif
+
     if (parser->has_error || node == NULL) {
         return NULL;
     }
@@ -242,6 +277,12 @@ ASTNode* parse(Lexer* lexer)
 
     ASTNode* result = parse_expression(&parser);
     
+    #ifdef DEBUG
+    printf("parser() - result\n");
+    print_ast(result, 0);
+    wait();
+    #endif
+
     if (parser.has_error)
     {
         if (result != NULL)
