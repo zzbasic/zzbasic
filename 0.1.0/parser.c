@@ -233,10 +233,28 @@ ASTNode* parse(Lexer* lexer)
         return NULL;
     }
     
+    if (parser.current_token.type == TOKEN_ERROR)
+    {
+        parser_set_error(&parser, parser.current_token.text);
+        printf("%s\n", parser.error_message);
+        return NULL;
+    }
+
     ASTNode* result = parse_expression(&parser);
     
     if (parser.has_error)
     {
+        if (result != NULL)
+        {
+            free_ast(result);
+        }
+        printf("%s\n", parser.error_message);
+        return NULL;
+    }
+
+    if (parser.current_token.type == TOKEN_ERROR)
+    {
+        parser_set_error(&parser, parser.current_token.text);
         if (result != NULL)
         {
             free_ast(result);
