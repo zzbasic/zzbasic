@@ -355,13 +355,13 @@ Token lexer_get_next_token(Lexer* lexer)
                                     '/',
                                     "/");
             
-        case '%':
-            lexer_advance(lexer);
-            return lexer_make_token(lexer,
-                                    TOKEN_PERCENT,
-                                    0.0,
-                                    '%',
-                                    "%");
+        // case '%':
+        //     lexer_advance(lexer);
+        //     return lexer_make_token(lexer,
+        //                             TOKEN_PERCENT,
+        //                             0.0,
+        //                             '%',
+        //                             "%");
             
         case '(':
             lexer_advance(lexer);
