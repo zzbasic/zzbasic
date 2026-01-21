@@ -2,6 +2,7 @@
 #include <string.h>
 #include <math.h>
 
+#include "color.h"
 #include "evaluator.h"
 #include "a89alloc.h"
 
@@ -25,17 +26,23 @@ static EvaluatorResult create_success_result_number(double value, int line, int 
 
 static EvaluatorResult create_error_result(const char* message, int line, int column)
 {
+    char buffer[BUFFER_SIZE];
     EvaluatorResult result;
     result.success = 0;
     result.is_string = 0;
     result.value.number_value = 0;
-    strncpy(result.error_message, message, sizeof(result.error_message) - 1);
+    snprintf(buffer, sizeof(buffer), "%s(%d, %d)%s%s",
+             COLOR_ERROR,
+             line,
+             column,
+             message,
+             COLOR_RESET);
+    strncpy(result.error_message, buffer, sizeof(result.error_message) - 1);
     result.error_message[sizeof(result.error_message) - 1] = '\0';
     result.line = line;
     result.column = column;
     return result;
 }
-
 
 //===================================================================
 // AVALIA A AST

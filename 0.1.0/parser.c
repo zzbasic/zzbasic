@@ -108,6 +108,7 @@ static ASTNode* parse_expression(Parser* parser)
     {
         char op = parser->current_token.value.operator_char;
         parser_advance(parser);
+
         ASTNode* right = parse_term(parser);
 
         #ifdef DEBUG
@@ -122,7 +123,8 @@ static ASTNode* parse_expression(Parser* parser)
             return NULL;
         }
         node = create_binary_op_node(op, node, right, line, column);
-    }    
+    } 
+
     return node;
 }
 
@@ -163,7 +165,7 @@ static ASTNode* parse_term(Parser* parser)
         }
         node = create_binary_op_node(op, node, right, line, column);
     }
-    
+
     return node;
 }
 
