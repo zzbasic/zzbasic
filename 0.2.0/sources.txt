@@ -1,0 +1,20 @@
+# ========================================
+# ZzBasic v0.1.0 - Avaliador de Expressões Aritméticas
+# ========================================
+
+utils.c
+a89alloc.c
+
+#zzbasic.c
+#ast.c
+symbol_table.c
+
+#lexer.c
+#parser.c
+#evaluator.c
+
+#main.c
+
+#test_lexer.c
+#test_parser.c
+#test_eval.c
