@@ -6,17 +6,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-// ============================================
-// Headers do Projeto
-// ============================================
 #include "color.h"
-#include "utils.h"
 #include "lexer.h"
-
-// ============================================
-// Constantes
-// ============================================
-#define MAX_NUMBER_LENGTH 63
 
 static const char* TOKEN_STRINGS[] = 
 {
@@ -33,7 +24,7 @@ static const char* TOKEN_STRINGS[] =
     "RPAREN",       // TOKEN_RPAREN
     "IDENTIFIER",   // TOKEN_IDENTIFIER           
     "LET",          // TOKEN_LET          
-    "EQUAL",        // TOKEN_EQ 
+    "EQUAL",        // TOKEN_EQUAL 
     "NOERROR"       // TOKEN_NOERROR
 };
 
@@ -362,7 +353,7 @@ static Token lexer_read_number(Lexer* lexer)
 
 static Token lexer_read_identifier(Lexer* lexer)
 {
-    char buffer[MAX_ID_LEN + 1];
+    char buffer[MAX_IDENTIFIER_LEN + 1];
     int i = 0;
 
     int id_line = lexer->line;
@@ -371,14 +362,14 @@ static Token lexer_read_identifier(Lexer* lexer)
     // Lê o identificador
     while (isalnum(lexer->current_char) || lexer->current_char == '_')
     {
-        if (i >= MAX_ID_LEN)
+        if (i >= MAX_IDENTIFIER_LEN)
         {
-            buffer[MAX_ID_LEN] = '\0';
+            buffer[MAX_IDENTIFIER_LEN] = '\0';
             return lexer_report_error(lexer,
                                       id_line,
                                       id_column,
                                       "Identifier too long (max %d chars): '%.30s...'",
-                                      MAX_ID_LEN,
+                                      MAX_IDENTIFIER_LEN,
                                       buffer);
         }
         buffer[i++] = lexer->current_char;
@@ -533,7 +524,7 @@ Token lexer_get_next_token(Lexer* lexer)
         case '=':
             lexer_advance(lexer);
             return lexer_make_token(lexer,
-                                    TOKEN_EQ,
+                                    TOKEN_EQUAL,
                                     0.0,
                                     '=',
                                     "=",

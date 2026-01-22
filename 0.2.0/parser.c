@@ -17,7 +17,10 @@ static void parser_init(Parser* parser, Lexer* lexer);
 static void parser_advance(Parser* parser);
 static int parser_expect(Parser* parser, Token_type expected_type);
 static void parser_set_error(Parser* parser, const char* message);
-static ASTNode* parse_program(Parser* parser);
+
+static ASTNode* parse_statement(Parser* parser);
+static ASTNode* parse_assignment_stmt(Parser* parser); 
+static ASTNode* parse_expression_stmt(Parser* parser);
 static ASTNode* parse_expression(Parser* parser);
 static ASTNode* parse_term(Parser* parser);
 static ASTNode* parse_factor(Parser* parser);
@@ -27,16 +30,18 @@ static ASTNode* parse_atom(Parser* parser);
 // FUNÇÕES PÚBLICAS NO FINAL
 //============================================
 //ASTNode* parse(Lexer* lexer)
+//ASTNode* parse_program(Lexer* lexer);
 
 
-
+//============================================
+// FUNÇÕES AUXILIARES
+//============================================
 static void parser_init(Parser* parser, Lexer* lexer)
 {
     parser->lexer = lexer;
     parser->current_token = lexer_get_next_token(lexer);
     parser->has_error = 0;
     strcpy(parser->error_message, "");
-    // Inicializa posição com base no primeiro token
     parser->line = parser->current_token.line;
     parser->column = parser->current_token.column;
 }
@@ -66,25 +71,124 @@ static void parser_set_error(Parser* parser, const char* message)
 }
 
 
+
 /********************************************************************
-FUNCOES DE PARSING 
+FUNCOES DE PARSING - GRAMATICA v0.2.0
 
-GRAMATICA v0.1.0
-
-program     := expression |  E
-expression  := term (('+' | '-') term)*
-term        := factor (('*' | '/') factor)*
-factor      := NUMBER | '(' expression ')' | '-' (NUMBER | '(' expression ')')
+program         := (statement | comment)* EOF
+statement       := assignment_stmt | expression_stmt 
+assignment_stmt := LET identifier '=' expression
+expression_stmt := expression
+expression      := term (('+' | '-') term)*
+term            := factor (('*' | '/') factor)*
+factor          := ('+' | '-')? atom
+atom            := NUMBER | '(' expression ')' | identifier
 
 ********************************************************************/
 
 //===================================================================
-// program     := expression |  E
+// program := (statement | comment)* EOF
 //===================================================================
-static ASTNode* parse_program(Parser* parser)
+ASTNode* parse_program(Lexer* lexer)
+{
+    Parser parser;
+    parser_init(&parser, lexer);
+    
+    if (parser.current_token.type == TOKEN_EOF)
+    {
+        return NULL;
+    }
+    
+    // Parsing do primeiro statement
+    ASTNode* first_stmt = parse_statement(&parser);
+    if (parser.has_error || first_stmt == NULL)
+    {
+        printf("%s\n", parser.error_message);
+        return NULL;
+    }
+    
+
+    // Cria nó de programa
+    ASTNode* program = create_program_node(first_stmt);
+    
+    // Verifica se terminou corretamente
+    if (parser.current_token.type != TOKEN_EOF)
+    {
+        parser_set_error(&parser, "Error: expected EOF after statement");
+        printf("%s\n", parser.error_message);
+        free_ast(program);
+        return NULL;
+    }
+    
+    return program;
+}
+
+//===================================================================
+// statement       := assignment_stmt | expression_stmt 
+//===================================================================
+static ASTNode* parse_statement(Parser* parser)
+{
+    if (parser->current_token.type == TOKEN_LET)
+    {
+        return parse_assignment_stmt(parser);
+    }
+    else
+    {
+        return parse_expression_stmt(parser);
+    }
+
+}
+
+//===================================================================
+// assignment_stmt := LET identifier '=' expression
+//===================================================================
+static ASTNode* parse_assignment_stmt(Parser* parser)
+{
+    int line = parser->line;
+    int column = parser->column;
+    
+    parser_advance(parser);// Consome 'LET'
+    
+    // Verifica se o próximo token é um identificador
+    if (!parser_expect(parser, TOKEN_IDENTIFIER))
+    {
+        parser_set_error(parser, "Error: expected identifier after LET");
+        return NULL;
+    }
+    
+    char var_name[MAX_IDENTIFIER_LEN];
+    strncpy(var_name, parser->current_token.text, MAX_IDENTIFIER_LEN - 1);
+    var_name[MAX_IDENTIFIER_LEN - 1] = '\0';
+
+    parser_advance(parser);
+    
+    // Verifica '='
+    if (!parser_expect(parser, TOKEN_EQUAL))
+    {
+        parser_set_error(parser, "Error: expected '=' after identifier");
+        return NULL;
+    }
+
+    parser_advance(parser);
+    
+    // Parsing da expressão (valor)
+    ASTNode* value_expr = parse_expression(parser);
+    if (parser->has_error || value_expr == NULL)
+    {
+        return NULL;
+    }
+    
+    return create_assignment_node(var_name, value_expr, line, column);
+}
+
+//===================================================================
+// expression_stmt := expression
+//===================================================================
+static ASTNode* parse_expression_stmt(Parser* parser)
 {
     return parse_expression(parser);
 }
+
 
 //===================================================================
 // expression  := term (('+' | '-') term)*
@@ -122,6 +226,7 @@ static ASTNode* parse_expression(Parser* parser)
             free_ast(node);
             return NULL;
         }
+
         node = create_binary_op_node(op, node, right, line, column);
     } 
 
@@ -184,7 +289,8 @@ static ASTNode* parse_factor(Parser* parser)
         parser->current_token.type == TOKEN_MINUS)
     {
         // Guarda se é menos unário
-        if (parser->current_token.type == TOKEN_MINUS) {
+        if (parser->current_token.type == TOKEN_MINUS)
+        {
             is_unary_minus = 1;
         }
         // Consome o operador unário (+ ou -)
@@ -200,12 +306,14 @@ static ASTNode* parse_factor(Parser* parser)
     wait();
     #endif
 
-    if (parser->has_error || node == NULL) {
+    if (parser->has_error || node == NULL)
+    {
         return NULL;
     }
     
     // Se era um 'menos unário', cria o nó unário
-    if (is_unary_minus) {
+    if (is_unary_minus)
+    {
         return create_unary_op_node('-', node, line, column);
     }
     
@@ -215,7 +323,7 @@ static ASTNode* parse_factor(Parser* parser)
 }
 
 //===================================================================
-// atom        := (NUMBER | '(' expression ')')
+// atom := NUMBER | '(' expression ')' | identifier
 //===================================================================
 static ASTNode* parse_atom(Parser* parser)
 {
@@ -227,7 +335,8 @@ static ASTNode* parse_atom(Parser* parser)
     {
         case TOKEN_NUMBER:
             parser_advance(parser);
-            return create_number_node(token.value.number_value, line, column);            
+            return create_number_node(token.value.number_value, line, column);  
+
         case TOKEN_LPAREN:
             parser_advance(parser);
             ASTNode* node = parse_expression(parser);
@@ -240,10 +349,15 @@ static ASTNode* parse_atom(Parser* parser)
             }
             parser_advance(parser);
             return node;
+
+        case TOKEN_IDENTIFIER:
+            parser_advance(parser);
+            return create_identifier_node(token.text, line, column);
             
         case TOKEN_ERROR:
             parser_set_error(parser, token.text);
             return NULL;
+
         default:
         {
             char buffer[BUFFER_SIZE];
@@ -257,68 +371,68 @@ static ASTNode* parse_atom(Parser* parser)
     return NULL;
 }
 
-//================================
+// ================================
 // Função PRINCIPAL DE PARSING
-//================================
-ASTNode* parse(Lexer* lexer)
-{
-    Parser parser;
-    parser_init(&parser, lexer);
+// ================================
+// ASTNode* parse(Lexer* lexer)
+// {
+//     Parser parser;
+//     parser_init(&parser, lexer);
     
-    if (parser.current_token.type == TOKEN_EOF)
-    {
-        return NULL;
-    }
+//     if (parser.current_token.type == TOKEN_EOF)
+//     {
+//         return NULL;
+//     }
     
-    if (parser.current_token.type == TOKEN_ERROR)
-    {
-        parser_set_error(&parser, parser.current_token.text);
-        printf("%s\n", parser.error_message);
-        return NULL;
-    }
+//     if (parser.current_token.type == TOKEN_ERROR)
+//     {
+//         parser_set_error(&parser, parser.current_token.text);
+//         printf("%s\n", parser.error_message);
+//         return NULL;
+//     }
 
-    ASTNode* result = parse_expression(&parser);
+//     ASTNode* result = parse_expression(&parser);
     
-    #ifdef DEBUG
-    printf("parser() - result\n");
-    print_ast(result, 0);
-    wait();
-    #endif
+//     #ifdef DEBUG
+//     printf("parser() - result\n");
+//     print_ast(result, 0);
+//     wait();
+//     #endif
 
-    if (parser.has_error)
-    {
-        if (result != NULL)
-        {
-            free_ast(result);
-        }
-        printf("%s\n", parser.error_message);
-        return NULL;
-    }
+//     if (parser.has_error)
+//     {
+//         if (result != NULL)
+//         {
+//             free_ast(result);
+//         }
+//         printf("%s\n", parser.error_message);
+//         return NULL;
+//     }
 
-    if (parser.current_token.type == TOKEN_ERROR)
-    {
-        parser_set_error(&parser, parser.current_token.text);
-        if (result != NULL)
-        {
-            free_ast(result);
-        }
-        printf("%s\n", parser.error_message);
-        return NULL;
-    }
+//     if (parser.current_token.type == TOKEN_ERROR)
+//     {
+//         parser_set_error(&parser, parser.current_token.text);
+//         if (result != NULL)
+//         {
+//             free_ast(result);
+//         }
+//         printf("%s\n", parser.error_message);
+//         return NULL;
+//     }
     
-    if (parser.current_token.type != TOKEN_EOF)
-    {
-        if (result != NULL)
-        {
-            free_ast(result);
-        }
-        printf("%s(%d, %d)Error: incomplete or invalid expression\n%s",
-               COLOR_ERROR,
-               parser.line,
-               parser.column,
-               COLOR_RESET);
-        return NULL;
-    }
+//     if (parser.current_token.type != TOKEN_EOF)
+//     {
+//         if (result != NULL)
+//         {
+//             free_ast(result);
+//         }
+//         printf("%s(%d, %d)Error: incomplete or invalid expression\n%s",
+//                COLOR_ERROR,
+//                parser.line,
+//                parser.column,
+//                COLOR_RESET);
+//         return NULL;
+//     }
     
-    return result;
-}
+//     return result;
+// }

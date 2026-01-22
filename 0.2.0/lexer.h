@@ -4,10 +4,7 @@
 #include <stdbool.h>
 #include <stdarg.h>
 
-#include "utils.h"
-
-#define MAX_NUMBER_LEN 63 
-#define MAX_ID_LEN     63
+#include "zzdefs.h"
 
 // ============================================
 // Tipos de Token (Token Types)
@@ -29,9 +26,9 @@ typedef enum {
     TOKEN_PERCENT,      // %
     TOKEN_LPAREN,       // (
     TOKEN_RPAREN,       // )
-    TOKEN_IDENTIFIER,           // Identificador: x, y, total, _var
+    TOKEN_IDENTIFIER,   // Identificador: x, y, total, _var
     TOKEN_LET,          // Palavra-chave LET
-    TOKEN_EQ,           // Operador de atribuição: =
+    TOKEN_EQUAL,           // Operador de atribuição: =
     TOKEN_NOERROR
     
     // Palavras-chave (reservadas para versões futuras)
