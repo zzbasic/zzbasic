@@ -1,9 +1,9 @@
 # 🗺️ ZzBasic - Plano de Implementação Técnica (Incremental)
 
 ## 🔤 Convenções e Decisões Técnicas Iniciais
-*   **Extensão de Arquivo:** `.zz` é **perfeito**. Curta, única e óbvia.
+*   **Extensão de Arquivo:** `.zz` 
 *   **Comando REPL:** `zzbasic` (sem argumentos) inicia o REPL. `zzbasic script.zz` executa o arquivo.
-*   **Gerenciamento de Memória:** Comece com alocação simples (`malloc/free`). Pode evoluir para um *garbage collector* básico nas versões com `list` e `dict`.
+
 
 ## 🚀 Roadmap Incremental Detalhada
 
