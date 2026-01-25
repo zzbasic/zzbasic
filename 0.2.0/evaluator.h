@@ -1,22 +1,41 @@
 #ifndef EVALUATOR_H
 #define EVALUATOR_H
 
-#include "utils.h"
+#include "zzdefs.h"
 #include "ast.h"
+#include "symbol_table.h"
 
-typedef struct {
+// ============================================
+// Contexto de avaliação (para verificação de tipos)
+// ============================================
+typedef enum
+{
+    CTX_ANY,      // Qualquer tipo aceitável (para exibição: PRINT x)
+    CTX_NUMBER,   // Espera número (operações matemáticas: x + 5)
+    CTX_STRING    // Espera string (concatenação futura: "Olá " + nome)
+} EvalContext;
+
+typedef struct
+{
     int success;    // 1 = sucesso, 0 = erro
-    int is_string;  // 1 = string, 0 = number;// SERÁ USADO COM STRING 
+    int is_string;  // 1 = string, 0 = number
     union {
-        double number_value;
-        char string_value[BUFFER_SIZE];// SERÁ USADO COM STRING
+        double number;
+        char string[STRING_SIZE];
     } value;
     char error_message[BUFFER_SIZE];
-    int line;   // Linha do node
-    int column; // Coluna do node
+    int line;   
+    int column; 
 } EvaluatorResult;
 
-// Avalia uma AST e retorna o resultado
+// Avalia uma AST com contexto
+EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalContext ctx);
+
+// Funções auxiliares
+int execute_statement(ASTNode* node, SymbolTable* symbols);
+int evaluate_program(ASTNode* node, SymbolTable* symbols);
+
+// Old function (for compatibility)
 EvaluatorResult evaluate(ASTNode* node);
 
 #endif

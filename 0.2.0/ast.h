@@ -3,51 +3,121 @@
 
 #include "zzdefs.h"
 
-typedef enum {
+//===================================================================
+// ESTRUTURAS (ENUMS E STRUCTS)
+//===================================================================
+
+typedef struct ASTNode ASTNode;
+
+typedef enum
+{
     NODE_NULL,
     NODE_NUMBER,
-    NODE_BINARY_OP,     //operacao binaria (+, -, *, /)
-    NODE_UNARY_OP,      //operacao unaria (-)
-    NODE_IDENTIFIER,    // identificador (nome de variável) 
-    NODE_ASSIGNMENT,    // atribuição LET x = 5 
-    NODE_PROGRAM    
-} Node_type;
+    NODE_STRING,       
+    NODE_VARIABLE,    
+    NODE_BINARY_OP,     // operacao binaria (+, -, *, /)
+    NODE_UNARY_OP,      // operacao unaria (+, -)
+    NODE_ASSIGNMENT,    // atribuição  
+} NodeType;
 
-typedef struct ASTNode {
-    Node_type type;
+typedef enum
+{
+    TYPE_NULL,
+    TYPE_NUMBER,
+    TYPE_STRING,
+    // Tipos futuros...
+    // TYPE_BOOLEAN,
+    // TYPE_ARRAY,
+    // TYPE_FUNCTION,
+} VariableType;
+
+typedef struct Variable
+{
+    char name[VARNAME_SIZE];
+    VariableType type; // TYPE_NULL = não inicializada
     
-    // Dados especificos do no
-    //double value;    // Para NODE_NUMBER 
-    //char operator;   // Para NODE_BINARY_OP e NODE_UNARY_OP
-
-    // Dados especificos do no
     union {
-        double number_value;                            // Para NODE_NUMBER
-        char identifier_name[MAX_IDENTIFIER_LEN + 1];   // Para NODE_IDENTIFIER
-        char operator_char;                             // Para operações
+        double number;
+        char string[STRING_SIZE];
+        // Tipos futuros...
+        // int boolean;
+        // void* array;
+        // void* function;
     } value;
-    
-    // Filhos do no
-    struct ASTNode* left;       // Filho esquerdo (operacoes binarias)
-    struct ASTNode* right;      // Filho direito (operacoes binarias)
-    struct ASTNode* operand;    // Operando (operacoes unarias e atribuição) 
-    struct ASTNode* next;       // Próximo statement (para programas)
+} Variable;
 
-    int line;   // Linha do início do token
-    int column; // Coluna do início do token
+typedef struct
+{
+    double value;
+} NumberData;
+
+typedef struct
+{
+    char operator;
+    ASTNode* left;
+    ASTNode* right;
+} BinaryOpData;
+
+typedef struct
+{
+    char operator;
+    ASTNode* operand;
+} UnaryOpData;
+
+typedef struct
+{
+    char var_name[VARNAME_SIZE];
+    ASTNode* value;  // ASTNode que contém a expressão a ser atribuída
+} AssignmentData;
+
+typedef struct
+{
+    char var_name[VARNAME_SIZE];
+} VariableData;
+
+typedef struct
+{
+    char value[STRING_SIZE];
+} StringData;
+
+typedef struct ASTNode
+{
+    NodeType type;
+    int line;
+    int column;
+    
+    union {
+        NumberData      number;
+        StringData      string;
+        VariableData    variable;
+        BinaryOpData    binaryop;
+        UnaryOpData     unaryop;
+        AssignmentData  assignment;
+    } data;
 } ASTNode;
 
-// v0.1.0
-ASTNode* create_number_node(double value, int line, int column);
-ASTNode* create_binary_op_node(char operator, ASTNode* left, ASTNode* right, int line, int column);
-ASTNode* create_unary_op_node(char operator, ASTNode* operand, int line, int column);
 
-// v0.2.0
-ASTNode* create_identifier_node(const char* name, int line, int column);
-ASTNode* create_assignment_node(const char* name, ASTNode* value, int line, int column);
-ASTNode* create_program_node(ASTNode* first_statement);
+ASTNode* create_number_node(double value, int line, int column);
+
+ASTNode* create_string_node(const char* value, int line, int column);
+
+// CRIA NÓ DE VARIÁVEL. VAR_NAME JÁ DEVE SER VÁLIDO (VALIDADO PELO PARSER)
+ASTNode* create_variable_node(const char* var_name, int line, int column);
+
+// CRIA OPERAÇÃO BINÁRIA. LEFT E RIGHT NÃO PODEM SER NULL
+ASTNode* create_binary_op_node(char operator, ASTNode* left, ASTNode* right, 
+                               int line, int column);
+
+// CRIA OPERAÇÃO UNÁRIA. OPERAND NÃO PODE SER NULL
+ASTNode* create_unary_op_node(char operator, ASTNode* operand, 
+                              int line, int column);
+
+// CRIA ATRIBUIÇÃO. VAR_NAME JÁ VALIDADO, VALUE NÃO PODE SER NULL
+ASTNode* create_assignment_node(const char* var_name, ASTNode* value, 
+                                int line, int column);
 
 void free_ast(ASTNode* node);
+
 void print_ast(ASTNode* node, int indent);
 
 #endif // AST_H

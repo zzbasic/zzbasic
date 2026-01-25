@@ -14,8 +14,8 @@ int main(int argc, char* argv[])
     if (argc == 1)
     {
         // Modo REPL: nenhum argumento
-        printf("Enter \"help\", a statement or \"exit\" to quit.\n\n");
         print_banner();
+        printf("Enter \"help\", a statement or \"exit\" to quit.\n\n");
         run_repl();
     }
     else if (argc == 2)

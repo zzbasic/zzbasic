@@ -1,35 +1,44 @@
+// lexer.c
 // ============================================
-// Headers da Biblioteca C
+// C Library Headers
 // ============================================
 #include <ctype.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdarg.h> 
 
 #include "color.h"
 #include "lexer.h"
 
 static const char* TOKEN_STRINGS[] = 
 {
+    "NULL",         // TOKEN_NULL      
     "EOF",          // TOKEN_EOF
     "EOL",          // TOKEN_EOL
     "ERROR",        // TOKEN_ERROR
+
     "NUMBER",       // TOKEN_NUMBER
+    "STRING",        // TOKEN_STRING
+
     "PLUS",         // TOKEN_PLUS
     "MINUS",        // TOKEN_MINUS
     "STAR",         // TOKEN_STAR
     "SLASH",        // TOKEN_SLASH
     "PERCENT",      // TOKEN_PERCENT
+
     "LPAREN",       // TOKEN_LPAREN
     "RPAREN",       // TOKEN_RPAREN
-    "IDENTIFIER",   // TOKEN_IDENTIFIER           
+
     "LET",          // TOKEN_LET          
+    "IDENTIFIER",   // TOKEN_IDENTIFIER 
     "EQUAL",        // TOKEN_EQUAL 
+
     "NOERROR"       // TOKEN_NOERROR
 };
 
 // ============================================
-// PROTÓTIPOS das Funções Privadas (static)
+// PROTOTYPES of Private Functions (static)
 // ============================================
 static void lexer_advance(Lexer* lexer);
 static char lexer_peek(Lexer* lexer);
@@ -37,16 +46,16 @@ static char lexer_peek_next(Lexer* lexer);
 static void lexer_skip_whitespace(Lexer* lexer);
 
 static Token lexer_make_token(Lexer* lexer,
-                              Token_type type,
+                              TokenType type,
                               double number_value,
                               char operator_char,
                               const char* text,
                               int line,
                               int column);
 
-static Token lexer_check_buffer_overflow(Lexer* lexer,
-                                         char* buffer,
-                                         int current_index);
+static Token lexer_check_buffer_overflow_number(Lexer* lexer,
+                                                char* buffer,
+                                                int current_index);
 
 static Token lexer_report_error(Lexer* lexer,
                                 int line,
@@ -57,10 +66,10 @@ static Token lexer_report_error(Lexer* lexer,
 static int lexer_read_digits(Lexer* lexer, char* buffer, int* index);
 static Token lexer_read_number(Lexer* lexer);
 static Token lexer_read_identifier(Lexer* lexer);
-
+static Token lexer_read_string(Lexer* lexer);
 
 //============================================
-// FUNÇÕES PÚBLICAS NO FINAL
+// PUBLIC FUNCTIONS AT THE END
 //============================================
 // void lexer_init(Lexer* lexer, const char* source);
 // Token lexer_get_next_token(Lexer* lexer);
@@ -69,44 +78,44 @@ static Token lexer_read_identifier(Lexer* lexer);
 
 
 // ============================================
-// Implementação das Funções Privadas
+// Implementation of Private Functions
 // ============================================
 
 /*******************************************************************
-Em UTF-8 as letras acentuadas ocupam 2 bytes, então a contagem
-não pode ser caractere por caractere.
+In UTF-8 accented letters occupy 2 bytes, so counting
+cannot be character by character.
 
-Regra geral:
-Qualquer caractere latino acentuado (maiúsculo ou minúsculo)
-ocupa 2 bytes em UTF-8, exceto:
-- Letras do alfabeto básico (A-Z, a-z): 1 byte
-- Números (0-9): 1 byte
-- Pontuação básica (. , ; : ! ? etc.): 1 byte
+General rule:
+Any accented Latin character (uppercase or lowercase)
+occupies 2 bytes in UTF-8, except:
+- Basic alphabet letters (A-Z, a-z): 1 byte
+- Numbers (0-9): 1 byte
+- Basic punctuation (. , ; : ! ? etc.): 1 byte
 
-Exemplo:
+Example:
 'é' - 2 bytes (0xC3 0xA9); 0xC3 = 11000011₂; 0xA9 = 10101001₂
 'ã' - 2 bytes (0xC3 0xA3); 0xC3 = 11000011₂; 0xA3 = 10100011₂
 
-Note que se contarmos caracteres teremos contado dois,
-mas na verdade queremos contar apenas um.
+Note that if we count characters we'll have counted two,
+but we actually want to count only one.
 
-Note também que o segundo byte começa com 10.
+Also note that the second byte starts with 10.
 
-Bytes começando com 0xxxxxxx (0x00-0x7F): ASCII, 1 byte
+Bytes starting with 0xxxxxxx (0x00-0x7F): ASCII, 1 byte
 
-Bytes começando com 110xxxxx: início de caractere 2-byte
+Bytes starting with 110xxxxx: start of 2-byte character
 
-Bytes começando com 10xxxxxx: byte de continuação
+Bytes starting with 10xxxxxx: continuation byte
 
-Seu código (lexer->current_char & 0b11000000) != 0b10000000 verifica:
+Your code (lexer->current_char & 0b11000000) != 0b10000000 checks:
 
-Se NÃO é um byte de continuação (10xxxxxx)
+If it's NOT a continuation byte (10xxxxxx)
 
-Então é um novo caractere ==> incrementa coluna
+Then it's a new character ==> increment column
 *******************************************************************/
 static void lexer_advance(Lexer* lexer)
 {
-    // Converte para unsigned para evitar problemas com signed char
+    // Convert to unsigned to avoid problems with signed char
     unsigned char uc = (unsigned char)lexer->current_char;
 
     if(lexer->current_char == '\n')
@@ -141,7 +150,7 @@ static char lexer_peek(Lexer* lexer)
     return lexer->source[lexer->position + 1];
 }
 
-// Retorna o próximo caractere sem avançar (lookahead)
+// Returns the next character without advancing (lookahead)
 static char lexer_peek_next(Lexer* lexer)
 {
     if (lexer->position + 1 < lexer->source_size)
@@ -159,62 +168,26 @@ static void lexer_skip_whitespace(Lexer* lexer)
     }
 }
 
-static Token lexer_make_token(Lexer* lexer,
-                              Token_type type,
-                              double number_value,
-                              char operator_char,
-                              const char* text,
-                              int line,
-                              int column)
-{
-    Token token;
-    
-    // Campos obrigatórios
-    token.type = type;
-    token.type_string = TOKEN_STRINGS[type];
-    token.line = line;
-    token.column = column;
-    
-    // Valores (dependem do tipo)
-    token.value.number_value = number_value;
-    token.value.operator_char = operator_char;
-    
-    // Texto (se fornecido)
-    if (text != NULL)
-    {
-        strncpy(token.text, text, TOKEN_TEXT_SIZE - 1);
-        token.text[TOKEN_TEXT_SIZE - 1] = '\0';
-    }
-    else
-    {
-        token.text[0] = '\0';
-    }
-    
-    return token;
-}
 
-// Função auxiliar para verificar buffer overflow e reportar erro
-static Token lexer_check_buffer_overflow(Lexer* lexer,
-                                         char* buffer,
-                                         int current_index)
+// Helper function to check buffer overflow and report error
+static Token lexer_check_buffer_overflow_number(Lexer* lexer,
+                                                char* buffer,
+                                                int current_index)
 {
-    if (current_index >= MAX_NUMBER_LENGTH)
+    if (current_index > NUMBER_SIZE - 1)
     {
-        buffer[MAX_NUMBER_LENGTH] = '\0';
+        buffer[NUMBER_SIZE - 1] = '\0';
         return lexer_report_error(lexer,
                                   lexer->line,
                                   lexer->column,
                                   "buffer overflow (maximum %d characters)",
-                                  MAX_NUMBER_LENGTH);      
+                                  NUMBER_SIZE);      
     }
-    
-    return lexer_make_token(lexer,
-                            TOKEN_NOERROR,
-                            0,
-                            ' ',
-                            "",
-                            0,
-                            0);
+ 
+    Token token;
+    memset(&token, 0, sizeof(token));  
+    token.type = TOKEN_NOERROR;
+    return token;
 }
 
 static Token lexer_report_error(Lexer* lexer,
@@ -223,26 +196,29 @@ static Token lexer_report_error(Lexer* lexer,
                                 const char* format,
                                 ...)
 {
-    // Formata a mensagem
-    char message[BUFFER_SIZE];
+    // Format the message
+    char message[TOKENTEXT_SIZE];
     va_list args;
     va_start(args, format);
     vsnprintf(message, sizeof(message), format, args);
     va_end(args);
     
-    char error_text[BUFFER_SIZE];
+    char error_text[TOKENTEXT_SIZE];
     snprintf(error_text,
              sizeof(error_text),
              "Error: %s",
              message);
     
-    return lexer_make_token(lexer,
-                            TOKEN_ERROR,
-                            0.0,
-                            ' ',
-                            error_text,
-                            line,
-                            column);
+    Token token;
+    memset(&token, 0, sizeof(token));  
+
+    token.type = TOKEN_ERROR;
+    strncpy(token.text, error_text, TOKENTEXT_SIZE - 1);
+    token.text[TOKENTEXT_SIZE - 1] = '\0';
+    token.line = line;
+    token.column = column;
+
+    return token;
 }
 
 static int lexer_read_digits(Lexer* lexer,
@@ -251,8 +227,8 @@ static int lexer_read_digits(Lexer* lexer,
 {
     while (isdigit(lexer->current_char) && lexer->current_char != '\0')
     {
-        Token error_check = lexer_check_buffer_overflow(lexer, buffer, *index);
-        if (error_check.type == TOKEN_ERROR)
+        // CHECK BUFFER OVERFLOW
+        if((*index) > NUMBER_SIZE - 1)
         {
             return 0;
         }
@@ -266,13 +242,13 @@ static int lexer_read_digits(Lexer* lexer,
 
 static Token lexer_read_number(Lexer* lexer)
 {
-    char buffer[MAX_NUMBER_LENGTH + 1];
+    char buffer[NUMBER_SIZE];
     int i = 0;
 
     int nr_line = lexer->line;
     int nr_column = lexer->column;
 
-    // Parte inteira
+    // Integer part
     if (!lexer_read_digits(lexer, buffer, &i))
     {
         return lexer_report_error(lexer,
@@ -281,7 +257,7 @@ static Token lexer_read_number(Lexer* lexer)
                                  "buffer overflow while reading integer part");
     }
 
-    // Parte decimal (opcional)
+    // Decimal part (optional)
     if (lexer->current_char == '.')
     {
         buffer[i++] = lexer->current_char;
@@ -289,19 +265,19 @@ static Token lexer_read_number(Lexer* lexer)
 
         if (!isdigit(lexer->current_char))
         {
-            // Adiciona o char inválido ao buffer para mostrar no erro
+            // Add invalid char to buffer to show in error
             buffer[i++] = lexer->current_char;
             lexer_advance(lexer);
 
-            // Tenta ler mais dígitos (para capturar o padrão inválido completo)
-            lexer_read_digits(lexer, buffer, &i);  // Ignora erro aqui, só quer capturar
+            // Try to read more digits (to capture complete invalid pattern)
+            lexer_read_digits(lexer, buffer, &i);  // Ignore error here, just want to capture
             
             buffer[i] = '\0';
 
             return lexer_report_error(lexer, nr_line, nr_column, "invalid number '%s'", buffer);     
         }
 
-        // Lê os dígitos após o ponto decimal
+        // Read digits after decimal point
         if (!lexer_read_digits(lexer, buffer, &i))
         {
             return lexer_report_error(lexer,
@@ -310,29 +286,29 @@ static Token lexer_read_number(Lexer* lexer)
                                       "buffer overflow while reading decimal part");
         }
     }
-    // Fim da parte decimal
+    // End of decimal part
 
-    // DETECTA SEGUNDO PONTO (BUG!)
+    // DETECT SECOND POINT (BUG!)
     if (lexer->current_char == '.')
     {
-        Token error_check = lexer_check_buffer_overflow(lexer, buffer, i);
+        Token error_check = lexer_check_buffer_overflow_number(lexer, buffer, i);
         if (error_check.type == TOKEN_ERROR) return error_check;
 
-        // Adiciona o segundo ponto ao buffer para mostrar no erro
+        // Add second point to buffer to show in error
         buffer[i++] = lexer->current_char;
         lexer_advance(lexer);
 
-        // Tenta ler mais dígitos (para capturar o padrão inválido completo)
-        lexer_read_digits(lexer, buffer, &i);  // Ignora erro aqui, só quer capturar
+        // Try to read more digits (to capture complete invalid pattern)
+        lexer_read_digits(lexer, buffer, &i);  // Ignore error here, just want to capture
 
         buffer[i] = '\0';
         return lexer_report_error(lexer, nr_line, nr_column, "invalid number '%s'", buffer);           
     } 
 
-    // Termina string
+    // Terminate string
     buffer[i] = '\0';
 
-    // Converte para double
+    // Convert to double
     char* endptr;
     double valor = strtod(buffer, &endptr);
     
@@ -342,34 +318,38 @@ static Token lexer_read_number(Lexer* lexer)
                                   buffer);
     }
 
-    return lexer_make_token(lexer,
-                            TOKEN_NUMBER,
-                            valor,
-                            ' ',
-                            buffer,
-                            nr_line,
-                            nr_column);
+    Token token;
+    memset(&token, 0, sizeof(token));
+
+    token.type = TOKEN_NUMBER;
+    token.value.number = valor;
+    strncpy(token.text, buffer, TOKENTEXT_SIZE - 1);
+    token.text[TOKENTEXT_SIZE - 1] = '\0';
+    token.line = nr_line;
+    token.column = nr_column;
+
+    return token;
 }
 
 static Token lexer_read_identifier(Lexer* lexer)
 {
-    char buffer[MAX_IDENTIFIER_LEN + 1];
+    char buffer[VARNAME_SIZE];
     int i = 0;
 
     int id_line = lexer->line;
     int id_column = lexer->column;
     
-    // Lê o identificador
+    // Read identifier
     while (isalnum(lexer->current_char) || lexer->current_char == '_')
     {
-        if (i >= MAX_IDENTIFIER_LEN)
+        if (i > VARNAME_SIZE - 1)
         {
-            buffer[MAX_IDENTIFIER_LEN] = '\0';
+            buffer[VARNAME_SIZE - 1] = '\0';
             return lexer_report_error(lexer,
                                       id_line,
                                       id_column,
                                       "Identifier too long (max %d chars): '%.30s...'",
-                                      MAX_IDENTIFIER_LEN,
+                                      VARNAME_SIZE,
                                       buffer);
         }
         buffer[i++] = lexer->current_char;
@@ -377,24 +357,76 @@ static Token lexer_read_identifier(Lexer* lexer)
     }
     buffer[i] = '\0';
     
-    // Verifica palavras-chave 
+    Token token;
+    memset(&token, 0, sizeof(token));
+
+    // Check keywords
     if (strcmp(buffer, "let") == 0)
     {
-        return lexer_make_token(lexer, TOKEN_LET, 0.0, ' ', "let", id_line, id_column);
+        token.type = TOKEN_LET;
+        strcpy(token.text, "let");
     }
-    // Futuras palavras-chave:
-    // else if (strcmp(buffer, "print") == 0) return TOKEN_PRINT;
-    // else if (strcmp(buffer, "if") == 0) return TOKEN_IF;
-    // else if (strcmp(buffer, "then") == 0) return TOKEN_THEN;
+    else
+    {
+        token.type = TOKEN_IDENTIFIER;
+        strcpy(token.value.varname, buffer);
+    }
+
+    token.line = id_line;
+    token.column = id_column;
+
+    return token; 
+}
+
+static Token lexer_read_string(Lexer* lexer) {
+    char buffer[STRING_SIZE];
+    int i = 0;
+
+    int str_line = lexer->line;
+    int str_column = lexer->column;
     
-    // É identificador normal (preserva o case do usuário)
-    return lexer_make_token(lexer, TOKEN_IDENTIFIER, 0.0, ' ', buffer, id_line, id_column);
+    lexer_advance(lexer); // Skip opening quote
+    
+    while (lexer->current_char != '"' && 
+           lexer->current_char != '\0' && 
+           lexer->current_char != '\n' &&
+           i < STRING_SIZE-1)
+    {
+        buffer[i++] = lexer->current_char;
+        lexer_advance(lexer);
+    }
+    
+    if (lexer->current_char != '"')
+    {
+        buffer[i] = '\0';
+        return lexer_report_error(lexer,
+                                  str_line,
+                                  str_column,
+                                  "missing terminating \" character: %s",
+                                  buffer);
+    }
+    
+    buffer[i] = '\0';
+    lexer_advance(lexer); // Skip closing quote
+ 
+    Token token;
+    memset(&token, 0, sizeof(token));
+
+    token.type = TOKEN_STRING;
+
+    strcpy(token.text, "\""); // For debug, keep quotes in text
+    strcat(token.text, buffer);
+    strcat(token.text, "\"");
+    
+    // Store content without quotes in string_value field
+    strcpy(token.value.string, buffer);
+    
+    return token;
 }
 
 
-
 // ============================================
-// Implementação das Funções Públicas
+// Implementation of Public Functions
 // ============================================
 void lexer_init(Lexer* lexer,
                 const char* source)
@@ -413,132 +445,125 @@ Token lexer_get_next_token(Lexer* lexer)
     {
         lexer_skip_whitespace(lexer);
 
-        // COMENTÁRIOS
+        // COMMENTS
         if (lexer->current_char == '#')
         {
-            // Pula tudo até fim da linha MAS NÃO consome o \n
+            // Skip everything until end of line BUT DON'T consume the \n
             while (lexer->current_char != '\n' && 
                    lexer->current_char != '\0')
             {
                 lexer_advance(lexer);
             }
-            // NÃO consome o \n! Ele será retornado como TOKEN_EOL
-            // Continue no loop para verificar se há mais espaços/comentários
+            // DON'T consume the \n! It will be returned as TOKEN_EOL
+            // Continue in loop to check for more spaces/comments
             continue;
         }
-        // Se não é comentário, sai do loop e processa o token
+        // If not a comment, break from loop and process token
         break;
     }
 
-    // AGORA processa o token normalmente
+    // NOW process token normally
+    Token token;
+    memset(&token, 0, sizeof(token));
+
     int line = lexer->line;
     int column = lexer->column;        
     char c = lexer->current_char;
     
-    // Fim de arquivo
+    // End of file
     if (c == '\0')
     {
-        return lexer_make_token(lexer,
-                                TOKEN_EOF,
-                                0.0,
-                                ' ',
-                                NULL,
-                                line,
-                                column);
+        token.type = TOKEN_EOF;
+        token.line = line;
+        token.column = column;
+
+        return token;
     }
     
-    // Números
+    // Numbers
     if (isdigit(c) || c == '.')
     {
         return lexer_read_number(lexer);
     }
     
-    // Identificadores
+    // Identifiers
     if (isalpha(c) || c == '_')
     {
         return lexer_read_identifier(lexer);
     }
 
-    // Operadores e caracteres especiais
+    if(c == '"')
+    {
+        return lexer_read_string(lexer);
+    }
+
+    // Operators and special characters
     switch (c)
     {
         case '+':
             lexer_advance(lexer);
-            return lexer_make_token(lexer,
-                                    TOKEN_PLUS,
-                                    0.0,
-                                    '+',
-                                    "+",
-                                    line,
-                                    column);
-            
+            token.type = TOKEN_PLUS;
+            strcpy(token.text, "+");
+            token.line = line;
+            token.column = column;
+            return token;
+
         case '-':
             lexer_advance(lexer);
-            return lexer_make_token(lexer,
-                                    TOKEN_MINUS,
-                                    0.0,
-                                    '-',
-                                    "-",
-                                    line,
-                                    column);
+            token.type = TOKEN_MINUS;
+            strcpy(token.text, "-");
+            token.line = line;
+            token.column = column;
+            return token;
             
         case '*':
             lexer_advance(lexer);
-            return lexer_make_token(lexer,
-                                    TOKEN_STAR,
-                                    0.0,
-                                    '*',
-                                    "*",
-                                    line,
-                                    column);
+            token.type = TOKEN_STAR;
+            strcpy(token.text, "*");
+            token.line = line;
+            token.column = column;
+            return token;
+
             
         case '/':
             lexer_advance(lexer);
-            return lexer_make_token(lexer,
-                                    TOKEN_SLASH,
-                                    0.0,
-                                    '/',
-                                    "/",
-                                    line,
-                                    column);
+            token.type = TOKEN_SLASH;
+            strcpy(token.text, "/");
+            token.line = line;
+            token.column = column;
+            return token;
             
         case '(':
             lexer_advance(lexer);
-            return lexer_make_token(lexer,
-                                    TOKEN_LPAREN,
-                                    0.0,
-                                    '(',
-                                    "(",
-                                    line,
-                                    column);
+            token.type = TOKEN_LPAREN;
+            strcpy(token.text, "(");
+            token.line = line;
+            token.column = column;
+            return token;
             
         case ')':
             lexer_advance(lexer);
-            return lexer_make_token(lexer,
-                                    TOKEN_RPAREN,
-                                    0.0,
-                                    ')',
-                                    ")",
-                                    line,
-                                    column);
+            token.type = TOKEN_RPAREN;
+            strcpy(token.text, ")");
+            token.line = line;
+            token.column = column;
+            return token;
+
         case '=':
             lexer_advance(lexer);
-            return lexer_make_token(lexer,
-                                    TOKEN_EQUAL,
-                                    0.0,
-                                    '=',
-                                    "=",
-                                    line,
-                                    column);            
+            token.type = TOKEN_EQUAL;
+            strcpy(token.text, "=");
+            token.line = line;
+            token.column = column;
+            return token; 
+
         case '\n':
             lexer_advance(lexer);
-            return lexer_make_token(lexer,
-                                    TOKEN_EOL,
-                                    0.0,
-                                    ' ',
-                                    "\\n",
-                                    line,
-                                    column);
+            token.type = TOKEN_EOL;
+            strcpy(token.text, "EOL");
+            token.line = line;
+            token.column = column;
+            return token; 
             
         default:
         {
@@ -555,20 +580,24 @@ Token lexer_get_next_token(Lexer* lexer)
 
 void lexer_print_token(Token token)
 {
-    printf("[%s]", token.type_string);
     printf("(%d:%d)", token.line, token.column);
+    printf("[%s]", TOKEN_STRINGS[token.type]);
     
     if (token.type == TOKEN_NUMBER)
     {
-        printf(": %g", token.value.number_value);
+        printf(": %g", token.value.number);
         if (token.text[0] != '\0')
         {
-            printf(" (texto: %s)", token.text);
+            printf(" (text: %s)", token.text);
         }
+    }
+    else if (token.type == TOKEN_STRING)
+    {
+        printf(": %s", token.value.string);
     }
     else if (token.type == TOKEN_IDENTIFIER)
     {
-        printf(": %s", token.text);
+        printf(": %s", token.value.varname);
     }
     else if (token.type == TOKEN_LET)
     {
@@ -586,8 +615,8 @@ void lexer_print_token(Token token)
 
 void lexer_print_all_tokens(const char* source)
 {
-    printf("=== ANÁLISE LÉXICA ===\n");
-    printf("Código-fonte: \"%s\"\n\n", source);
+    printf("=== LEXICAL ANALYSIS ===\n");
+    printf("Source code: \"%s\"\n\n", source);
     
     Lexer lexer;
     lexer_init(&lexer, source);
@@ -606,10 +635,106 @@ void lexer_print_all_tokens(const char* source)
     
     if (token.type == TOKEN_ERROR)
     {
-        printf(COLOR_WARNING "\nAnálise interrompida devido a erro léxico.\n" COLOR_RESET);
+        printf(COLOR_WARNING "\nAnalysis interrupted due to lexical error.\n" COLOR_RESET);
     }
     
-    printf("\nTotal de tokens: %d\n", token_count);
-    printf("=== FIM DA ANÁLISE ===\n");
+    printf("\nTotal tokens: %d\n", token_count);
+    printf("=== END OF ANALYSIS ===\n");
 }
-// fim de lexer.c
+
+#ifdef TESTLEXER
+#include "color.h"
+#include "utils.h"
+
+int main()
+{
+    setup_utf8();
+    
+    printf("ZzBasic Lexer Test v0.2.0\n\n");
+    
+    // ============================================
+    // TEST 1: Basic mathematical expressions
+    // ============================================
+    printf("%s1. Basic mathematical expressions:%s\n", COLOR_HEADER, COLOR_RESET);
+    lexer_print_all_tokens("2 + 3 * 4");
+    wait();
+    
+    // ============================================
+    // TEST 2: Decimal numbers and parentheses
+    // ============================================
+    printf("\n%s2. Decimal numbers and parentheses:%s\n", COLOR_HEADER, COLOR_RESET);
+    lexer_print_all_tokens("(10.5 - 2) / 3.14");
+    wait();
+    
+    // ============================================
+    // TEST 3: Comments
+    // ============================================
+    printf("\n%s3. Comments:%s\n", COLOR_HEADER, COLOR_RESET);
+    lexer_print_all_tokens("# Comment at beginning\n5 + 3 # comment at end");
+    wait();
+    
+    // ============================================
+    // TEST 4: LET declaration and identifiers
+    // ============================================
+    printf("\n%s4. LET declaration and identifiers:%s\n", COLOR_HEADER, COLOR_RESET);
+    lexer_print_all_tokens("let x = 10\nlet y = x + 5\nz = x * y");
+    wait();
+    
+    // ============================================
+    // TEST 5: Case-sensitive (let vs LET vs Let)
+    // ============================================
+    printf("\n%s5. Case-sensitive (lowercase):%s\n", COLOR_HEADER, COLOR_RESET);
+    lexer_print_all_tokens("let x = 5\nLet y = 10\nLET z = 15");
+    wait();
+    
+    // ============================================
+    // TEST 6: Unary negative operator
+    // ============================================
+    printf("\n%s6. Unary negative operator:%s\n", COLOR_HEADER, COLOR_RESET);
+    lexer_print_all_tokens("-5 + 3\n-(10 * 2)\n5 * -2");
+    wait();
+    
+    // ============================================
+    // TEST 7: Valid identifiers
+    // ============================================
+    printf("\n%s7. Valid identifiers:%s\n", COLOR_HEADER, COLOR_RESET);
+    lexer_print_all_tokens("x _var variavel123 total_geral a_b_c");
+    wait();
+    
+    // ============================================
+    // TEST 8: Invalid numbers (error test)
+    // ============================================
+    printf("\n%s8. Invalid numbers:%s\n", COLOR_HEADER, COLOR_RESET);
+    lexer_print_all_tokens("12.34.56");
+    wait();
+    lexer_print_all_tokens("12.");
+    wait();
+    lexer_print_all_tokens("12..34");
+    wait();
+    
+    // ============================================
+    // TEST 9: Identifier limit (63 chars)
+    // ============================================
+    printf("\n%s9. Identifier limit (63 chars):%s\n", COLOR_HEADER, COLOR_RESET);
+    lexer_print_all_tokens("var_com_63_caracteres_abcdefghijklmnopqrstuvwxyz0123456789_abc");
+    wait();
+    
+    // ============================================
+    // TEST 10: Complete mix
+    // ============================================
+    printf("\n%s10. Complete expression:%s\n", COLOR_HEADER, COLOR_RESET);
+    lexer_print_all_tokens("let total = (preco * quantidade) - desconto # cálculo do total");
+    
+    printf("\n%s✅ All tests completed!%s\n", COLOR_SUCCESS, COLOR_RESET);
+
+    // ============================================
+    // TEST 11: strings
+    // ============================================
+    printf("\n%s11. String:%s\n", COLOR_HEADER, COLOR_RESET);
+    lexer_print_all_tokens("\"Buzz Lightyear\" \"Zurg Evil Emperor");
+    wait();
+    
+    return 0;
+}
+#endif
+// END OF lexer.c

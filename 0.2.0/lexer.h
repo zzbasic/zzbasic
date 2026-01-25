@@ -10,13 +10,14 @@
 // Tipos de Token (Token Types)
 // ============================================
 typedef enum {
-    // Fim de arquivo/linha
-    TOKEN_EOF,
+    TOKEN_NULL,
+    TOKEN_EOF,          // Fim de arquivo
     TOKEN_EOL,          // Fim de linha (nova linha ou ;)
     TOKEN_ERROR,        // Token de erro
     
     // Literais
     TOKEN_NUMBER,       // 3.14, -42, etc.
+    TOKEN_STRING,       // literal string entre aspas
     
     // Operadores
     TOKEN_PLUS,         // +
@@ -24,34 +25,36 @@ typedef enum {
     TOKEN_STAR,         // *
     TOKEN_SLASH,        // /
     TOKEN_PERCENT,      // %
+
     TOKEN_LPAREN,       // (
     TOKEN_RPAREN,       // )
-    TOKEN_IDENTIFIER,   // Identificador: x, y, total, _var
+
     TOKEN_LET,          // Palavra-chave LET
-    TOKEN_EQUAL,           // Operador de atribuição: =
+    TOKEN_IDENTIFIER,   // Identificador: x, y, total, _var
+    TOKEN_EQUAL,        // Operador de atribuição: =
+
     TOKEN_NOERROR
     
     // Palavras-chave (reservadas para versões futuras)
     // TOKEN_LET, TOKEN_PRINT, TOKEN_IF, etc.
-} Token_type;
+} TokenType;
 
 // ============================================
 // Estrutura do Token (Expandida)
 // ============================================
 typedef struct {
-    Token_type type;            // Tipo enumerado
-    const char* type_string;    // String do tipo (para debug)
+    TokenType type;            
     
-    // Valor do token (depende do tipo)
     union {
-        double number_value;    // Para TOKEN_NUMBER
-        char operator_char;     // Para operadores (+, -, etc.)
+        double number;              // TOKEN_NUMBER
+        char string[STRING_SIZE];   // TOKEN_STRING
+        char varname[VARNAME_SIZE]; // TOKEN_IDENTIFIER
     } value;
     
-    char text[BUFFER_SIZE]; // Texto original do token
+    char text[BUFFER_SIZE];       
     
-    int line;                   // Número da linha
-    int column;                 // Coluna
+    int line;                       // Número da linha
+    int column;                     // Coluna
 } Token;
 
 // ============================================
