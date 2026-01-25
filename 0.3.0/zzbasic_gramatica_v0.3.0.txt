@@ -1,0 +1,38 @@
+# =================================================
+# ZzBasic - GRAMÁTICA v0.2.0 - LET e comentários //
+# =================================================
+
+# ---------- PROGRAMA ESTRUTURAL ----------
+program         := (statement | comment)* EOF
+statement       := assignment_stmt | expression_stmt 
+
+assignment_stmt := LET identifier '=' expression
+
+expression_stmt := expression
+
+expression      := term (('+' | '-') term)*
+term            := factor (('*' | '/') factor)*
+factor          := ('+' | '-')? atom
+atom            := NUMBER | STRING | identifier | '(' expression ')' 
+
+comment         := '#' ~[\n\r]*
+
+identifier      := [a-zA-Z_][a-zA-Z0-9_]*
+
+# ---------- LITERAIS ----------
+NUMBER          := [0-9]+ ('.' [0-9]+)?
+STRING_LITERAL := '"' [^"]* '"'
+
+# ---------- PALAVRAS-CHAVE ----------
+LET             := 'let' | 'LET'
+
+=====================================================================
+Exemplos válidos:
+=====================================================================
+
+// Comentário
+LET x = 10
+LET y = x + 5
+x + y           // Expressão sem LET
+LET z = (x + 3) * 2
+// Outro comentário
