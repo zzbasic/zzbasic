@@ -11,21 +11,22 @@
 **Objetivo:** Ter um programa que compila, roda e lê entrada.
 *   [✅] Criar `main()` que detecta se é REPL ou execução de arquivo.
 *   [✅] Implementar loop REPL básico: exibe prompt `>> `, lê linha, ecoa de volta.
-*   [✅ ] Compilar com e criar executável `zzbasic`.
+*   [✅] Compilar com e criar executável `zzbasic`.
 
 ### **Versão 0.1.0 - Avaliador de Expressões Aritméticas**
 **Objetivo:** Calcular `2 + 3 * (4 - 1)`.
-*   [✅ ] **Lexer:** Tokenizar números, operadores `+ - * / %` e parênteses.
-*   [ ] **Parser:** Construir uma Árvore de Sintaxe Abstrata (AST) para uma expressão.
-*   [ ] **Eval:** Percorrer a AST e calcular o resultado.
-*   [ ] No REPL: digitar `>> 5 + 3` exibe `8`.
+*   [✅] **Lexer:** Tokenizar números, operadores `+ - * / %` e parênteses.
+*   [✅] **Parser:** Construir uma Árvore de Sintaxe Abstrata (AST) para uma expressão.
+*   [✅] **Evaluator:** Percorrer a AST e calcular o resultado.
+*   [✅] No REPL: digitar `>> 5 + 3` exibe `8`.
 
-### **Versão 0.2.0 - Variáveis e Comando `LET`**
+### **Versão 0.2.0 - Comentários(#), Variáveis e Comando `LET`**
 **Objetivo:** Atribuir e recuperar valores: `LET x = 10`.
-*   [ ] Adicionar token `LET` e identificadores (nomes de variáveis) ao lexer.
-*   [ ] Estender o parser para a forma `LET <id> = <expr>`.
-*   [ ] Criar uma tabela de símbolos simples (hashmap ou array) para armazenar pares `nome -> valor`.
-*   [ ] No REPL: `>> LET pi = 3.14` depois `>> pi * 2` exibe `6.28`.
+*   [✅] Adicionar comentários `#`.
+*   [✅] Adicionar token `LET` e identificadores (nomes de variáveis) ao lexer.
+*   [✅] Criar uma tabela de símbolos simples (hashmap ou array) para armazenar pares `nome -> valor`.
+*   [✅] Estender o parser para a forma `LET <id> = <expr>`.
+*   [✅ ] No REPL: `>> LET pi = 3.14` depois `>> pi * 2` exibe `6.28`.
 
 ### **Versão 0.3.0 - Múltiplas Statements (Declarações)**
 **Objetivo:** Executar mais de um comando por linha/arquivo.
