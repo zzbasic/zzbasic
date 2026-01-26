@@ -1,0 +1,115 @@
+
+# =================================================
+# ZzBasic - GRAMÁTICA v0.4.0 - PRINT
+# =================================================
+
+# ---------- PROGRAMA ESTRUTURAL ----------
+program         := (statement | comment)* EOF
+statement       := assignment_stmt | print_stmt | expression_stmt 
+
+assignment_stmt := LET identifier '=' expression
+
+print_stmt      := ('print' | '?') print_item* nl?
+print_item      := expression  # Na v0.4.1: width(), cores, alinhamento
+nl              := 'nl'        # New line - quando presente, quebra linha
+
+expression_stmt := expression
+
+expression      := term (('+' | '-') term)*
+term            := factor (('*' | '/') factor)*
+factor          := ('+' | '-')? atom
+atom            := NUMBER | STRING | identifier | '(' expression ')' 
+
+comment         := '#' ~[\n\r]*
+
+identifier      := [a-zA-Z_][a-zA-Z0-9_]*
+
+# ---------- LITERAIS ----------
+NUMBER          := [0-9]+ ('.' [0-9]+)?
+STRING          := '"' [^"]* '"'
+
+# ---------- PALAVRAS-CHAVE ----------
+LET             := 'let'
+PRINT           := 'print'
+?               := '?' (atalho para print)
+NL              := 'nl'        # controle de linha no print
+
+# ---------- NOTAS IMPORTANTES ----------
+# 1. 'nl' é OPICIONAL no final do print
+# 2. Comportamento padrão: acumula na mesma linha
+# 3. Com 'nl' no final: quebra linha após imprimir
+# 4. Espaço é separador padrão entre print_items
+
+
+# ---------- FORMATAÇÃO (v0.4.1) ----------
+# WIDTH          := 'width' '(' NUMBER ')'
+# LEFT           := 'left'
+# RIGHT          := 'right'
+# CENTER         := 'center'
+# NOCOLOR        := 'nocolor'
+
+# ---------- CORES (v0.4.1) ----------
+# BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE
+# BRED, BGREEN, BYELLOW, BBLUE, BMAGENTA, BCYAN, BWHITE
+# BGBLACK, BGRED, BGGREEN, BGYELLOW, BGBLUE, BGMAGENTA, BGCYAN, BGWHITE
+
+=====================================================================
+Exemplos válidos v0.4.0:
+=====================================================================
+
+// Comentário
+LET x = 10
+LET y = x + 5
+x + y           // Expressão sem LET
+LET z = (x + 3) * 2
+
+// NOVO: Comando PRINT
+print "Olá Mundo"
+print x
+print y + z
+print "Valor:" x "Resultado:" y * 2
+
+// Atalho com ?
+? "Teste rápido"
+? 10 + 20
+
+// Controle de nova linha
+print "Linha 1";
+print " continua"
+print "Fim!"
+
+// Múltiplos statements
+let a = 5 : print a ; print " ao quadrado:" a * a
+
+=====================================================================
+Exemplos futuros v0.4.1 (formatação e cores):
+=====================================================================
+
+print red "ERRO" nocolor ": Arquivo não encontrado"
+print green "SUCESSO!" nocolor width(20) "OK"
+
+print left width(10) "ID" right width(20) "NOME"
+print "101" width(10) "João" width(20) cyan "Ativo" nocolor
+
+print bred bgblue "ALERTA" nocolor " Mensagem importante"
+
+# ---------- NOTAS DE IMPLEMENTAÇÃO ----------
+1. ';' no final do print suprime nova linha
+2. Espaço é separador padrão entre print_items
+3. '?' é equivalente a 'print' (atalho)
+4. print vazio (sem argumentos) → linha em branco
+5. Cores e formatação serão adicionadas na v0.4.1
+
+=====================================================================
+Hierarquia de precedência (mantida):
+=====================================================================
+1. ()                  - Parênteses
+2. + - (unário)        - Positivo/Negativo
+3. * /                 - Multiplicação/Divisão
+4. + - (binário)       - Adição/Subtração
+5. = (em LET)          - Atribuição
+6. print/?, ;          - Comando print e controle de linha
+
+**A gramática agora reflete o design completo do `print`!** 🎯
+
+Vamos implementar o parser seguindo esta gramática?
