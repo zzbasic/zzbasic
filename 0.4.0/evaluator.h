@@ -1,3 +1,5 @@
+// evaluator.h
+
 #ifndef EVALUATOR_H
 #define EVALUATOR_H
 
@@ -29,13 +31,15 @@ typedef struct
 } EvaluatorResult;
 
 
-int execute_statement_list(ASTNode* node, SymbolTable* symbols);
+int evaluate_program(ASTNode* node, SymbolTable* symbols);
 
-EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalContext ctx);
+int execute_statement_list(ASTNode* node, SymbolTable* symbols);
 
 int execute_statement(ASTNode* node, SymbolTable* symbols);
 
-int evaluate_program(ASTNode* node, SymbolTable* symbols);
+int evaluate_print_statement(ASTNode* node, SymbolTable* symbols);
+
+EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalContext ctx);
 
 // Old function (for compatibility)
 EvaluatorResult evaluate(ASTNode* node);

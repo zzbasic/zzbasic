@@ -315,7 +315,6 @@ void debug_file(const char* filename) {
 
 void run_file(const char* filename)
 {
-
     //debug_file(filename);
 
     size_t input_size;
@@ -334,11 +333,19 @@ void run_file(const char* filename)
             a89free(code);
             exit(EXIT_FAILURE);
         }
-        
-        int success = execute_statement(ast, symbols);
+
+        print_ast(ast, 0);
+
+        int success = evaluate_program(ast, symbols);
         if (!success) {
             // Error already printed by execute_statement
         }
+
+        // if (!success) {
+        // printf("%sErro na execução%s\n", COLOR_ERROR, COLOR_RESET);
+        // } else {
+        //     printf("%sPrograma executado com sucesso!%s\n", COLOR_SUCCESS, COLOR_RESET);
+        // }
         
         free_ast(ast);
         a89free(code);

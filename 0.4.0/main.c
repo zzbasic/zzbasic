@@ -1,3 +1,5 @@
+// main.c
+
 #include <string.h>
 
 #include "color.h"
@@ -23,7 +25,7 @@ int main(int argc, char* argv[])
     {
         // Modo arquivo: um argumento
         char* filename = argv[1];
-        
+
         // Verifica se tem extensão .zz
         if (!has_zz_extension(filename)) {
             printf("%sError: ZzBasic scripts must have .zz extension\n", 
@@ -46,6 +48,7 @@ int main(int argc, char* argv[])
         
         printf("ZzBasic v%s on %s\n", ZZ_VERSION, get_os_name());
         printf("Executing: %s\n", filename);
+
         run_file(filename);  
     }
     else

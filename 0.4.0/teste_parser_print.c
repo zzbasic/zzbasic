@@ -29,7 +29,7 @@ int main() {
         "? 3.14 nl",
         
         // Sem nl (acumula)
-        "print \"A\" print \"B\" print \"C\" nl",
+        "print \"A\" \"B\" \"C\" nl",
         
         // Com variáveis e expressões
         "print \"Dobro de 5:\" 5 * 2 nl",
@@ -37,6 +37,21 @@ int main() {
         // Print vazio
         "print",
         "print nl",
+
+        "print \"A\"; print \"B\"",
+
+        "print \"A\": print \"B\"" ,
+
+        "print \"A\" print \"B\"" ,
+
+        "print print \"B\"",
+
+        "? ? \"B\"",
+
+        "print let x = 5",                   // Deve dar erro específico
+
+        "let print = 10",                    // Teste bônus: print como variável (deve dar erro)
+
     };
     
     int num_testes = sizeof(testes) / sizeof(testes[0]);
@@ -71,21 +86,21 @@ int main() {
     }
     
     // Teste com múltiplos statements separados por ;
-    printf("%sTeste multi-statements: 'print \"A\"; print \"B\" nl'%s\n", 
-           COLOR_HEADER, COLOR_RESET);
+    // printf("%sTeste multi-statements: 'print \"A\"; print \"B\" nl'%s\n", 
+    //        COLOR_HEADER, COLOR_RESET);
     
-    Lexer lexer;
-    lexer_init(&lexer, "print \"A\"; print \"B\" nl");
-    ASTNode* ast = parse(&lexer);
+    // Lexer lexer;
+    // lexer_init(&lexer, "print \"A\"; print \"B\" nl");
+    // ASTNode* ast = parse(&lexer);
     
-    if (ast) {
-        printf("AST:\n");
-        print_ast(ast, 0);
-        free_ast(ast);
-        printf("%s✓ Funcionou com ; separador%s\n", COLOR_SUCCESS, COLOR_RESET);
-    } else {
-        printf("%s✗ Problema com ; separador%s\n", COLOR_ERROR, COLOR_RESET);
-    }
+    // if (ast) {
+    //     printf("AST:\n");
+    //     print_ast(ast, 0);
+    //     free_ast(ast);
+    //     printf("%s✓ Funcionou com ; separador%s\n", COLOR_SUCCESS, COLOR_RESET);
+    // } else {
+    //     printf("%s✗ Problema com ; separador%s\n", COLOR_ERROR, COLOR_RESET);
+    // }
     
     wait();  // <--- ADICIONADO AQUI
     

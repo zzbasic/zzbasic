@@ -1,4 +1,3 @@
-
 # =================================================
 # ZzBasic - GRAMÁTICA v0.4.0 - PRINT
 # =================================================
@@ -53,6 +52,12 @@ bright_color ::= 'bred' | 'bgreen' | 'byellow' | 'bblue'
 background_color ::= 'bgblack' | 'bgred' | 'bggreen' | 'bgyellow'
                    | 'bgblue' | 'bgmagenta' | 'bgcyan' | 'bgwhite'
 
+
+# ---------- NOTAS IMPORTANTES ----------
+# 1. 'nl' é OPICIONAL no final do print
+# 2. Comportamento padrão: acumula na mesma linha
+# 3. Com 'nl' no final: quebra linha após imprimir
+# 4. Espaço é separador padrão entre print_items
 #--------------------- PRINT STATMENT FIM ----------------------------------
 
 
@@ -66,12 +71,6 @@ LET             := 'let'
 PRINT           := 'print'
 ?               := '?' (atalho para print)
 NL              := 'nl'        # controle de linha no print
-
-# ---------- NOTAS IMPORTANTES ----------
-# 1. 'nl' é OPICIONAL no final do print
-# 2. Comportamento padrão: acumula na mesma linha
-# 3. Com 'nl' no final: quebra linha após imprimir
-# 4. Espaço é separador padrão entre print_items
 
 
 # ---------- FORMATAÇÃO (v0.4.1) ----------
@@ -145,6 +144,4 @@ Hierarquia de precedência (mantida):
 
 **A gramática agora reflete o design completo do `print`!** 🎯
 
-
 Vamos implementar o parser seguindo esta gramática?
-

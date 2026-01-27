@@ -1,3 +1,5 @@
+// zzbasic.h
+
 #ifndef ZZBASIC_H
 #define ZZBASIC_H
 
@@ -5,7 +7,7 @@
 
 #include "symbol_table.h"
 
-#define ZZ_VERSION "0.3.0"
+#define ZZ_VERSION "0.4.0"
 #define ZZ_PROMPT ">> "
 
 const char* get_os_name(void);

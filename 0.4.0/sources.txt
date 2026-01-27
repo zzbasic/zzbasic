@@ -1,5 +1,5 @@
 # ========================================
-# ZzBasic v0.2.0 - Avaliador de Expressões Aritméticas
+# ZzBasic v0.4.0 - print
 # ========================================
 
 utils.c
@@ -8,9 +8,8 @@ lexer.c
 ast.c
 symbol_table.c
 parser.c
-#evaluator.c
-#zzbasic.c
+evaluator.c
+zzbasic.c
 #main.c
 
-#lexer_test0.4.0.c
-teste_parser_print.c
+test_print.c

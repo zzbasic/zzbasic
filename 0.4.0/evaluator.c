@@ -64,6 +64,240 @@ static EvaluatorResult create_error_result_fmt(int line, int column,
     return create_error_result(message, line, column);
 }
 
+
+// ============================================
+// EVALUATE PROGRAM 
+// Função principal para avaliar um programa completo
+// ============================================
+int evaluate_program(ASTNode* node, SymbolTable* symbols) {
+    if (!node) return 0;
+    
+    if (node->type == NODE_STATEMENT_LIST) {
+        return execute_statement_list(node, symbols);
+    }
+    else {
+        // Programa com apenas um statement (backward compatibility)
+        return execute_statement(node, symbols);
+    }
+}
+
+
+// ==================================================================
+// Executa uma lista de statements
+// ==================================================================
+int execute_statement_list(ASTNode* node, SymbolTable* symbols)
+{
+    if (!node || node->type != NODE_STATEMENT_LIST)
+    {
+        printf("Error: expected statement list node\n");
+        return 0;
+    }
+    
+    StatementListData* list = &node->data.statementlist;
+    int all_success = 1;
+    
+    // Executa cada statement em sequência
+    for (int i = 0; i < list->count; i++)
+    {
+        ASTNode* stmt = list->statements[i];
+        int success = execute_statement(stmt, symbols);
+        
+        if (!success)
+        {
+            all_success = 0;
+            // Não para no primeiro erro? Decisão de design.
+            // Por enquanto, continua executando os outros.
+        }
+    }
+    
+    return all_success;
+}
+
+// ============================================
+// EXECUTE STATEMENT (uses CTX_ANY by default)
+// ============================================
+int execute_statement(ASTNode* node, SymbolTable* symbols)
+{
+    if (!node) return 0;
+    
+    switch (node->type)
+    {
+        case NODE_ASSIGNMENT: {
+            const char* var_name = node->data.assignment.var_name;
+            ASTNode* value_node = node->data.assignment.value;
+            
+            // Evaluate value (any type)
+            EvaluatorResult value_result = evaluate_expression(
+                value_node, symbols, CTX_ANY);
+            
+            if (!value_result.success)
+            {
+                printf("%s\n", value_result.error_message);
+                return 0;
+            }
+            
+            // Store
+            if (value_result.is_string)
+            {
+                if (!symbol_table_set_string(symbols, var_name, value_result.value.string))
+                {
+                    printf("Error assigning string to '%s'\n", var_name);
+                    return 0;
+                }
+                printf("\"%s\"\n", value_result.value.string);
+                //printf("OK: %s = \"%s\"\n", var_name, value_result.value.string);
+            }
+            else
+            {
+                if (!symbol_table_set_number(symbols, var_name, value_result.value.number))
+                {
+                    printf("Error assigning number to '%s'\n", var_name);
+                    return 0;
+                }
+                printf("%g\n", value_result.value.number);
+                //printf("OK: %s = %g\n", var_name, value_result.value.number);
+            }
+            return 1;
+        }
+            
+        case NODE_NUMBER:
+        case NODE_BINARY_OP:
+        case NODE_UNARY_OP:
+        case NODE_VARIABLE:
+        {
+            // Evaluate for display (any type)
+            EvaluatorResult result = evaluate_expression(node, symbols, CTX_ANY);
+            if (result.success)
+            {
+                if (result.is_string)
+                {
+                    printf("= \"%s\"\n", result.value.string);
+                }
+                else
+                {
+                    printf("= %g\n", result.value.number);
+                }
+                return 1;
+            }
+            else
+            {
+                printf("%s\n", result.error_message);
+                return 0;
+            }
+        }
+            
+        case NODE_STRING:
+        {
+            // Standalone string
+            printf("= \"%s\"\n", node->data.string.value);
+            return 1;
+        }
+
+        case NODE_PRINT:
+            return evaluate_print_statement(node, symbols);
+
+        case NODE_STATEMENT_LIST:  
+            return execute_statement_list(node, symbols);
+            
+        default:
+            printf("Unsupported statement type: %d\n", node->type);
+            return 0;
+    }
+}
+
+// ============================================
+// EXECUTE PRINT STATEMENT
+// ============================================
+int evaluate_print_statement(ASTNode* node, SymbolTable* symbols)
+{
+    if (!node || node->type != NODE_PRINT)
+    {
+        printf("Error: expected print statement node\n");
+        return 0;
+    }
+    
+    PrintStatementData* print_data = &node->data.printstatement;
+    int printed_something = 0;
+    
+    // Se não tem itens (print vazio) → linha em branco
+    if (print_data->count == 0) {
+        printf("\n");
+        return 1;
+    }
+    
+    // Avalia e imprime cada item
+    for (int i = 0; i < print_data->count; i++)
+    {
+        ASTNode* item_node = print_data->items[i];
+        
+        // Avalia a expressão (qualquer tipo)
+        EvaluatorResult result = evaluate_expression(item_node, symbols, CTX_ANY);
+        if (!result.success)
+        {
+            printf("%s\n", result.error_message);
+            return 0;
+        }
+        
+        // Converte para string e imprime
+        if (result.is_string) {
+            printf("%s", result.value.string);
+        }
+        else
+        {
+            // Formata número sem zeros desnecessários
+            double num = result.value.number;
+            
+            // Verifica se é inteiro
+            if (fabs(num - (int)num) < EPSILON)
+            {
+                printf("%d", (int)num);
+            }
+            else
+            {
+                // Remove zeros à direita
+                char buffer[NUMBER_SIZE];
+                snprintf(buffer, sizeof(buffer), "%.10g", num);
+                
+                // Remove .00000 no final
+                char* dot = strchr(buffer, '.');
+                if (dot)
+                {
+                    // Encontra último caractere não-zero após ponto
+                    char* end = buffer + strlen(buffer) - 1;
+                    while (end > dot && *end == '0')
+                    {
+                        *end = '\0';
+                        end--;
+                    }
+                    // Se terminou com ponto, remove também
+                    if (*(end) == '.')
+                    {
+                        *end = '\0';
+                    }
+                }
+                printf("%s", buffer);
+            }
+        }
+        
+        // Adiciona espaço entre itens (exceto após o último)
+        if (i < print_data->count - 1)
+        {
+            printf(" ");
+        }
+        
+        printed_something = 1;
+    }
+    
+    // Quebra linha se tem newline=1
+    if (print_data->newline)
+    {
+        printf("\n");
+    }
+    
+    return printed_something ? 1 : 0;
+}
+
+
 // ============================================
 // EVALUATE EXPRESSIONS (with context)
 // ============================================
@@ -240,140 +474,6 @@ EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalCon
     }
 }
 
-
-// ==================================================================
-// Executa uma lista de statements
-// ==================================================================
-int execute_statement_list(ASTNode* node, SymbolTable* symbols)
-{
-    if (!node || node->type != NODE_STATEMENT_LIST)
-    {
-        printf("Error: expected statement list node\n");
-        return 0;
-    }
-    
-    StatementListData* list = &node->data.statementlist;
-    int all_success = 1;
-    
-    // Executa cada statement em sequência
-    for (int i = 0; i < list->count; i++)
-    {
-        ASTNode* stmt = list->statements[i];
-        int success = execute_statement(stmt, symbols);
-        
-        if (!success)
-        {
-            all_success = 0;
-            // Não para no primeiro erro? Decisão de design.
-            // Por enquanto, continua executando os outros.
-        }
-    }
-    
-    return all_success;
-}
-
-// ============================================
-// EXECUTE STATEMENT (uses CTX_ANY by default)
-// ============================================
-int execute_statement(ASTNode* node, SymbolTable* symbols)
-{
-    if (!node) return 0;
-    
-    switch (node->type)
-    {
-        case NODE_ASSIGNMENT: {
-            const char* var_name = node->data.assignment.var_name;
-            ASTNode* value_node = node->data.assignment.value;
-            
-            // Evaluate value (any type)
-            EvaluatorResult value_result = evaluate_expression(
-                value_node, symbols, CTX_ANY);
-            
-            if (!value_result.success)
-            {
-                printf("%s\n", value_result.error_message);
-                return 0;
-            }
-            
-            // Store
-            if (value_result.is_string)
-            {
-                if (!symbol_table_set_string(symbols, var_name, value_result.value.string))
-                {
-                    printf("Error assigning string to '%s'\n", var_name);
-                    return 0;
-                }
-                printf("OK: %s = \"%s\"\n", var_name, value_result.value.string);
-            }
-            else
-            {
-                if (!symbol_table_set_number(symbols, var_name, value_result.value.number))
-                {
-                    printf("Error assigning number to '%s'\n", var_name);
-                    return 0;
-                }
-                printf("OK: %s = %g\n", var_name, value_result.value.number);
-            }
-            return 1;
-        }
-            
-        case NODE_NUMBER:
-        case NODE_BINARY_OP:
-        case NODE_UNARY_OP:
-        case NODE_VARIABLE:
-        {
-            // Evaluate for display (any type)
-            EvaluatorResult result = evaluate_expression(node, symbols, CTX_ANY);
-            if (result.success)
-            {
-                if (result.is_string)
-                {
-                    printf("= \"%s\"\n", result.value.string);
-                }
-                else
-                {
-                    printf("= %g\n", result.value.number);
-                }
-                return 1;
-            }
-            else
-            {
-                printf("%s\n", result.error_message);
-                return 0;
-            }
-        }
-            
-        case NODE_STRING:
-        {
-            // Standalone string
-            printf("= \"%s\"\n", node->data.string.value);
-            return 1;
-        }
-
-        case NODE_STATEMENT_LIST:  
-            return execute_statement_list(node, symbols);
-            
-        default:
-            printf("Unsupported statement type: %d\n", node->type);
-            return 0;
-    }
-}
-
-// ============================================
-// EVALUATE PROGRAM 
-// Função principal para avaliar um programa completo
-// ============================================
-int evaluate_program(ASTNode* node, SymbolTable* symbols) {
-    if (!node) return 0;
-    
-    if (node->type == NODE_STATEMENT_LIST) {
-        return execute_statement_list(node, symbols);
-    }
-    else {
-        // Programa com apenas um statement (backward compatibility)
-        return execute_statement(node, symbols);
-    }
-}
 
 // Old function (for compatibility)
 EvaluatorResult evaluate(ASTNode* node)

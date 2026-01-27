@@ -5,6 +5,31 @@
 #include "parser.h"
 #include "a89alloc.h"
 
+//===================================================================
+// PROTÓTIPOS DAS FUNÇÕES DESTE ARQUIVO
+//===================================================================
+static void parser_init(Parser* parser, Lexer* lexer);
+static void parser_advance(Parser* parser);
+static int parser_expect(Parser* parser, TokenType expected_type);
+static void parser_set_error(Parser* parser, const char* message);
+
+static int is_keyword_token(TokenType type);
+static const char* get_keyword_name(TokenType type);
+static void report_print_keyword_error(Parser* parser, Token token);
+
+static ASTNode* parse_program(Parser* parser);
+static ASTNode* parse_statement_list(Parser* parser);
+static ASTNode* parse_statement(Parser* parser);
+static ASTNode* parse_assignment_stmt(Parser* parser);
+static ASTNode* parse_print_statement(Parser* parser);
+static ASTNode* parse_expression(Parser* parser);
+static ASTNode* parse_term(Parser* parser);
+static ASTNode* parse_expression_stmt(Parser* parser);
+static ASTNode* parse_factor(Parser* parser);
+static ASTNode* parse_atom(Parser* parser);
+//===================================================================
+
+
 //=============================
 // PARSER HELPER FUNCTIONS
 //=============================
@@ -52,20 +77,97 @@ static void parser_set_error(Parser* parser, const char* message)
 //     return (len > 0 && name[len - 1] == '$');
 // }
 
+// =====================================================================
+// FUNÇÕES AUXILIARES PARA MANIPULAÇÃO DE PALAVRAS-CHAVE
+// =====================================================================
+
+// Verifica se um token é palavra-chave/comando
+static int is_keyword_token(TokenType type) {
+    switch (type) {
+        case TOKEN_LET:      // Comando let
+        case TOKEN_PRINT:    // Comando print
+        case TOKEN_QUESTION: // Atalho ?
+        // FUTURO: adicionar novos comandos aqui
+        // case TOKEN_IF:
+        // case TOKEN_FOR:
+        // case TOKEN_WHILE:
+        // case TOKEN_FUNCTION:
+        // case TOKEN_RETURN:
+            return 1;  // É palavra-chave/comando
+        default:
+            return 0;  // Não é palavra-chave
+    }
+}
+
+// Obtém nome amigável de uma palavra-chave
+static const char* get_keyword_name(TokenType type) {
+    switch (type) {
+        case TOKEN_LET:      return "let";
+        case TOKEN_PRINT:    return "print";
+        case TOKEN_QUESTION: return "?";
+        // FUTURO: adicionar novos comandos aqui
+        // case TOKEN_IF:       return "if";
+        // case TOKEN_FOR:      return "for";
+        default:             return "command";
+    }
+}
+
+// Gera mensagem de erro específica para token problemático em print
+static void report_print_keyword_error(Parser* parser, Token token) {
+    char error_msg[BUFFER_SIZE];
+    
+    if (token.type == TOKEN_SEMICOLON) {
+        snprintf(error_msg, sizeof(error_msg),
+            "Error [%d:%d]: print statement cannot have ';' after it. "
+            "Remove the ';' or use: print \"text1\" \"text2\" nl",
+            token.line, token.column);
+    }
+    else if (token.type == TOKEN_COLON) {
+        snprintf(error_msg, sizeof(error_msg),
+            "Error [%d:%d]: print statement cannot have ':' after it. "
+            "Use new line for next statement.",
+            token.line, token.column);
+    }
+    else if (is_keyword_token(token.type)) {
+        const char* keyword_name = get_keyword_name(token.type);
+        
+        // Mensagens específicas por tipo de comando
+        if (token.type == TOKEN_LET) {
+            snprintf(error_msg, sizeof(error_msg),
+                "Error [%d:%d]: '%s' is a command, not a valid expression. "
+                "Assign variables BEFORE printing:\n"
+                "  let x = 5\n"
+                "  print x nl",
+                token.line, token.column, keyword_name);
+        }
+        else if (token.type == TOKEN_PRINT || token.type == TOKEN_QUESTION) {
+            snprintf(error_msg, sizeof(error_msg),
+                "Error [%d:%d]: '%s' is a command, not a valid expression. "
+                "Use ONE print with multiple items:\n"
+                "  print \"text1\" \"text2\" nl  (instead of print \"text1\" print \"text2\")",
+                token.line, token.column, keyword_name);
+        }
+        else {
+            // Mensagem genérica para outros comandos (futuro)
+            snprintf(error_msg, sizeof(error_msg),
+                "Error [%d:%d]: '%s' is a command, not a valid expression in print statement.",
+                token.line, token.column, keyword_name);
+        }
+    }
+    else {
+        // Erro genérico para outros tokens inesperados
+        snprintf(error_msg, sizeof(error_msg),
+            "Error [%d:%d]: Unexpected '%s' in print statement",
+            token.line, token.column, token.text[0] ? token.text : "token");
+    }
+    
+    parser_set_error(parser, error_msg);
+}
+
 
 //===================================================================
 // PARSING FUNCTIONS
 //===================================================================
-static ASTNode* parse_program(Parser* parser);
-static ASTNode* parse_statement_list(Parser* parser);
-static ASTNode* parse_statement(Parser* parser);
-static ASTNode* parse_assignment_stmt(Parser* parser);
-static ASTNode* parse_print_statement(Parser* parser);
-static ASTNode* parse_expression(Parser* parser);
-static ASTNode* parse_term(Parser* parser);
-static ASTNode* parse_expression_stmt(Parser* parser);
-static ASTNode* parse_factor(Parser* parser);
-static ASTNode* parse_atom(Parser* parser);
 
 //===================================================================
 // program := (statement | comment)* EOF
@@ -162,8 +264,22 @@ static ASTNode* parse_assignment_stmt(Parser* parser)
     parser_advance(parser);  // Consume LET
     
     // Check identifier
-    if (parser->current_token.type != TOKEN_IDENTIFIER) {
-        parser_set_error(parser, "Error: expected identifier");
+    if (parser->current_token.type != TOKEN_IDENTIFIER)
+    {
+        // Se for palavra-chave, dá erro específico
+        if (is_keyword_token(parser->current_token.type))
+        {
+            const char* keyword_name = get_keyword_name(parser->current_token.type);
+            char error_msg[BUFFER_SIZE];
+            snprintf(error_msg, sizeof(error_msg),
+                "Error [%d:%d]: '%s' is a command keyword, cannot be used as variable name",
+                parser->current_token.line, parser->current_token.column, keyword_name);
+            parser_set_error(parser, error_msg);
+        }
+        else
+        {
+            parser_set_error(parser, "Error: expected identifier");
+        }
         return NULL;
     }
 
@@ -204,7 +320,7 @@ static ASTNode* parse_assignment_stmt(Parser* parser)
 }
 
 //===================================================================
-// print_stmt := ('print' | '?') print_item* nl?
+// print_stmt := ('print' | '?') print_item* (nl | EOL | EOF)
 // print_item := expression
 //===================================================================
 static ASTNode* parse_print_statement(Parser* parser)
@@ -224,35 +340,39 @@ static ASTNode* parse_print_statement(Parser* parser)
         return NULL;
     }
     
-    // Parseia os itens (expressões) até encontrar EOL, EOF ou nl
-    while (!parser->has_error && 
-           parser->current_token.type != TOKEN_EOL &&
-           parser->current_token.type != TOKEN_EOF &&
-           parser->current_token.type != TOKEN_NL)
+    // Parseia os itens (expressões)
+    while (!parser->has_error)
     {
+        Token token = parser->current_token;
         
-        // Parseia uma expressão (pode ser número, string, variável, operação)
-        ASTNode* item = parse_expression(parser);
-        if (parser->has_error)
-        {
-            free_ast(print_node);
-            return NULL;
-        }
-        
-        // Adiciona o item ao comando print
-        print_node_add_item(print_node, item);
-        
-        // Se depois da expressão vier EOL, EOF ou nl, para
-        if (parser->current_token.type == TOKEN_EOL ||
-            parser->current_token.type == TOKEN_EOF ||
-            parser->current_token.type == TOKEN_NL)
+        // PARA nestes casos:
+        if (token.type == TOKEN_NL  ||
+            token.type == TOKEN_EOL ||
+            token.type == TOKEN_EOF)
         {
             break;
         }
         
-        // Se não for nenhum desses, continua (espaço separa itens)
+        // Verifica tokens problemáticos: ;, :, ou palavras-chave
+        if (token.type == TOKEN_SEMICOLON ||
+            token.type == TOKEN_COLON ||
+            is_keyword_token(token.type))
+        {
+            report_print_keyword_error(parser, token);
+            free_ast(print_node);
+            return NULL;
+        }
+        
+        // Agora parseia com segurança
+        ASTNode* item = parse_expression(parser);
+        if (parser->has_error) {
+            free_ast(print_node);
+            return NULL;
+        }
+        
+        print_node_add_item(print_node, item);
     }
-    
+
     // Verifica se tem 'nl' no final
     if (parser->current_token.type == TOKEN_NL) {
         print_set_newline(print_node, 1);  // 1 = tem nl (quebra linha)
@@ -260,6 +380,8 @@ static ASTNode* parse_print_statement(Parser* parser)
     } else {
         print_set_newline(print_node, 0);  // 0 = sem nl (mesma linha)
     }
+
+
     
     return print_node;
 }
@@ -377,6 +499,9 @@ static ASTNode* parse_atom(Parser* parser)
 {
     Token token = parser->current_token;
     
+    printf("Token atual: ");
+    lexer_print_token(parser->current_token);
+
     switch (token.type)
     {
         case TOKEN_NUMBER:
