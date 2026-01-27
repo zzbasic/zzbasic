@@ -499,9 +499,6 @@ static ASTNode* parse_atom(Parser* parser)
 {
     Token token = parser->current_token;
     
-    printf("Token atual: ");
-    lexer_print_token(parser->current_token);
-
     switch (token.type)
     {
         case TOKEN_NUMBER:
