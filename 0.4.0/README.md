@@ -1,7 +1,6 @@
 # ZzBasic - Documentação v0.4.0
 
-![ZzBasic](zzbasic_logo1.png){:width="50%"} 
-
+![ZzBasic](zzbasic_logo1.png)
 
 **ZzBasic** é uma linguagem de programação interpretada que combina a simplicidade do BASIC clássico com recursos modernos. É um projeto solo desenvolvido com cuidado e atenção aos detalhes.
 
