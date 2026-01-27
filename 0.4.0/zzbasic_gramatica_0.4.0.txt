@@ -26,8 +26,6 @@ print_stmt      := ('print' | '?') print_item* (nl | EOL | EOF)
 print_item      := expression  
 nl              := 'nl'        # New line - quando presente, quebra linha
 
-print_command ::= ('print' | '?') print_item* [';']
-
 print_item ::= expression 
              | format_directive
              | color_directive
@@ -149,3 +147,4 @@ Hierarquia de precedência (mantida):
 
 
 Vamos implementar o parser seguindo esta gramática?
+
