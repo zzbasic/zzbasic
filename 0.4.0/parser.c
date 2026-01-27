@@ -174,6 +174,13 @@ static void report_print_keyword_error(Parser* parser, Token token) {
 //===================================================================
 static ASTNode* parse_program(Parser* parser)
 {
+
+    // Pula EOLs iniciais (de comentários ou linhas em branco)
+    while (parser->current_token.type == TOKEN_EOL)
+    {
+        parser_advance(parser);
+    }
+
     return parse_statement_list(parser);
 }
 
@@ -206,10 +213,16 @@ static ASTNode* parse_statement_list(Parser* parser)
         {
             
             parser_advance(parser);  // Consome o separador
+
+            // Pula EOLs adicionais
+            while (parser->current_token.type == TOKEN_EOL)
+            {
+                parser_advance(parser);
+            }
+            
             
             // Se após separador for EOF ou EOL, para (statements opcionais)
-            if (parser->current_token.type == TOKEN_EOF ||
-                parser->current_token.type == TOKEN_EOL)
+            if (parser->current_token.type == TOKEN_EOF)
             {
                 // Permite separadores no final (BASIC tradicional)
                 break;

@@ -144,7 +144,6 @@ int execute_statement(ASTNode* node, SymbolTable* symbols)
                     printf("Error assigning string to '%s'\n", var_name);
                     return 0;
                 }
-                printf("\"%s\"\n", value_result.value.string);
                 //printf("OK: %s = \"%s\"\n", var_name, value_result.value.string);
             }
             else
@@ -154,7 +153,6 @@ int execute_statement(ASTNode* node, SymbolTable* symbols)
                     printf("Error assigning number to '%s'\n", var_name);
                     return 0;
                 }
-                printf("%g\n", value_result.value.number);
                 //printf("OK: %s = %g\n", var_name, value_result.value.number);
             }
             return 1;

@@ -334,8 +334,6 @@ void run_file(const char* filename)
             exit(EXIT_FAILURE);
         }
 
-        print_ast(ast, 0);
-
         int success = evaluate_program(ast, symbols);
         if (!success) {
             // Error already printed by execute_statement
