@@ -22,7 +22,7 @@ identifier      := [a-zA-Z_][a-zA-Z0-9_]*
 
 
 # ------------ PRINT STATEMENT ----------------------------
-print_stmt      := ('print' | '?') print_item* nl?
+print_stmt      := ('print' | '?') print_item* (nl | EOL | EOF)
 print_item      := expression  
 nl              := 'nl'        # New line - quando presente, quebra linha
 
@@ -146,5 +146,6 @@ Hierarquia de precedência (mantida):
 6. print/?, ;          - Comando print e controle de linha
 
 **A gramática agora reflete o design completo do `print`!** 🎯
+
 
 Vamos implementar o parser seguindo esta gramática?
