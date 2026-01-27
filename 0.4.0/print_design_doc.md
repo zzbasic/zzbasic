@@ -8,6 +8,11 @@ O comando `print` no ZzBasic v0.4.0 fornece saída formatada com cores, alinhame
 ## 2. SINTAXE FORMAL (EBNF)
 
 ```
+# ------------ PRINT STATEMENT ----------------------------
+print_stmt      := ('print' | '?') print_item* nl?
+print_item      := expression  
+nl              := 'nl'        # New line - quando presente, quebra linha
+
 print_command ::= ('print' | '?') print_item* [';']
 
 print_item ::= expression 
@@ -36,13 +41,16 @@ bright_color ::= 'bred' | 'bgreen' | 'byellow' | 'bblue'
 
 background_color ::= 'bgblack' | 'bgred' | 'bggreen' | 'bgyellow'
                    | 'bgblue' | 'bgmagenta' | 'bgcyan' | 'bgwhite'
+
+#--------------------- PRINT STATMENT FIM ----------------------------------
 ```
 
 ## 3. SEMÂNTICA E COMPORTAMENTO
 
 ### 3.1 Separadores e Controle de Linha
+- **Comportamento padrão**: não quebra a linha
+- **`nl` no final**: quebra de linha ('\n')
 - **Separador padrão**: Espaço simples entre items
-- **`;` no final**: Suprime a quebra de linha automática
 - **`print` vazio**: Imprime uma linha em branco (apenas `\n`)
 
 ### 3.2 Ordem de Processamento
@@ -78,15 +86,15 @@ Nome: Zurg
 
 ### 4.2 Controle de Linha
 ```basic
->> print "Linha 1";
+>> print "Linha 1"
 >> print " continua"
 Linha 1 continua
 
 >> print  # Linha em branco
 (linha vazia)
 
->> print "a"; print "b"; print "c"
-abc
+>> print "a" "b" "c"
+a b c
 ```
 
 ### 4.3 Expressões
@@ -206,7 +214,7 @@ BGBLACK, BGRED, BGGREEN, BGYELLOW, BGBLUE, BGMAGENTA, BGCYAN, BGWHITE
 NOCOLOR
 ```
 
-### 5.2 Estruturas de Dados
+### 5.2 Estruturas de Dados (ideia inicial, podem ser alteradas no decorrer da implementação)
 ```c
 typedef struct {
     char* text;
@@ -221,10 +229,10 @@ typedef struct {
     int current_color;      // Código ANSI atual
     int field_width;        // Largura para próximo item (0 = sem width)
     char field_align;       // 'L', 'R', 'C', '\0' para próximo item
-    bool suppress_newline;  // ; no final
+    int newline;            // 1 - true; 0 - false
     
     // Configuração
-    bool colors_enabled;    // Terminal suporta cores?
+    int colors_enabled;    // Terminal suporta cores?
 } PrintContext;
 
 typedef struct {
@@ -307,8 +315,8 @@ PROCEDURE ExecutePrint(tokens, symbol_table)
                 
                 AppendString(context, str)
                 
-            SEMICOLON:
-                context.suppress_newline = TRUE
+            NL:
+                context.newline = TRUE
                 
         END CASE
     END WHILE
@@ -359,23 +367,23 @@ texto
 
 ## 7. PLANO DE IMPLEMENTAÇÃO
 
-### Fase 1: Núcleo (Semana 1)
+### Fase 1: Núcleo 
 1. Token `PRINT` e `?`
 2. Múltiplas expressões com espaço
 3. Controle de nova linha com `;`
 4. Conversão automática de tipos
 
-### Fase 2: Cores ANSI (Semana 2)  
+### Fase 2: Cores ANSI 
 1. Sistema básico de cores (8 normais + nocolor)
 2. Cores bright (8)
 3. Detecção automática de suporte a cores
 
-### Fase 3: Formatação (Semana 3)
+### Fase 3: Formatação 
 1. `width()` básico
 2. Alinhamento `left/right/center`
 3. Combinações de formatação
 
-### Fase 4: Polimento (Semana 4)
+### Fase 4: Polimento 
 1. Background colors (opcional)
 2. Otimizações de performance
 3. Testes abrangentes
@@ -398,46 +406,22 @@ texto
 ## 9. TESTES RECOMENDADOS
 
 ### Unitários:
-```c
-// test_print_basic
-assert(print("hello") == "hello\n")
-
-// test_print_multiple  
-assert(print("a", "b", "c") == "a b c\n")
-
-// test_print_no_newline
-assert(print("a";) == "a")
-
-// test_print_width
-assert(print(width(5) "a") == "    a\n")
-
-// test_print_colors
-assert(print(red "error") == "\033[31merror\033[0m\n")
-```
 
 ### Integração:
-```basic
-# Teste de sessão REPL completa
->> print "Teste 1"
->> let x = 10
->> print "x =" x
->> print red "ERRO" nocolor width(20) "!"
->> print  # linha vazia
->> ? "Atalho funciona"
-```
+
 
 ## 10. NOTAS DE COMPATIBILIDADE
 
 ### 10.1 vs BASIC Tradicional
 - `?` como atalho mantido
-- `;` para controle de linha mantido
+- `nl` para quebra de linha
 - `width()` substitui `TAB()` mais flexível
 - Cores ANSI adicionadas (novo)
 
 ### 10.2 vs Python
 - Sem parênteses obrigatórios
 - `sep` fixo como espaço (não configurável)
-- `end=''` via `;`
+- `end=''` não possui; basta colocar os itens sem separação: `print "TudoJunto"`
 - Sistema de cores integrado
 
 ### 10.3 Cross-platform
