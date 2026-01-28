@@ -2,12 +2,12 @@
 
 ![ZzBasic](zzbasic_logo1.png)
 
-
 **ZzBasic** é uma linguagem de programação interpretada que combina a simplicidade do BASIC clássico com recursos modernos. É um projeto solo desenvolvido com cuidado e atenção aos detalhes.
 
 ## Versão Atual: **0.4.1 (EM DESENVOLVIMENTO)** 🚧
 
 ### 🚀 Características
+
 - ✅ **Sintaxe limpa** - Comandos em caixa baixa (`let`, não `LET`)
 - ✅ **Tipagem dinâmica** - Números e strings
 - ✅ **REPL interativo avançado** - Com comandos de debug e análise
@@ -18,31 +18,35 @@
 - ✅ **Análise léxica e AST** - Ferramentas de debug integradas
 - ✅ **Comando `print`** - Saída formatada com controle explícito de linha
 - ✅ **Atalho `?`** - Alternativa rápida para `print`
-- ✅ **Comandos de cores** para exibir no `print` (red, blue, yellow, etc.)
+- ✅ **Cores no `print`** - Suporte a 24 cores (normais, brilhantes e fundo)
 
 ### 📋 Histórico de Versões
+
 | Versão | Status | Recursos Principais |
 |--------|--------|-------------------|
 | 0.1.0 | Lançada | Expressões matemáticas básicas |
 | 0.2.0 | Lançada | Variáveis (`let`), strings, tabela de símbolos |
 | 0.3.0 | Lançada | Múltiplos statements, REPL avançado, comandos de debug |
 | 0.4.0 | Lançada | Comando `print`, controle de linha, saída formatada |
-| **0.4.1** | **Em desenvolvimento** | **Comando `print` com cores** |
+| 0.4.1 | Lançada | Comando `print` com cores |
+| **0.4.2** | **Em desenvolvimento** | **largura de campo e alinhamento** no `print` |
 
 ---
 
 ## 📥 Instalação e Compilação
 
 ### Pré-requisitos
+
 - **Compilador C**: GCC, Clang ou MSVC
 - **Make** (opcional)
 - **Git** (para clonar)
 
 ### Compilação (Linux/macOS)
+
 ```bash
 # Clone o repositório
-git clone [repositório]
-cd zzbasic
+git clone https://github.com/zzbasic/zzbasic.git
+cd zzbasic/0.4.1
 
 # Compile
 make
@@ -52,34 +56,38 @@ make
 ```
 
 ### Compilação (Windows)
+
 ```bash
 # Com MinGW
+cd zzbasic\0.4.1
 gcc -o zzbasic *.c
 zzbasic.exe
 ```
 
 ### Testando
+
 ```bash
 # REPL
 $ ./zzbasic
-ZzBasic v0.4.0 on Linux
-> 5 + 3 * 2
+ZzBasic v0.4.1 on Linux
+>> 5 + 3 * 2
 11
-> exit
+>> exit
 
 # Arquivo
-$ echo 'let x = 10 : let y = 20 : x + y' > teste.zz
+$ echo 'let x = 10 : let y = 20 : print x + y nl' > teste.zz
 $ ./zzbasic teste.zz
 30
 ```
 
 ---
 
-## 🎯 Tutorial Rápido v0.4.0
+## 🎯 Tutorial Rápido v0.4.1
 
-### 1. NOVO: Comando `print` 🖨️
+### 1. Comando `print` Básico
 
-#### Básico:
+#### Imprimindo valores simples:
+
 ```basic
 >> print "Olá Mundo" nl
 Olá Mundo
@@ -93,6 +101,7 @@ Bem-vindo, Zurg!
 ```
 
 #### Atalho `?`:
+
 ```basic
 >> ? "Teste rápido" nl
 Teste rápido
@@ -102,6 +111,7 @@ Teste rápido
 ```
 
 #### Sem `nl` (acumula na linha):
+
 ```basic
 >> print "Progresso: [" 
 >> print "." print "." print "." 
@@ -109,30 +119,94 @@ Teste rápido
 Progresso: [...]
 ```
 
-### 2. 📖 Filosofia do `print` no ZzBasic
+### 2. 🎨 NOVO: Cores no `print`
+
+O ZzBasic suporta **24 cores** para tornar a saída mais expressiva e legível.
+
+#### Cores básicas:
+
+```basic
+>> print red "ERRO" nocolor ": Arquivo não encontrado" nl
+ERRO: Arquivo não encontrado
+(com "ERRO" em vermelho)
+
+>> print green "SUCESSO" nocolor " - Operação concluída" nl
+SUCESSO - Operação concluída
+(com "SUCESSO" em verde)
+
+>> print yellow "AVISO" nocolor ": Verifique os dados" nl
+AVISO: Verifique os dados
+(com "AVISO" em amarelo)
+```
+
+#### Cores brilhantes:
+
+```basic
+>> print bred "CRÍTICO" nocolor " - Reinicie o sistema" nl
+CRÍTICO - Reinicie o sistema
+(com "CRÍTICO" em vermelho brilhante)
+
+>> print bgreen "OK" nocolor " - Tudo funcionando" nl
+OK - Tudo funcionando
+(com "OK" em verde brilhante)
+```
+
+#### Cores de fundo:
+
+```basic
+>> print bgred "ALERTA" nocolor " - Ação necessária" nl
+ALERTA - Ação necessária
+(com fundo vermelho)
+
+>> print bgblue white "INFORMAÇÃO" nocolor " - Leia com atenção" nl
+INFORMAÇÃO - Leia com atenção
+(com fundo azul e texto branco)
+```
+
+#### Combinações:
+
+```basic
+>> print bred bgblue "CRÍTICO" nocolor " - Sistema em risco" nl
+CRÍTICO - Sistema em risco
+(vermelho brilhante em fundo azul)
+
+>> print cyan "Dica:" nocolor " Use 'nocolor' para resetar" nl
+Dica: Use 'nocolor' para resetar
+(com "Dica:" em ciano)
+```
+
+### 3. 📊 Tabela de Cores Disponíveis
+
+| Categoria | Cores |
+|-----------|-------|
+| **Normais** | `black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white` |
+| **Brilhantes** | `bblack`, `bred`, `bgreen`, `byellow`, `bblue`, `bmagenta`, `bcyan`, `bwhite` |
+| **Fundo** | `bgblack`, `bgred`, `bggreen`, `bgyellow`, `bgblue`, `bgmagenta`, `bgcyan`, `bgwhite` |
+| **Especial** | `nocolor` (reseta a cor para padrão) |
+
+### 4. 📖 Filosofia do `print` no ZzBasic
 
 O ZzBasic adota uma abordagem **simplificada e consistente** para o comando `print`:
 
-#### 🎯 **Princípios de Design:**
-- **Um comando, uma ação**: Cada `print` é uma ação completa
-- **Controle explícito**: Use `nl` quando quiser quebrar linha
-- **Sem ambiguidades**: Sem `;` ou `:` após `print`
-- **Expressões inline**: Avaliação automática de expressões
+#### Princípios de Design
 
-#### ✅ **O que TEMOS:**
+Um comando deve fazer uma coisa bem. No ZzBasic, o `print` é responsável por exibir valores com controle total sobre cores e nova linha. Se você precisa imprimir múltiplos valores com cores diferentes, faça em um único `print`. Se precisa controlar linhas, use `nl` explicitamente.
+
+#### O que TEMOS
+
 ```basic
-# Um print, múltiplos itens (CORRETO)
-print "Nome:" nome ", Idade:" idade nl
+# Um print, múltiplos itens com cores (CORRETO)
+print red "Erro:" nocolor " Arquivo não encontrado" nl
 
-# Controle explícito de linha
-print "Texto"     # Fica na mesma linha (padrão)
-print "outro" nl  # Quebra linha após imprimir
+# Cores em diferentes partes
+print "Status: " green "OK" nocolor " [" yellow "Aguardando" nocolor "]" nl
 
-# Expressões matemáticas
-print "Soma:" 10 + 20 "=" 30 nl
+# Expressões matemáticas com cores
+print "Resultado: " blue 10 + 20 nocolor " = 30" nl
 ```
 
-#### 🚫 **O que NÃO TEMOS (e por quê):**
+#### O que NÃO TEMOS (e por quê)
+
 ```basic
 # ❌ NÃO FAÇA: Dois prints sem separador
 print "A" print "B"      # ERRO: print não é expressão válida
@@ -144,93 +218,49 @@ print "A"; print "B"     # ERRO: print não precisa de ;
 print "A": print "B"     # ERRO: use nl (nova linha)
 ```
 
-#### 🧠 **Por que esta abordagem?**
-> "Um comando deve fazer uma coisa bem. Se precisa imprimir múltiplos valores, 
-> faça em um único `print`. Se precisa controlar linhas, use `nl` explicitamente.
-> Simplicidade acima de flexibilidade desnecessária."
-
-#### 📚 **Comparação com outras linguagens:**
-| Linguagem | Sintaxe | Filosofia |
-|-----------|---------|-----------|
-| BASIC tradicional | `PRINT A; B;` | Concatenar com controle implícito |
-| Python | `print(a, b, end=" ")` | Flexibilidade com parâmetros |
-| **ZzBasic** | `print a b nl` | **Simplicidade explícita** |
-
-### 3. 📝 Exemplos Pedagógicos Graduais
+### 5. 🎮 REPL Avançado
 
 ```basic
-# Nível 1: Básico
-print "Olá"           # Imprime e fica na linha
-print "Mundo" nl      # Imprime e quebra linha
-
-# Nível 2: Múltiplos itens  
-print "Nome:" nome nl # Variável após texto
-
-# Nível 3: Expressões
-print "Dobro:" n * 2 nl  # Cálculo inline
-
-# Nível 4: Construção complexa
-print "Progresso: ["
-for i = 1 to 10        # Futuro: loops
-    print "."
-print "]" nl
-```
-
-### 4. 🚨 Mensagens de Erro Específicas
-
-O ZzBasic dá **feedback claro** sobre erros comuns:
-
-```basic
->> print "A"; print "B"
-Error [1:10]: print statement cannot have ';' after it. 
-              Remove the ';' or use: print "text1" "text2" nl
-
->> print "A": print "B"
-Error [1:10]: print statement cannot have ':' after it. 
-              Use new line for next statement.
-
->> print print "teste"
-Error [1:7]: Unexpected 'print' in expression
-```
-
-### 5. 🎮 REPL Avançado (atualizado)
-
-```basic
-# Testando o novo print no REPL
->> tokens print "Olá" nome nl
+# Testando cores no REPL
+>> tokens print red "Erro" nocolor nl
 === LEXICAL ANALYSIS ===
   1: (1:1)[PRINT]: print
-  2: (1:7)[STRING]: "Olá"
-  3: (1:12)[IDENTIFIER]: nome
-  4: (1:17)[NL]: nl
-  5: (1:19)[EOF]
+  2: (1:7)[RED]: red
+  3: (1:11)[STRING]: "Erro"
+  4: (1:17)[NOCOLOR]: nocolor
+  5: (1:25)[NL]: nl
+  6: (1:27)[EOF]
 === END OF ANALYSIS ===
 
->> ast print "Olá" nome nl
-AST for: "print "Olá" nome nl"
+>> ast print red "Erro" nocolor nl
+AST for: "print red "Erro" nocolor nl"
 [1:1] STATEMENT_LIST (1 statements)
-    [1:1] PRINT (2 items) [newline]
-        [1:7] STRING: "Olá"
-        [1:12] VARIABLE: nome
+    [1:1] PRINT (3 items) [newline]
+        [1:7] COLOR: red (\033[31m)
+        [1:11] STRING: "Erro"
+        [1:17] COLOR: nocolor (\033[0m)
 ```
 
 ---
 
-## 📚 Referência da Linguagem v0.4.0
+## 📚 Referência da Linguagem v0.4.1
 
-### Gramática:
+### Gramática EBNF
+
 ```ebnf
 # =================================================
-# ZzBasic - GRAMÁTICA v0.4.0 - PRINT
+# ZzBasic - GRAMÁTICA v0.4.1 - PRINT com cores
 # =================================================
 
 # ---------- PROGRAMA ESTRUTURAL ----------
 program         := (statement | comment)* EOF
-statement       := assignment_stmt | print_stmt | expression_stmt 
+statement       := assignment_stmt | print_stmt | expression_stmt | color_stmt
 
 assignment_stmt := LET identifier '=' expression
 
 expression_stmt := expression
+
+color_stmt := COLOR_TOKEN (apenas nocolor por enquanto)
 
 expression      := term (('+' | '-') term)*
 term            := factor (('*' | '/') factor)*
@@ -263,7 +293,7 @@ color_directive ::= color_name
 
 color_name ::= normal_color
              | bright_color
-             | background_color  
+             | background_color  # Futuro
 
 normal_color ::= 'black' | 'red' | 'green' | 'yellow'
                | 'blue' | 'magenta' | 'cyan' | 'white'
@@ -282,6 +312,8 @@ background_color ::= 'bgblack' | 'bgred' | 'bggreen' | 'bgyellow'
 # 4. Espaço é separador padrão entre print_items
 #--------------------- PRINT STATMENT FIM ----------------------------------
 
+
+
 # ---------- LITERAIS ----------
 NUMBER          := [0-9]+ ('.' [0-9]+)?
 STRING          := '"' [^"]* '"'
@@ -291,6 +323,7 @@ LET             := 'let'
 PRINT           := 'print'
 ?               := '?' (atalho para print)
 NL              := 'nl'        # controle de linha no print
+
 
 # ---------- FORMATAÇÃO (v0.4.1) ----------
 # WIDTH          := 'width' '(' NUMBER ')'
@@ -361,164 +394,74 @@ Hierarquia de precedência (mantida):
 5. = (em LET)          - Atribuição
 6. print/?, ;          - Comando print e controle de linha
 
+**A gramática agora reflete o design completo do `print`!** 🎯
+
+Vamos implementar o parser seguindo esta gramática?
 ```
 
-### Comportamento do `print`:
-| Código | Resultado | Comportamento |
-|--------|-----------|---------------|
-| `print "A"` | `A` (sem quebra) | Acumula na linha |
-| `print "A" nl` | `A\n` | Quebra após imprimir |
-| `print "A" "B"` | `AB` (sem quebra) | Acumula ambos |
-| `print "A" "B" nl` | `AB\n` | Quebra no final |
-| `print nl` | `\n` | Linha em branco |
+### Exemplos Válidos v0.4.1
 
-### Regras do `print`:
-1. **Único comando**: Apenas um `print` por linha (até `nl`/`EOL`/`EOF`)
-2. **Múltiplos itens**: Separe por espaço: `print item1 item2 item3 nl`
-3. **Controle explícito**: Sem `nl` = mesma linha, com `nl` = quebra linha
-4. **Sem separadores**: Não use `;` ou `:` após `print`
-5. **Expressões válidas**: Números, strings, variáveis, operações matemáticas
+```basic
+# Comentários
+let x = 10
+let y = x + 5
+x + y           # Expressão sem LET
+let z = (x + 3) * 2
 
-### Novos Tokens (v0.4.0):
-```c
-TOKEN_PRINT     // print
-TOKEN_QUESTION  // ? (atalho)
-TOKEN_NL        // nl (new line control)
+# Comando PRINT básico
+print "Olá Mundo"
+print x
+print y + z
+print "Valor:" x "Resultado:" y * 2
+
+# Atalho com ?
+? "Teste rápido"
+? 10 + 20
+
+# Controle de nova linha
+print "Linha 1"
+print " continua"
+print "Fim!"
+
+# NOVO: Cores
+print red "ERRO" nocolor ": Arquivo não encontrado" nl
+print green "SUCESSO" nocolor " - Operação concluída" nl
+print blue "Informação:" nocolor " Verifique os dados" nl
+
+# Combinações de cores
+print bred bgblue "CRÍTICO" nocolor " - Sistema em risco" nl
+print yellow "AVISO" nocolor " - Ação necessária" nl
+
+# Múltiplos statements
+let a = 5 : print red a nocolor " ao quadrado:" a * a nl
 ```
 
 ---
 
-## 💡 Exemplos Práticos v0.4.0
+## 🚀 Próximas Versões
 
-### 1. Calculadora com Saída Formatada:
-```basic
-# calculadora.zz
-let a = 10
-let b = 20
-
-print "Calculadora ZzBasic" nl
-print "===================" nl
-print "A =" a nl
-print "B =" b nl
-print "Soma:" a "+" b "=" a + b nl
-print "Produto:" a "*" b "=" a * b nl
-```
-
-### 2. Relatório Simples:
-```basic
-# relatorio.zz
-let produto = "Monitor LED"
-let preco = 299.90
-let quantidade = 3
-let total = preco * quantidade
-
-print "RELATÓRIO DE VENDA" nl
-print "=================" nl
-print "Produto:" produto nl
-print "Preço unitário: R$" preco nl
-print "Quantidade:" quantidade nl
-print "Total: R$" total nl
-```
-
-### 3. Interface Interativa:
-```basic
-# Bem-vindo ao REPL
->> print "=== SISTEMA ZzBasic v0.4.0 ===" nl
->> print "Digite 'help' para ajuda" nl
->> print "ou 'exit' para sair" nl
->> 
-```
+### v0.4.2 
+- Largura de campo e alinhamento no `print`
 
 ---
 
-## 🔮 Roadmap 
+## 📖 Documentação Adicional
 
-### Versão 0.4.0 - PRINT e Saída **(CONCLUÍDA)**
-- [✅] Comando `print` básico
-- [✅] Atalho `?`
-- [✅] Controle de linha com `nl`
-- [✅] Implementação do evaluator para `print`
-- [✅] Integração com REPL
-- [✅] Testes 
-
-### Versão 0.4.1 - Cores e Formatação **(PRÓXIMO)**
-- [ ] Cores ANSI (16 cores básicas + bright)
-- [ ] Comando `width()` para largura fixa
-- [ ] Alinhamento `left`, `right`, `center`
-- [ ] Comando `nocolor` para reset
+Para mais detalhes, consulte o **Manual do Usuário** (em desenvolvimento).
 
 ---
 
-## 🛠️ Solução de Problemas v0.4.0
+## 🤝 Contribuições
 
-### Erros Comuns com `print`:
-
-#### "Unexpected ';' in expression"
-```basic
->> print "A"; print "B"
-Error: print statement cannot have ';' after it.
-```
-**Solução:** Use um único `print` com múltiplos itens:
-```basic
-print "A" "B" nl
-```
-
-#### "Unexpected ':' in expression"
-```basic
->> print "A": print "B"
-Error: print statement cannot have ':' after it.
-```
-**Solução:** Use nova linha para separar statements:
-```basic
-print "A" nl
-print "B" nl
-```
-
-#### "Unexpected 'print' in expression"
-```basic
->> print print "texto"
-Error: 'print' is not a valid expression.
-```
-**Solução:** Apenas um `print` por comando:
-```basic
-print "texto" nl
-```
-
-#### Print não quebra linha
-```basic
->> print "texto"
-# Nada acontece? Aguarde próximo comando...
->> print " continua" nl
-texto continua
-```
-**Solução:** Use `nl` para quebrar linha explicitamente, ou o próximo `print` continuará na mesma linha.
+ZzBasic é um projeto solo, mas sugestões e feedback são bem-vindos!
 
 ---
 
-## 📝 Sobre o Desenvolvimento v0.4.0
+## 📄 Licença
 
-### Novidades Técnicas:
-1. **Nó AST para `print`** - Estrutura otimizada para múltiplos itens
-2. **Parser específico** - Tratamento especial para comandos de saída
-3. **Mensagens de erro contextualizadas** - Ajuda clara para usuários
-4. **Design consistente** - Filosofia "simples e explícito" aplicada ao `print`
-
-### Filosofia Aplicada:
-O `print` do ZzBasic reflete nossa filosofia central:
-- **Explícito sobre implícito** (`nl` vs comportamento automático)
-- **Simples sobre complexo** (um comando, múltiplos itens)
-- **Consistente sobre flexível** (regras claras, sem exceções)
-
-### Para Desenvolvedores:
-- **Código modular** - Parser separado para cada tipo de statement
-- **Mensagens úteis** - Erros que ensinam a usar corretamente
-- **Preparado para extensão** - Estrutura pronta para cores e formatação
+[Especificar licença aqui]
 
 ---
 
-arataca89@gmail.com
-
-Aulas particulares de programação
-
-
-
+**Última atualização:** Janeiro de 2026
+**Versão:** 0.4.1
