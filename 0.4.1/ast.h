@@ -4,6 +4,7 @@
 #define AST_H
 
 #include "zzdefs.h"
+#include "color_mapping.h"
 
 typedef struct ASTNode ASTNode;
 
@@ -20,7 +21,8 @@ typedef enum
     NODE_UNARY_OP,      // operacao unaria (+, -)
     NODE_ASSIGNMENT,    // atribuição  
     NODE_STATEMENT_LIST,
-    NODE_PRINT  
+    NODE_PRINT,
+    NODE_COLOR  
 } NodeType;
 
 typedef enum
@@ -41,7 +43,8 @@ typedef enum
 //          VariableData                   
 //          AssignmentData  
 //          StatementListData 
-//          PrintStatementData  
+//          PrintStatementData 
+//          ColorNodeData
 //          ASTNode
 //===================================================================
 typedef struct
@@ -97,6 +100,10 @@ typedef struct {
     int newline;              // 1 - newline; 0 - mesma linha  
 } PrintStatementData;
 
+typedef struct {
+    int color_token_id;
+    char ansi_color[15];  // Ex: "\033[31m" para vermelho
+} ColorNodeData;
 
 typedef struct ASTNode
 {
@@ -114,45 +121,33 @@ typedef struct ASTNode
         AssignmentData      assignment;
         StatementListData   statementlist;
         PrintStatementData  printstatement;
+        ColorNodeData      color;
     } data;
 
 } ASTNode;
 
 
 ASTNode* create_number_node(double value, int line, int column);
-
 ASTNode* create_string_node(const char* value, int line, int column);
-
 // CRIA NÓ DE VARIÁVEL. VAR_NAME JÁ DEVE SER VÁLIDO (VALIDADO PELO PARSER)
 ASTNode* create_variable_node(const char* var_name, int line, int column);
-
 // CRIA OPERAÇÃO BINÁRIA. LEFT E RIGHT NÃO PODEM SER NULL
 ASTNode* create_binary_op_node(char operator, ASTNode* left, ASTNode* right, 
                                int line, int column);
-
 // CRIA OPERAÇÃO UNÁRIA. OPERAND NÃO PODE SER NULL
 ASTNode* create_unary_op_node(char operator, ASTNode* operand, 
                               int line, int column);
-
 // CRIA ATRIBUIÇÃO. VAR_NAME JÁ VALIDADO, VALUE NÃO PODE SER NULL
 ASTNode* create_assignment_node(const char* var_name, ASTNode* value, 
                                 int line, int column);
-
 ASTNode* create_statement_list_node(int line, int column);
-
 void statement_list_add(ASTNode* list_node, ASTNode* stmt);
-
 // Funções para criar nó print
 ASTNode* create_print_node(int line, int column);
-
+ASTNode* create_color_node(TokenType color_token, int line, int column);
 void print_node_add_item(ASTNode* print_node, ASTNode* expr_node);
-
 void print_set_newline(ASTNode* print_node, int has_newline);
-
-
 void free_ast(ASTNode* node);
-
 void print_ast(ASTNode* node, int indent);
-
 
 #endif // AST_H

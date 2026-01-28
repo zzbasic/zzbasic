@@ -11,6 +11,36 @@
 
 #define EPSILON 1e-12
 
+// Cor atual sendo aplicada (estado global para sessão)
+static const char* current_color_global = "";
+static int colors_enabled_global = 1;
+
+
+//===================================================================
+// FUNÇÕES DESTE ARQUIVO
+//===================================================================
+static EvaluatorResult create_success_result_number(double value, int line, int column);
+static EvaluatorResult create_success_result_string(const char* value, int line, int column);
+static EvaluatorResult create_error_result(const char* message, int line, int column);
+static EvaluatorResult create_error_result_fmt(int line, int column, 
+                                              const char* format, ...);
+
+static void reset_current_color(void);
+static void apply_color(const char* ansi_color);
+static void detect_color_support(void);
+
+// FUNÇÕES PÚBLICAS
+
+// int evaluate_program(ASTNode* node, SymbolTable* symbols);
+// int execute_statement_list(ASTNode* node, SymbolTable* symbols);
+// int execute_statement(ASTNode* node, SymbolTable* symbols);
+// int evaluate_print_statement(ASTNode* node, SymbolTable* symbols);
+// EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalContext ctx);
+// // Old function (for compatibility)
+// EvaluatorResult evaluate(ASTNode* node);
+//===================================================================
+
+
 // ============================================
 // HELPER FUNCTIONS (static)
 // ============================================
@@ -65,10 +95,55 @@ static EvaluatorResult create_error_result_fmt(int line, int column,
 }
 
 
-// ============================================
+// =================================================
+// CORES
+// ==================================================
+
+// Reseta a cor atual
+static void reset_current_color(void)
+{
+    current_color_global = "";
+    if (colors_enabled_global) {
+        printf("%s", COLOR_RESET);
+    }
+}
+
+// Aplica uma cor (se diferente da atual)
+static void apply_color(const char* ansi_color)
+{
+    if (!colors_enabled_global) return;
+    
+    // Se é nocolor (reset)
+    if (ansi_color[0] == '\0' || strcmp(ansi_color, "\033[0m") == 0)
+    {
+        reset_current_color();
+        return;
+    }
+    
+    // Se é a mesma cor já aplicada, não faz nada
+    if (strcmp(current_color_global, ansi_color) == 0)
+    {
+        return;
+    }
+    
+    // Aplica a nova cor
+    printf("%s", ansi_color);
+    current_color_global = ansi_color;
+}
+
+// Verifica se o terminal suporta cores (detecção simples)
+static void detect_color_support(void)
+{
+    // Por enquanto assume que sim
+    // Futuro: verificar variáveis de ambiente TERM, NO_COLOR, etc.
+    colors_enabled_global = 1;
+}
+
+
+// ===================================================
 // EVALUATE PROGRAM 
 // Função principal para avaliar um programa completo
-// ============================================
+// ===================================================
 int evaluate_program(ASTNode* node, SymbolTable* symbols) {
     if (!node) return 0;
     
@@ -194,6 +269,19 @@ int execute_statement(ASTNode* node, SymbolTable* symbols)
         case NODE_PRINT:
             return evaluate_print_statement(node, symbols);
 
+        case NODE_COLOR:
+            // Comando nocolor sozinho (ex: "nocolor" como statement)
+            // Apenas reseta a cor
+            if (node->data.color.color_token_id == 0) {  // CLR_NOCOLOR
+                reset_current_color();
+                return 1;
+            }
+            // Outras cores sozinhas não fazem sentido como statements
+            printf("%s[%d:%d] Warning: color command without print has no effect%s\n",
+                   COLOR_WARNING, node->line, node->column, COLOR_RESET);
+            return 1;
+
+
         case NODE_STATEMENT_LIST:  
             return execute_statement_list(node, symbols);
             
@@ -216,7 +304,15 @@ int evaluate_print_statement(ASTNode* node, SymbolTable* symbols)
     
     PrintStatementData* print_data = &node->data.printstatement;
     int printed_something = 0;
-    
+
+    // Detecta suporte a cores (uma vez só)
+    static int color_detected = 0;
+    if (!color_detected)
+    {
+        detect_color_support();
+        color_detected = 1;
+    }
+
     // Se não tem itens (print vazio) → linha em branco
     if (print_data->count == 0) {
         printf("\n");
@@ -227,8 +323,20 @@ int evaluate_print_statement(ASTNode* node, SymbolTable* symbols)
     for (int i = 0; i < print_data->count; i++)
     {
         ASTNode* item_node = print_data->items[i];
+
+        // ============================================
+        // CASO ESPECIAL: NODE_COLOR (não é expressão!)
+        // ============================================
+        if (item_node->type == NODE_COLOR)
+        {
+            // Aplica a cor diretamente
+            apply_color(item_node->data.color.ansi_color);
+            continue;  // Não imprime nada, só muda a cor
+        }
         
-        // Avalia a expressão (qualquer tipo)
+        // ======================================================
+        // CASO NORMAL: Expressão (número, string, variável, etc)
+        // ======================================================
         EvaluatorResult result = evaluate_expression(item_node, symbols, CTX_ANY);
         if (!result.success)
         {
@@ -292,6 +400,9 @@ int evaluate_print_statement(ASTNode* node, SymbolTable* symbols)
         printf("\n");
     }
     
+    // Se não tem newline, NÃO reseta a cor (persistência!)
+    // A cor será resetada no próximo print que tiver nocolor ou no final do programa
+
     return printed_something ? 1 : 0;
 }
 

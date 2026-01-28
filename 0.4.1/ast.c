@@ -6,6 +6,35 @@
 
 #include "ast.h"
 #include "a89alloc.h"
+#include "color_mapping.h"
+
+/********************************************************************
+ 
+ FUNÇÕES DESTE ARQUIVO
+
+ASTNode* create_number_node(double value, int line, int column);
+ASTNode* create_string_node(const char* value, int line, int column);
+// CRIA NÓ DE VARIÁVEL. VAR_NAME JÁ DEVE SER VÁLIDO (VALIDADO PELO PARSER)
+ASTNode* create_variable_node(const char* var_name, int line, int column);
+// CRIA OPERAÇÃO BINÁRIA. LEFT E RIGHT NÃO PODEM SER NULL
+ASTNode* create_binary_op_node(char operator, ASTNode* left, ASTNode* right, 
+                               int line, int column);
+// CRIA OPERAÇÃO UNÁRIA. OPERAND NÃO PODE SER NULL
+ASTNode* create_unary_op_node(char operator, ASTNode* operand, 
+                              int line, int column);
+// CRIA ATRIBUIÇÃO. VAR_NAME JÁ VALIDADO, VALUE NÃO PODE SER NULL
+ASTNode* create_assignment_node(const char* var_name, ASTNode* value, 
+                                int line, int column);
+ASTNode* create_statement_list_node(int line, int column);
+void statement_list_add(ASTNode* list_node, ASTNode* stmt);
+// Funções para criar nó print
+ASTNode* create_print_node(int line, int column);
+ASTNode* create_color_node(TokenType color_token, int line, int column);
+void print_node_add_item(ASTNode* print_node, ASTNode* expr_node);
+void print_set_newline(ASTNode* print_node, int has_newline);
+void free_ast(ASTNode* node);
+void print_ast(ASTNode* node, int indent);
+********************************************************************/
 
 //===================================================================
 // NODE CREATION FUNCTIONS
@@ -200,6 +229,30 @@ ASTNode* create_print_node(int line, int column)
     return node;
 }
 
+
+ASTNode* create_color_node(TokenType color_token, int line, int column)
+{
+    ASTNode* node = create_node(NODE_COLOR, line, column);
+    
+    // 1. Converte TokenType para ColorCode
+    ColorCode color_code = token_to_color_code(color_token);
+    node->data.color.color_token_id = color_code;
+    
+    // 2. Obtém string ANSI
+    const char* ansi = token_to_ansi(color_token);
+    
+    // 3. Copia para o node
+    if (ansi != NULL) {
+        strncpy(node->data.color.ansi_color, ansi, 
+                sizeof(node->data.color.ansi_color) - 1);
+        node->data.color.ansi_color[sizeof(node->data.color.ansi_color) - 1] = '\0';
+    } else {
+        strcpy(node->data.color.ansi_color, "\033[0m");
+    }
+    
+    return node;
+}
+
 // Adiciona um item (expressão) ao comando print
 void print_node_add_item(ASTNode* print_node, ASTNode* item)
 {
@@ -234,7 +287,6 @@ void print_node_add_item(ASTNode* print_node, ASTNode* item)
     print_data->items[print_data->count] = item;
     print_data->count++;
 }
-
 
 void print_set_newline(ASTNode* print_node, int has_newline) {
     if (print_node->type != NODE_PRINT) return;
@@ -300,6 +352,10 @@ void free_ast(ASTNode* node)
             break;
         }
 
+        case NODE_COLOR:
+            // ColorNodeData não tem filhos para liberar
+            break;
+
     }
     
     a89free(node); 
@@ -358,7 +414,7 @@ void print_ast(ASTNode* node, int indent)
             printf("PRINT_STATEMENT (%d items)", node->data.printstatement.count);
             if (node->data.printstatement.newline)
             {
-                printf(" [no newline]");
+                printf(" [newline]");
             }
             printf("\n");
             for (int i = 0; i < node->data.printstatement.count; i++)
@@ -367,35 +423,40 @@ void print_ast(ASTNode* node, int indent)
             }
             break;
 
+        case NODE_COLOR:
+            printf("COLOR: token_id=%d\n", 
+                   node->data.color.color_token_id);
+            break;
+
     }
 }
 
-#ifdef TEST
+#ifdef TESTAST
 #include "utils.h"
 #include "color.h"
 int main(void)
 {
     setup_utf8();
     
-    printf("=== TESTE CRIAÇÃO DE NODES ===\n\n");
+    printf("%s=== TESTE CRIAÇÃO DE NODES ===%s\n\n", COLOR_HEADER, COLOR_RESET);
     
     // 1. Number
     ASTNode* num = create_number_node(42.5, 1, 1);
-    printf("1. Número:\n");
+    printf("%s1. Número:%s\n", COLOR_HEADER, COLOR_RESET);
     print_ast(num, 0);
     printf("\n");
     wait();
 
     // 2. String
     ASTNode* str = create_string_node("Olá Mundo", 2, 1);
-    printf("2. String:\n");
+    printf("%s2. String:%s\n", COLOR_HEADER, COLOR_RESET);
     print_ast(str, 0);
     printf("\n");
     wait();
     
     // 3. Variable
     ASTNode* var = create_variable_node("idade", 3, 1);
-    printf("3. Variável:\n");
+    printf("%s3. Variável:%s\n", COLOR_HEADER, COLOR_RESET);
     print_ast(var, 0);
     printf("\n");
     wait();
@@ -404,7 +465,7 @@ int main(void)
     ASTNode* num1 = create_number_node(10.0, 4, 1);
     ASTNode* num2 = create_number_node(20.0, 4, 5);
     ASTNode* soma = create_binary_op_node('+', num1, num2, 4, 3);
-    printf("4. Operação binária (10 + 20):\n");
+    printf("%s4. Operação binária (10 + 20):%s\n", COLOR_HEADER, COLOR_RESET);
     print_ast(soma, 0);
     printf("\n");
     wait();
@@ -412,7 +473,7 @@ int main(void)
     // 5. Unary operation: -15
     ASTNode* num3 = create_number_node(15.0, 5, 2);
     ASTNode* negativo = create_unary_op_node('-', num3, 5, 1);
-    printf("5. Operação unária (-15):\n");
+    printf("%s5. Operação unária (-15):%s\n", COLOR_HEADER, COLOR_RESET);
     print_ast(negativo, 0);
     printf("\n");
     wait();
@@ -420,7 +481,7 @@ int main(void)
     // 6. Assignment: x = 100
     ASTNode* num4 = create_number_node(100.0, 6, 5);
     ASTNode* atrib = create_assignment_node("x", num4, 6, 1);
-    printf("6. Atribuição (x = 100):\n");
+    printf("%s6. Atribuição (x = 100):%s\n", COLOR_HEADER, COLOR_RESET);
     print_ast(atrib, 0);
     printf("\n");
     wait();
@@ -433,7 +494,7 @@ int main(void)
     ASTNode* mult = create_binary_op_node('*', soma2, num7, 7, 13);
     ASTNode* atrib2 = create_assignment_node("y", mult, 7, 1);
 
-    printf("7. Expressão complexa (y = (5 + 3) * 2):\n");
+    printf("%s7. Expressão complexa (y = (5 + 3) * 2):%s\n", COLOR_HEADER, COLOR_RESET);
     print_ast(atrib2, 0);
     wait();
 
@@ -458,7 +519,6 @@ int main(void)
     ASTNode* var2 = create_variable_node("usuario", 9, 14);
     ASTNode* str2b = create_string_node("Idade:", 9, 22);
     num2 = create_number_node(25, 9, 29);
-    wait();
 
     print_node_add_item(print2, str2a);
     print_node_add_item(print2, var2);
@@ -484,12 +544,12 @@ int main(void)
     printf("\n");
     wait();
 
-    // 8.4 Print com suppress_newline (; no final)
-    printf("8.4 Print com suppress_newline (; no final):\n");
+    // 8.4 Print com set_newline (nl no final)
+    printf("8.4 Print com set_newline (nl no final):\n");
     ASTNode* print4 = create_print_node(11, 1);
-    ASTNode* str4 = create_string_node("Linha 1", 11, 7);
+    ASTNode* str4 = create_string_node("Linha 1 nl", 11, 7);
     print_node_add_item(print4, str4);
-    print_set_suppress_newline(print4, 1);
+    print_set_newline(print4, 1);
     print_ast(print4, 0);
     printf("\n");
     wait();
@@ -511,7 +571,8 @@ int main(void)
     print_node_add_item(print5, str5b);
     print_node_add_item(print5, expr5);
     print_ast(print5, 0);
-    
+    wait();
+
     // Free everything
     printf("\n=== LIMPEZA ===\n");
     free_ast(num);

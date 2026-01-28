@@ -48,9 +48,9 @@ typedef enum {
     TOKEN_LEFT,         // left
     TOKEN_RIGHT,        // right
     TOKEN_CENTER,       // center
-    TOKEN_NOCOLOR,      // nocolor
 
     // Cores normais (8)
+    TOKEN_NOCOLOR,      // nocolor
     TOKEN_BLACK,        // black
     TOKEN_RED,          // red
     TOKEN_GREEN,        // green

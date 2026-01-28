@@ -15,6 +15,8 @@ static void parser_set_error(Parser* parser, const char* message);
 
 static int is_keyword_token(TokenType type);
 static const char* get_keyword_name(TokenType type);
+static int is_color_token(TokenType type);
+static const char* get_color_name(TokenType type);
 static void report_print_keyword_error(Parser* parser, Token token);
 
 static ASTNode* parse_program(Parser* parser);
@@ -22,6 +24,7 @@ static ASTNode* parse_statement_list(Parser* parser);
 static ASTNode* parse_statement(Parser* parser);
 static ASTNode* parse_assignment_stmt(Parser* parser);
 static ASTNode* parse_print_statement(Parser* parser);
+static ASTNode* parse_color_statement(Parser* parser);
 static ASTNode* parse_expression(Parser* parser);
 static ASTNode* parse_term(Parser* parser);
 static ASTNode* parse_expression_stmt(Parser* parser);
@@ -109,6 +112,41 @@ static const char* get_keyword_name(TokenType type) {
         // case TOKEN_IF:       return "if";
         // case TOKEN_FOR:      return "for";
         default:             return "command";
+    }
+}
+
+static int is_color_token(TokenType type)
+{
+    // Verifica se está no intervalo das cores
+    return (type >= TOKEN_NOCOLOR && type <= TOKEN_BGWHITE);
+}
+
+// Verifica se um token pode ser statement sozinho (nocolor)
+static int is_color_statement_token(TokenType type) {
+    return (type == TOKEN_NOCOLOR);  // Apenas nocolor pode ser statement
+}
+
+// Obtém nome amigável de uma cor
+static const char* get_color_name(TokenType type)
+{
+    switch (type) {
+        case TOKEN_NOCOLOR: return "nocolor";
+        case TOKEN_BLACK:   return "black";
+        case TOKEN_RED:     return "red";
+        case TOKEN_GREEN:   return "green";
+        case TOKEN_YELLOW:  return "yellow";
+        case TOKEN_BLUE:    return "blue";
+        case TOKEN_MAGENTA: return "magenta";
+        case TOKEN_CYAN:    return "cyan";
+        case TOKEN_WHITE:   return "white";
+        case TOKEN_BRED:    return "bred";
+        case TOKEN_BGREEN:  return "bgreen";
+        case TOKEN_BYELLOW: return "byellow";
+        case TOKEN_BBLUE:   return "bblue";
+        case TOKEN_BMAGENTA: return "bmagenta";
+        case TOKEN_BCYAN:   return "bcyan";
+        case TOKEN_BWHITE:  return "bwhite";
+        default:            return "color";
     }
 }
 
@@ -247,9 +285,9 @@ static ASTNode* parse_statement_list(Parser* parser)
     return list;
 }
 
-//===================================================================
-// statement := assignment_stmt | print_stetemant | expression_stmt
-//===================================================================
+//==============================================================================
+// statement := assignment_stmt | print_stetemant | expression_stmt | color_stmt
+//==============================================================================
 static ASTNode* parse_statement(Parser* parser)
 {
     if (parser->current_token.type == TOKEN_LET)
@@ -260,6 +298,11 @@ static ASTNode* parse_statement(Parser* parser)
              parser->current_token.type == TOKEN_QUESTION)
     {
         return parse_print_statement(parser);  
+    }
+    else if (is_color_statement_token(parser->current_token.type))
+    {
+        // Cores que podem ser statements sozinhas (apenas nocolor por enquanto)
+        return parse_color_statement(parser);
     }
     else
     {
@@ -376,12 +419,38 @@ static ASTNode* parse_print_statement(Parser* parser)
             return NULL;
         }
         
-        // Agora parseia com segurança
+
+        // ============================================
+        // CASOS ESPECIAIS PARA PRINT
+        // ============================================
+        
+        // 1. CORES
+        if (is_color_token(token.type))
+        {
+            ASTNode* color_node = create_color_node(token.type, 
+                                                   token.line, 
+                                                   token.column);
+            if (!color_node)
+            {
+                parser_set_error(parser, "Error: could not create color node");
+                free_ast(print_node);
+                return NULL;
+            }
+            print_node_add_item(print_node, color_node);
+            parser_advance(parser);  // Consome o token de cor
+            continue;  // Continua para próximo item
+        }
+        
+        // 2. COMANDOS DE FORMATAÇÃO (width, left, right, center)
+        //    TODO
+        
+        // 3. EXPRESSÕES NORMAIS (números, strings, variáveis, etc)
         ASTNode* item = parse_expression(parser);
-        if (parser->has_error) {
+        if (parser->has_error)
+        {
             free_ast(print_node);
             return NULL;
-        }
+        }        
         
         print_node_add_item(print_node, item);
     }
@@ -393,12 +462,40 @@ static ASTNode* parse_print_statement(Parser* parser)
     } else {
         print_set_newline(print_node, 0);  // 0 = sem nl (mesma linha)
     }
-
-
     
     return print_node;
 }
 
+//===================================================================
+// color_stmt := COLOR_TOKEN (apenas nocolor por enquanto)
+//===================================================================
+static ASTNode* parse_color_statement(Parser* parser)
+{
+    Token token = parser->current_token;
+    
+    // Verifica se é um token de cor permitido como statement
+    if (!is_color_statement_token(token.type))
+    {
+        char error_msg[BUFFER_SIZE];
+        snprintf(error_msg, sizeof(error_msg),
+            "Error [%d:%d]: Color '%s' cannot be used as standalone statement",
+            token.line, token.column, token.text);
+        parser_set_error(parser, error_msg);
+        return NULL;
+    }
+    
+    // Cria nó de cor
+    ASTNode* node = create_color_node(token.type, token.line, token.column);
+    
+    if (!node) {
+        parser_set_error(parser, "Error: could not create color node");
+        return NULL;
+    }
+    
+    parser_advance(parser);  // Consome o token
+    
+    return node;
+}
 
 //===================================================================
 // expression_stmt := expression
@@ -629,7 +726,7 @@ ASTNode* parse_single_statement(Lexer* lexer) {
 int main() {
     setup_utf8();
     
-    printf("%s=== TESTE PARSER v0.3.0 (Múltiplos Statements) ===%s\n\n", 
+    printf("%s=== TESTE PARSER v0.4.1 (Cores no print) ===%s\n\n", 
            COLOR_HEADER, COLOR_RESET);
     
     char* testes[] = {
@@ -652,7 +749,7 @@ int main() {
         "a + 10",
         
         // ============================================
-        // NOVOS TESTES v0.3.0 - MÚLTIPLOS STATEMENTS
+        // TESTES v0.3.0 - MÚLTIPLOS STATEMENTS
         // ============================================
         
         // 1. Dois-pontos (BASIC tradicional)
@@ -684,6 +781,53 @@ int main() {
          "let x = 5 : : let y = 10",  // Dois separadores seguidos - ERRO
          "let x = 5 ; ; ;",           // Múltiplos separadores - ERRO
          ": let x = 5",               // Separador no início - ERRO
+
+
+        // ============================================
+        // TESTES v0.4.1 - CORES NO PRINT
+        // ============================================
+        
+        // 1. Cores básicas
+        "print red \"ERRO\" nocolor \": Arquivo não encontrado\" nl",
+        "print green \"SUCESSO\" nocolor blue \" INFO\" nocolor nl",
+        
+        // 2. Cores bright
+        "print bred \"ALERTA!\" nocolor \" Mensagem importante\" nl",
+        
+        // 3. Cores com expressões
+        "let valor = 100",
+        "print green \"Saldo:\" nocolor \" R$\" bred valor nocolor nl",
+        
+        // 4. Cores persistentes (em múltiplos prints)
+        "print cyan",
+        "print \"Texto 1 em ciano\" nl",
+        "print \"Texto 2 ainda em ciano\" nl",
+        "nocolor",
+        "print \"Texto 3 normal\" nl",
+        
+        // 5. Combinações complexas
+        "print cyan \"=== RELATÓRIO DE VENDAS ===\" nocolor nl",
+        "print",
+        
+        // 6. Tabela com cores
+        "print yellow \"CÓDIGO\" nocolor \"    \"",
+        "print yellow \"PRODUTO\" nocolor \"     \"",
+        "print yellow \"ESTOQUE\" nocolor nl",
+        "print \"---    \" \"-------     \" \"-------\" nl",
+        "print \"101\" \"    \" \"Monitor\" \"     \" green \"10\" nocolor nl",
+        "print \"102\" \"    \" \"Teclado\" \"     \" yellow \"5\" nocolor nl",
+        "print \"103\" \"    \" \"Mouse\" \"     \" red \"0\" nocolor nl",
+        
+        // 7. Testes de erro (esperados)
+         "print red ; let x = 5",  // Erro: ; após cor
+         "print red : print green", // Erro: : após cor
+        "print let",  // Erro: palavra-chave como expressão
+        
+        // 8. Formatação + cores (futuro)
+        // "print red width(20) \"Texto alinhado\" nocolor nl",
+        
+        // 9. Background colors 
+         "print bgred \"Fundo vermelho\" nocolor nl",
     };
     
     int num_testes = sizeof(testes) / sizeof(testes[0]);

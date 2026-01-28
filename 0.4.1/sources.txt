@@ -1,15 +1,16 @@
 # ========================================
-# ZzBasic v0.4.0 - print
+# ZzBasic v0.4.1 - print
 # ========================================
 
 utils.c
+color_mapping.c
 a89alloc.c
 lexer.c
 ast.c
 symbol_table.c
 parser.c
 evaluator.c
-zzbasic.c
+#zzbasic.c
 #main.c
 
-test_print.c
+evaluator_test.c

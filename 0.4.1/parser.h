@@ -11,6 +11,7 @@
 #include "zzdefs.h"
 #include "lexer.h"
 #include "ast.h"
+#include "color_mapping.h"
 
 typedef struct Parser{
     Lexer* lexer;
