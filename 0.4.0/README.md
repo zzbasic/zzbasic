@@ -4,7 +4,7 @@
 
 **ZzBasic** é uma linguagem de programação interpretada que combina a simplicidade do BASIC clássico com recursos modernos. É um projeto solo desenvolvido com cuidado e atenção aos detalhes.
 
-## Versão Atual: **0.4.0 (EM DESENVOLVIMENTO)** 🚧
+## Versão Atual: **0.4.0** 🚧
 
 ### 🚀 Características
 - ✅ **Sintaxe limpa** - Comandos em caixa baixa (`let`, não `LET`)
