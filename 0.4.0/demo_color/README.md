@@ -1,4 +1,4 @@
-```c
+```
 # ============================================================
 # ZzBasic v0.4.1 - Demonstração de Cores
 # Um programa que mostra todos os recursos de cores disponíveis
