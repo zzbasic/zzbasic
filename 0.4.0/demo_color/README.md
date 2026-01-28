@@ -1,8 +1,8 @@
-![demo_colors#1.png](demo_colors#1.png)
+![demo_colors1.png](demo_colors1.png)
 
-![demo_colors#2.png](demo_colors#2.png)
+![demo_colors2.png](demo_colors2.png)
 
-![demo_colors#3.png](demo_colors#3.png)
+![demo_colors3.png](demo_colors3.png)
 
 ---
 
