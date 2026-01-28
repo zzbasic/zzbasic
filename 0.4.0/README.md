@@ -24,7 +24,7 @@
 | 0.1.0 | Lançada | Expressões matemáticas básicas |
 | 0.2.0 | Lançada | Variáveis (`let`), strings, tabela de símbolos |
 | 0.3.0 | Lançada | Múltiplos statements, REPL avançado, comandos de debug |
-| **0.4.0** | **Em desenvolvimento** | **Comando `print`, controle de linha, saída formatada** |
+| **0.4.0** | Lançada | Comando `print`, controle de linha, saída formatada |
 
 ---
 
