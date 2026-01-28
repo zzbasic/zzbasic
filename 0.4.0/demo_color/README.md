@@ -1,3 +1,9 @@
+[demo_colors#1.png](demo_colors#1.png)
+[demo_colors#2.png](demo_colors#2.png)
+[demo_colors#3.png](demo_colors#3.png)
+
+---
+
 ```
 # ============================================================
 # ZzBasic v0.4.1 - Demonstração de Cores
