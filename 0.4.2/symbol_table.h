@@ -32,3 +32,4 @@ int symbol_table_count(SymbolTable* table);  // número de variáveis
 void symbol_table_print(SymbolTable* table);
 
 #endif
+// Fim de symbol_table.h

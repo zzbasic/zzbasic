@@ -40,3 +40,4 @@ typedef enum {
 } ColorCode;
 
 #endif // COLOR_CONSTANTS_H
+// Fim de color_constants.h

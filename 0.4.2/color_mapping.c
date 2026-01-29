@@ -74,3 +74,4 @@ const char* token_to_ansi(TokenType token) {
     ColorCode code = token_to_color_code(token);
     return color_code_to_ansi(code);
 }
+// Fim de color_mapping.c

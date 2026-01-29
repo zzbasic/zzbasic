@@ -1,3 +1,5 @@
+// a89alloc
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,9 +22,11 @@ static allocation_info allocations[MAX_ALLOCATIONS];
 static int total_allocations = 0;
 
 
-void* a89alloc(size_t size, const char* file, int line) {
+void* a89alloc(size_t size, const char* file, int line)
+{
     // Validação 1: Verificar limite de alocações
-    if (total_allocations >= MAX_ALLOCATIONS) {
+    if (total_allocations >= MAX_ALLOCATIONS)
+    {
         fprintf(stderr,
                 "ERRO: Limite máximo de alocações atingido (%d)!\n", 
                 MAX_ALLOCATIONS);
@@ -32,7 +36,8 @@ void* a89alloc(size_t size, const char* file, int line) {
     }
     
     // Validação 2: Verificar tamanho válido
-    if (size == 0) {
+    if (size == 0)
+    {
         fprintf(stderr,
                 "AVISO: Tentativa de alocar 0 bytes em %s:%d\n", 
                 file, line);
@@ -42,7 +47,8 @@ void* a89alloc(size_t size, const char* file, int line) {
     }
     
     // Validação 3: Verificar parâmetros de entrada
-    if (file == NULL) {
+    if (file == NULL)
+    {
         fprintf(stderr,
                 "ERRO: Parâmetro 'file' é NULL em a89alloc()\n");
         return NULL;
@@ -51,7 +57,8 @@ void* a89alloc(size_t size, const char* file, int line) {
     // Alocação usando malloc padrão
     void* ptr = malloc(size);
     
-    if (ptr != NULL) {
+    if (ptr != NULL)
+    {
         // Registro bem-sucedido no sistema de controle
         allocations[total_allocations].ptr = ptr;
         allocations[total_allocations].size = size;
@@ -67,13 +74,17 @@ void* a89alloc(size_t size, const char* file, int line) {
         // Log informativo (pode ser desabilitado em produção)
         //printf("ALOCACAO: %zu bytes em %s:%d (ptr: %p)\n", 
         //       size, file, line, ptr);
-    } else {
-        // Tratamento de falha na alocação
+    }
+    else
+    {
+        // Falha na alocação. Encerra programa.
         fprintf(stderr,
-                "ERRO: Falha na alocação de %zu bytes em %s:%d\n", 
+                "a89alloc:ERRO: Falha na alocação de %zu bytes em %s:%d\n", 
                 size, file, line);
         fprintf(stderr,
                 "Possíveis causas: memória insuficiente ou fragmentação.\n");
+
+        exit(EXIT_FAILURE);
     }
     
     return ptr;

@@ -131,4 +131,4 @@ void lexer_print_all_tokens(const char* source);
 const char* token_type_to_string(TokenType type);
 
 #endif // LEXER_H
-// fim de lexer.h
+// Fim de lexer.h

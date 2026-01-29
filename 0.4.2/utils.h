@@ -7,3 +7,4 @@ void setup_utf8();
 void wait();
 
 #endif
+// Fim de utils.h

@@ -1,4 +1,5 @@
 // utils.c
+
 #include <stdio.h>
 
 #include "utils.h"
@@ -21,3 +22,4 @@ void wait() {
     getchar(); // Wait for user to press Enter
     printf("\n");
 }
+// Fim de utils.c

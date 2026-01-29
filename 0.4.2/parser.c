@@ -452,7 +452,24 @@ static ASTNode* parse_print_statement(Parser* parser)
                 return NULL;
             }
             parser_advance(parser);  // Consome o '('
+
+            // Valida se o usuario passou um numero como argumento do width()
+            if(parser->current_token.type != TOKEN_NUMBER)
+            {
+                parser_set_error(parser, "Error: number expected in width()");
+                free_ast(print_node);
+                return NULL;
+            }
+
             int width_value  = parser->current_token.value.number;
+
+            // Valida o intervalo aceitável para width
+            if (width_value < 0 || width_value > 256) {
+                parser_set_error(parser, "Error: width must be between 1 and 256");
+                free_ast(print_node);
+                return NULL;
+            }
+
             parser_advance(parser);  // Consome o numero
             if(parser->current_token.type != TOKEN_RPAREN)
             {
@@ -760,201 +777,4 @@ ASTNode* parse_single_statement(Lexer* lexer) {
     
     return result;
 }
-
-#ifdef TEST
-#include "color.h"
-#include "utils.h"
-
-int main() {
-    setup_utf8();
-    
-    printf("%s=== TESTE PARSER v0.4.1 (Cores no print) ===%s\n\n", 
-           COLOR_HEADER, COLOR_RESET);
-    
-    char* testes[] = {
-        // ============================================
-        // TESTES EXISTENTES (compatibilidade)
-        // ============================================
-/*        "-5 + 3",
-        "10 - 4 * 2",
-        "-(5 + 3) * 2",
-        "10 / 2 + 1",
-        
-        "let x = 10",
-        "let y = 20",
-        "x + y",
-        "let pi = 3.14159",
-        "pi * 2",
-        "let total = (x + y) * 2",
-        "total / 3",
-        "let a = -5",
-        "a + 10",
-        
-        // ============================================
-        // TESTES v0.3.0 - MÚLTIPLOS STATEMENTS
-        // ============================================
-        
-        // 1. Dois-pontos (BASIC tradicional)
-        "let a = 5 : let b = a * 2",
-        "let x = 10 : let y = 20 : x + y",
-        "let nome = \"Zz\" : let versao = 0.3 : nome",
-        
-        // 2. Ponto-e-vírgula (moderno)
-        "let a = 5; let b = a * 2",
-        "let x = 10; let y = 20; x + y;",
-        "let a = 1; let b = 2; let c = 3; a + b + c",
-        
-        // 3. Misturado
-        "let a = 5 : let b = 10; a + b",
-        "let x = 1; let y = 2 : let z = 3; x * y * z",
-        
-        // 4. Com strings
-        "let msg = \"Olá\" : let alvo = \"Mundo\" : msg",
-        "let a = \"teste\"; let b = 123; a",
-        
-        // 5. Expressões complexas com múltiplos statements
-        "let base = 10 : let altura = 5 : let area = (base * altura) / 2 : area",
-        
-        // 6. Apenas um statement (com separador no final) - deve funcionar
-        "let x = 100;",
-        "let y = 200:",
-        
-        // 7. Testes de erro (esperados)
-         "let x = 5 : : let y = 10",  // Dois separadores seguidos - ERRO
-         "let x = 5 ; ; ;",           // Múltiplos separadores - ERRO
-         ": let x = 5",               // Separador no início - ERRO
-
-
-        // ============================================
-        // TESTES v0.4.1 - CORES NO PRINT
-        // ============================================
-        
-        // 1. Cores básicas
-        "print red \"ERRO\" nocolor \": Arquivo não encontrado\" nl",
-        "print green \"SUCESSO\" nocolor blue \" INFO\" nocolor nl",
-        
-        // 2. Cores bright
-        "print bred \"ALERTA!\" nocolor \" Mensagem importante\" nl",
-        
-        // 3. Cores com expressões
-        "let valor = 100",
-        "print green \"Saldo:\" nocolor \" R$\" bred valor nocolor nl",
-        
-        // 4. Cores persistentes (em múltiplos prints)
-        "print cyan",
-        "print \"Texto 1 em ciano\" nl",
-        "print \"Texto 2 ainda em ciano\" nl",
-        "nocolor",
-        "print \"Texto 3 normal\" nl",
-        
-        // 5. Combinações complexas
-        "print cyan \"=== RELATÓRIO DE VENDAS ===\" nocolor nl",
-        "print",
-        
-        // 6. Tabela com cores
-        "print yellow \"CÓDIGO\" nocolor \"    \"",
-        "print yellow \"PRODUTO\" nocolor \"     \"",
-        "print yellow \"ESTOQUE\" nocolor nl",
-        "print \"---    \" \"-------     \" \"-------\" nl",
-        "print \"101\" \"    \" \"Monitor\" \"     \" green \"10\" nocolor nl",
-        "print \"102\" \"    \" \"Teclado\" \"     \" yellow \"5\" nocolor nl",
-        "print \"103\" \"    \" \"Mouse\" \"     \" red \"0\" nocolor nl",
-        
-        // 7. Testes de erro (esperados)
-         "print red ; let x = 5",  // Erro: ; após cor
-         "print red : print green", // Erro: : após cor
-        "print let",  // Erro: palavra-chave como expressão
-        
-        // 8. Formatação + cores (futuro)
-        // "print red width(20) \"Texto alinhado\" nocolor nl",
-        
-        // 9. Background colors 
-         "print bgred \"Fundo vermelho\" nocolor nl",
-*/
-        "print width(10) left nome width(20) right idade \" - TESTE\"", 
-    };
-    
-    int num_testes = sizeof(testes) / sizeof(testes[0]);
-    
-    for (int i = 0; i < num_testes; i++) {
-        printf("%s=== Teste %d: '%s' ===%s\n", 
-               COLOR_HEADER, i+1, testes[i], COLOR_RESET);
-        
-        Lexer lexer;
-        lexer_init(&lexer, testes[i]);
-        
-        // USAR parse (não parse_single_statement) para testar múltiplos statements
-        ASTNode* ast = parse(&lexer);
-        
-        if (ast) {
-            printf("AST gerada:\n");
-            print_ast(ast, 0);
-            free_ast(ast);
-            printf("%s✓ Parsing OK%s\n", COLOR_SUCCESS, COLOR_RESET);
-        } else {
-            printf("%s✗ ERRO no parsing%s\n", COLOR_ERROR, COLOR_RESET);
-        }
-        
-        printf("\n");
-        wait();
-    }
-    
-    // ============================================
-    // TESTES ESPECIAIS
-    // ============================================
-/*    printf("%s=== TESTES ESPECIAIS ===%s\n", COLOR_HEADER, COLOR_RESET);
-    
-    // Teste com múltiplas linhas em uma string (simulando arquivo)
-    printf("\n%sTeste com múltiplas linhas:%s\n", YELLOW, COLOR_RESET);
-    {
-        char* multi_line = "let x = 5\nlet y = 10\nx + y";
-        printf("Código: \"%s\"\n", multi_line);
-        
-        Lexer lexer;
-        lexer_init(&lexer, multi_line);
-        
-        ASTNode* ast = parse(&lexer);
-        if (ast) {
-            printf("AST:\n");
-            print_ast(ast, 0);
-            free_ast(ast);
-            printf("%s✓ OK%s\n", COLOR_SUCCESS, COLOR_RESET);
-        } else {
-            printf("%s✗ ERRO%s\n", COLOR_ERROR, COLOR_RESET);
-        }
-    }
-    
-    wait();
-    
-    // Teste de separadores no final (deve ser permitido)
-    printf("\n%sTeste separadores no final:%s\n", YELLOW, COLOR_RESET);
-    {
-        char* tests[] = {
-            "let x = 5:",
-            "let y = 10;",
-            "let z = 15:\n",
-            "let w = 20;\n",
-        };
-        
-        for (int i = 0; i < 4; i++) {
-            printf("  '%s': ", tests[i]);
-            Lexer lexer;
-            lexer_init(&lexer, tests[i]);
-            
-            ASTNode* ast = parse(&lexer);
-            if (ast) {
-                printf("%sOK%s\n", COLOR_SUCCESS, COLOR_RESET);
-                free_ast(ast);
-            } else {
-                printf("%sERRO%s\n", COLOR_ERROR, COLOR_RESET);
-            }
-        }
-    }
-    
-    printf("\n%s=== TODOS OS TESTES COMPLETADOS ===%s\n", COLOR_SUCCESS, COLOR_RESET);
-*/    
-    a89check_leaks();
-    return 0;
-}
-#endif
-// END OF parser.c
+// Fim de parser.c

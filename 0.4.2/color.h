@@ -1,4 +1,5 @@
 // color.h 
+
 #ifndef COLOR_H
 #define COLOR_H
 
@@ -61,3 +62,4 @@
 #define COLOR_EXPR      "\033[1;37m"    // Branco brilhante (para expressões)
 #define COLOR_AST       "\033[0;36m"    // Ciano normal (para AST)
 #endif
+// Fim de color.h

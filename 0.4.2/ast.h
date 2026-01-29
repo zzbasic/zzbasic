@@ -170,3 +170,4 @@ void free_ast(ASTNode* node);
 void print_ast(ASTNode* node, int indent);
 
 #endif // AST_H
+// Fim de st.h

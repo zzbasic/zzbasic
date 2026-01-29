@@ -16,3 +16,4 @@ const char* color_code_to_ansi(ColorCode  code);
 const char* token_to_ansi(TokenType token);
 
 #endif // COLOR_MAPPING_H
+// Fim de color_mapping.h
