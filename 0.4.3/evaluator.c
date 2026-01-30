@@ -476,11 +476,11 @@ int execute_statement(ASTNode* node, SymbolTable* symbols)
             {
                 if (result.is_string)
                 {
-                    printf("= \"%s\"\n", result.value.string);
+                    printf("\"%s\"\n", result.value.string);
                 }
                 else
                 {
-                    printf("= %g\n", result.value.number);
+                    printf("%g\n", result.value.number);
                 }
                 return 1;
             }
@@ -954,9 +954,9 @@ int execute_statement_with_context(ASTNode* node, ExecutionContext* ctx)
             EvaluatorResult result = evaluate_expression(node, ctx->symbols, CTX_ANY);
             if (result.success) {
                 if (result.is_string) {
-                    printf("= \"%s\"\n", result.value.string);
+                    printf("\"%s\"\n", result.value.string);
                 } else {
-                    printf("= %g\n", result.value.number);
+                    printf("%g\n", result.value.number);
                 }
                 return 1;
             } else {
@@ -966,7 +966,7 @@ int execute_statement_with_context(ASTNode* node, ExecutionContext* ctx)
         }
             
         case NODE_STRING:
-            printf("= \"%s\"\n", node->data.string.value);
+            printf("\"%s\"\n", node->data.string.value);
             return 1;
             
         case NODE_STATEMENT_LIST:
