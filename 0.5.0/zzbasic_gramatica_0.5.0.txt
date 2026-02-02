@@ -1,0 +1,104 @@
+# =======================================================
+# ZzBasic - GRAMÁTICA v0.5.0 - if_stmt - NAO ATUALIZADA AINDA 
+# =======================================================
+
+# ---------- PROGRAMA ESTRUTURAL ----------
+program         := (statement | COMMENT)* EOF
+
+statement       := assignment_stmt
+                | input_stmt 
+                | print_stmt
+                | color_stmt 
+                | expression_stmt
+
+assignment_stmt := LET identifier '=' expression
+
+expression_stmt := expression
+
+input_stmt      := 'INPUT' (STRING)? IDENTIFIER  
+
+print_stmt      := ('print' | '?') print_item* ('nl' | EOL | EOF)
+
+color_stmt      := COLOR_TOKEN 
+
+expression      := term (('+' | '-') term)*
+
+term            := factor (('*' | '/') factor)*
+
+factor          := ('+' | '-')? atom
+
+atom            := NUMBER | STRING | BOOLEAN | IDENTIFIER | '(' expression ')' 
+
+COMMENT         := '#' ~[\n\r]*
+
+IDENTIFIER      := [a-zA-Z_][a-zA-Z0-9_]*
+
+nl              := 'nl'        # New line - quando presente, quebra linha
+
+print_item ::= expression 
+             | format_directive
+             | color_directive
+
+format_directive ::= alignment
+                   | width_spec
+
+alignment ::= 'left' | 'right' | 'center'
+
+width_spec ::= 'width' '(' number ')'
+
+color_directive ::= color_name 
+                  | 'nocolor'
+
+color_name ::= normal_color
+             | bright_color
+             | background_color  # Futuro
+
+normal_color ::= 'black' | 'red' | 'green' | 'yellow'
+               | 'blue' | 'magenta' | 'cyan' | 'white'
+
+bright_color ::= 'bred' | 'bgreen' | 'byellow' | 'bblue'
+               | 'bmagenta' | 'bcyan' | 'bwhite'
+
+background_color ::= 'bgblack' | 'bgred' | 'bggreen' | 'bgyellow'
+                   | 'bgblue' | 'bgmagenta' | 'bgcyan' | 'bgwhite'
+
+
+# ---------- NOTAS IMPORTANTES SOBRE O PRINT ----------
+# 1. 'nl' é OPCIONAL no final do print
+# 2. Comportamento padrão: acumula na mesma linha
+# 3. Com 'nl' no final: quebra linha após imprimir
+# 4. Espaço é separador padrão entre print_items
+
+# ---------- LITERAIS ----------
+NUMBER          := [0-9]+ ('.' [0-9]+)?
+STRING          := '"' [^"]* '"'
+
+# ---------- PALAVRAS-CHAVE ----------
+let             := 'let'
+print           := 'print'
+input           := 'input'
+?               := '?' (atalho para print)
+nl              := 'nl'  # nova linha, newline; controle de linha no print
+
+
+# ---------- FORMATAÇÃO  ----------
+width          := 'width' '(' NUMBER ')'
+left           := 'left'
+right          := 'right'
+center         := 'center'
+nocolor        := 'nocolor'
+
+# ---------- CORES  ----------
+black, red, green, yellow, blue, magenta, cyan, white
+bred, bgreen, byellow, bblue, bmagenta, bcyan, bwhite
+bgblack, bgred, bggreen, bgyellow, bgblue, bgmagenta, bgcyan, bgwhite
+
+=====================================================================
+Hierarquia de precedência:
+=====================================================================
+1. ()                  - Parênteses
+2. + - (unário)        - Positivo/Negativo
+3. * /                 - Multiplicação/Divisão
+4. + - (binário)       - Adição/Subtração
+5. = (em let)          - Atribuição
+6. print/?, ;          - Comando print e controle de linha
