@@ -128,7 +128,7 @@ logical_and_expr := comparison_expr ('AND' comparison_expr)*
 
 comparison_expr  := expression (relational_op expression)* 
 
-relational_op    := '==' | '<>' | '<' | '>' | '<=' | '>='
+relational_op    := '==' | '!=' | '<' | '>' | '<=' | '>='
 
 # ---------- EXPRESSÕES ARITMÉTICAS ----------
 expression      := term (('+' | '-') term)*
