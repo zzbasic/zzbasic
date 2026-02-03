@@ -1,5 +1,5 @@
 # =======================================================
-# ZzBasic - GRAMÁTICA v0.5.0 - if_stmt - NAO ATUALIZADA AINDA 
+# ZzBasic - GRAMÁTICA v0.5.0 - if_stmt - 
 # =======================================================
 
 # ---------- PROGRAMA ESTRUTURAL ----------
@@ -9,6 +9,7 @@ statement       := assignment_stmt
                 | input_stmt 
                 | print_stmt
                 | color_stmt 
+                | if_stmt
                 | expression_stmt
 
 assignment_stmt := LET identifier '=' expression
@@ -21,13 +22,22 @@ print_stmt      := ('print' | '?') print_item* ('nl' | EOL | EOF)
 
 color_stmt      := COLOR_TOKEN 
 
+if_stmt         := 'IF' logical_expr 'THEN' EOL   
+                       statement*
+                   'END' 'IF' EOL
+
+# ---------- EXPRESSÕES LÓGICAS ----------
+logical_expr     := logical_or_expr    
+logical_or_expr  := logical_and_expr ('OR' logical_and_expr)*  
+logical_and_expr := comparison_expr ('AND' comparison_expr)*  
+comparison_expr  := expression (relational_op expression)* 
+
+# ---------- EXPRESSÕES ----------
 expression      := term (('+' | '-') term)*
-
 term            := factor (('*' | '/') factor)*
-
 factor          := ('+' | '-')? atom
-
 atom            := NUMBER | STRING | BOOLEAN | IDENTIFIER | '(' expression ')' 
+
 
 COMMENT         := '#' ~[\n\r]*
 

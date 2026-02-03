@@ -650,9 +650,18 @@ static int evaluate_print_statement_with_format(ASTNode* node, ExecutionContext*
         
         // Converte para string
         char buffer[BUFFER_SIZE];
-        if (result.type == RESULT_STRING) {
+        if (result.type == RESULT_BOOL)
+        {
+            // Trata booleano
+            snprintf(buffer, sizeof(buffer), "%s", 
+                     result.value.boolean ? "true" : "false");
+        }
+        else if (result.type == RESULT_STRING)
+        {
             snprintf(buffer, sizeof(buffer), "%s", result.value.string);
-        } else {
+        }
+        else
+        {
             // Formata número sem zeros desnecessários
             double num = result.value.number;
             
@@ -780,6 +789,25 @@ EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalCon
                 }
                 return create_success_result_string(str_value, node->line, node->column);
             }
+
+            // Try as boolean
+            int bool_value;
+            if (symbol_table_get_bool(symbols, var_name, &bool_value))
+            {
+                if (ctx == CTX_NUMBER)
+                {
+                    return create_error_result_fmt(node->line, node->column,
+                         "Variable '%s' is a boolean, cannot be used in mathematical operation", 
+                         var_name);
+                }
+                if (ctx == CTX_STRING)
+                {
+                    return create_error_result_fmt(node->line, node->column,
+                         "Variable '%s' is a boolean, cannot be used as string", 
+                         var_name);
+                }
+                return create_success_result_bool(bool_value, node->line, node->column);
+            }      
             
             // Should not reach here
             return create_error_result_fmt(node->line, node->column,
