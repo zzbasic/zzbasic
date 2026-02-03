@@ -45,7 +45,7 @@ logical_and_expr := comparison_expr ('AND' comparison_expr)*
 
 comparison_expr  := expression (relational_op expression)* 
 
-relational_op    := '==' | '<>' | '<' | '>' | '<=' | '>='
+relational_op    := '==' | '!=' | '<' | '>' | '<=' | '>='
 
 # ---------- EXPRESSÕES ARITMÉTICAS ----------
 expression      := term (('+' | '-') term)*
@@ -183,3 +183,4 @@ RPAREN          := ')'
 # if a = 1 or b = 2 then
 #     print "a = 1 OR b = 2" nl
 # end if
+
