@@ -33,7 +33,7 @@ typedef enum {
 
     TOKEN_LET,          // Palavra-chave LET
     TOKEN_IDENTIFIER,   // Identificador: x, y, total, _var
-    TOKEN_EQUAL,        // Operador de atribuição: =
+    TOKEN_ASSIGN,       // Operador de atribuição: =
 
     TOKEN_COLON,        // :
     TOKEN_SEMICOLON,    // ;
@@ -83,6 +83,22 @@ typedef enum {
 
     TOKEN_TRUE,
     TOKEN_FALSE,
+
+    TOKEN_IF,           // IF
+    TOKEN_THEN,         // THEN  
+    TOKEN_ELSE,         // ELSE  
+    TOKEN_END,          // END
+
+    TOKEN_AND,          // AND
+    TOKEN_OR,           // OR
+    TOKEN_NOT,          // NOT or !
+    
+    TOKEN_EQUAL,           // ==
+    TOKEN_NOT_EQUAL,       // != 
+    TOKEN_LESS,            // < 
+    TOKEN_GREATER,         // > 
+    TOKEN_LESS_EQUAL,      // <= 
+    TOKEN_GREATER_EQUAL,   // >= 
 
     TOKEN_NOERROR
 } TokenType;

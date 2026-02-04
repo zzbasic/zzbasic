@@ -8,6 +8,26 @@
 #include "a89alloc.h"
 #include "color_mapping.h"
 
+typedef struct
+{
+    const char* logic_operator_name;
+    LogicalOperator operator;
+} LogicOp;
+
+static LogicOp logic_operators [] = 
+{
+    {"None", OP_NONE},
+    {"AND", OP_AND},
+    {"OR", OP_OR},
+    {"NOT", OP_NOT},
+    {"==", OP_EQUAL},
+    {"!=", OP_NOT_EQUAL},
+    {"<", OP_LESS},
+    {">", OP_GREATER},
+    {"<=", OP_LESS_EQUAL},
+    {">=", OP_GREATER_EQUAL}
+};
+
 //===================================================================
 // NODE CREATION FUNCTIONS
 //===================================================================
@@ -243,6 +263,49 @@ void print_set_newline(ASTNode* print_node, int has_newline) {
     print_node->data.printstatement.newline = has_newline;
 }
 
+// Criar nó de operação de comparação(==, !=, <, <=, >, >=)
+ASTNode* create_comparison_op_node(LogicalOperator operator,
+                                   ASTNode* left, ASTNode* right, 
+                                   int line, int column) {
+    ASTNode* node = create_node(NODE_COMPARISON_OP, line, column);
+    node->line = line;
+    node->column = column;
+    
+    node->data.logicalop.operator = operator;
+    node->data.logicalop.left = left;
+    node->data.logicalop.right = right;
+    
+    return node;
+}
+
+// Criar nó de operação lógica (AND, OR)
+ASTNode* create_logical_op_node(LogicalOperator operator,
+                                ASTNode* left, ASTNode* right, 
+                                int line, int column) {
+    ASTNode* node = create_node(NODE_LOGICAL_OP, line, column);
+    node->line = line;
+    node->column = column;
+    
+    node->data.logicalop.operator = operator;
+    node->data.logicalop.left = left;
+    node->data.logicalop.right = right;
+    
+    return node;
+}
+
+// Criar nó de operação lógica unária (NOT)
+ASTNode* create_logical_not_node(ASTNode* operand, int line, int column)
+{
+    ASTNode* node = create_node(NODE_NOT_LOGICAL_OP, line, column);
+    node->line = line;
+    node->column = column;
+    
+    node->data.notop.operator = OP_NOT;
+    node->data.notop.operand = operand;
+    
+    return node;
+}
+
 //===================================================================
 // MEMORY DEALLOCATION
 //===================================================================
@@ -278,7 +341,21 @@ void free_ast(ASTNode* node)
             
             break;
         }
-            
+
+        case NODE_COMPARISON_OP:
+            free_ast(node->data.logicalop.left);
+            free_ast(node->data.logicalop.right);
+            break;
+
+        case NODE_LOGICAL_OP:
+            free_ast(node->data.logicalop.left);
+            free_ast(node->data.logicalop.right);
+            break;
+
+        case NODE_NOT_LOGICAL_OP:
+            free_ast(node->data.notop.operand);
+            break;            
+
         case NODE_BOOL:
         case NODE_NUMBER:
         case NODE_STRING:
@@ -403,6 +480,27 @@ void print_ast(ASTNode* node, int indent)
         case NODE_WIDTH:
             printf("WIDTH: [%d]\n", node->data.width.value); 
             break;
+
+        case NODE_COMPARISON_OP:
+            printf("COMPARISON_OP: '%s'\n",
+            logic_operators[node->data.logicalop.operator].logic_operator_name);
+            print_ast(node->data.logicalop.left, indent + 1);
+            print_ast(node->data.logicalop.right, indent + 1);
+            break;
+
+        case NODE_LOGICAL_OP:
+            printf("LOGICAL_OP: '%s'\n",
+            logic_operators[node->data.logicalop.operator].logic_operator_name);
+            print_ast(node->data.logicalop.left, indent + 1);
+            print_ast(node->data.logicalop.right, indent + 1);
+            break;
+
+        case NODE_NOT_LOGICAL_OP:
+            printf("NOT_LOGICAL_OP: '%s'\n",
+            logic_operators[node->data.notop.operator].logic_operator_name);
+            print_ast(node->data.notop.operand, indent + 1);
+            break;
+
     }
 }
 
@@ -414,22 +512,97 @@ int main(void)
 {
     setup_utf8();
 
-    printf("ZzBasic AST Test v0.5.0 - 'true' e 'false'\n\n");
+    printf("ZzBasic AST Test v0.5.1 - operações de comparação e lógicas'\n\n");
    
 
-    ASTNode* bool_true_node = create_bool_node(1, 1, 1);
-    printf("bool_true_node:\n");
-    print_ast(bool_true_node, 0);
+    ASTNode* left1 = create_number_node(5, 1, 1);
+    ASTNode* right1 = create_number_node(7, 1, 5);
+    ASTNode* comparison_op1 = create_comparison_op_node(OP_EQUAL, left1, right1, 1, 3);
+    printf("comparison_op1 node:\n");
+    print_ast(comparison_op1, 0);
     printf("\n");
 
-    ASTNode* bool_false_node = create_bool_node(0, 1, 6);
-    printf("bool_false_node:\n");
-    print_ast(bool_false_node, 0);
+    free_ast(comparison_op1);
+
+    left1 = create_number_node(5, 1, 1);
+    right1 = create_number_node(7, 1, 5);
+
+    ASTNode* comparison_op2 = create_comparison_op_node(OP_NOT_EQUAL, left1, right1, 1, 3);
+    printf("comparison_op2 node:\n");
+    print_ast(comparison_op2, 0);
     printf("\n");
 
-    free_ast(bool_true_node);
-    free_ast(bool_false_node);
-    
+    free_ast(comparison_op2);
+
+    left1 = create_number_node(5, 1, 1);
+    right1 = create_number_node(7, 1, 5);
+
+    ASTNode* comparison_op3 = create_comparison_op_node(OP_LESS, left1, right1, 1, 3);
+    printf("comparison_op3 node:\n");
+    print_ast(comparison_op3, 0);
+    printf("\n");    
+
+    free_ast(comparison_op3);
+
+    left1 = create_number_node(5, 1, 1);
+    right1 = create_number_node(7, 1, 5);
+
+    ASTNode* comparison_op4 = create_comparison_op_node(OP_GREATER, left1, right1, 1, 3);
+    printf("comparison_op4 node:\n");
+    print_ast(comparison_op4, 0);
+    printf("\n"); 
+
+    free_ast(comparison_op4);
+
+    left1 = create_number_node(5, 1, 1);
+    right1 = create_number_node(7, 1, 5);
+
+    ASTNode* comparison_op5 = create_comparison_op_node(OP_LESS_EQUAL, left1, right1, 1, 3);
+    printf("comparison_op5 node:\n");
+    print_ast(comparison_op5, 0);
+    printf("\n"); 
+
+    free_ast(comparison_op5);
+
+    left1 = create_number_node(5, 1, 1);
+    right1 = create_number_node(7, 1, 5);  
+
+    ASTNode* comparison_op6 = create_comparison_op_node(OP_GREATER_EQUAL, left1, right1, 1, 3);
+    printf("comparison_op6 node:\n");
+    print_ast(comparison_op6, 0);
+    printf("\n");
+
+    free_ast(comparison_op6);
+
+    left1 = create_number_node(5, 1, 1);
+    right1 = create_number_node(7, 1, 5); 
+
+    ASTNode* comparison_op7 = create_logical_op_node(OP_AND, left1, right1, 1, 3);
+    printf("comparison_op7 node:\n");
+    print_ast(comparison_op7, 0);
+    printf("\n");
+
+    free_ast(comparison_op7);
+
+    left1 = create_number_node(5, 1, 1);
+    right1 = create_number_node(7, 1, 5); 
+
+    ASTNode* comparison_op8 = create_logical_op_node(OP_OR, left1, right1, 1, 3);
+    printf("comparison_op8 node:\n");
+    print_ast(comparison_op8, 0);
+    printf("\n");
+
+    free_ast(comparison_op8);
+
+    left1 = create_number_node(5, 1, 1);
+
+    ASTNode* comparison_op9 = create_logical_not_node(left1, 1, 3);
+    printf("comparison_op9 node:\n");
+    print_ast(comparison_op9, 0);
+    printf("\n");
+
+    free_ast(comparison_op9);
+
     printf("Memória liberada. Teste concluído.\n");
 
     a89check_leaks();

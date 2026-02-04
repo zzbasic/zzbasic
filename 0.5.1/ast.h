@@ -26,7 +26,10 @@ typedef enum
     NODE_COLOR,
     NODE_ALIGNMENT,
     NODE_WIDTH, 
-    NODE_INPUT 
+    NODE_INPUT,
+    NODE_COMPARISON_OP,     // Operação de comparação (==, !=, <, >, <=, >=)
+    NODE_LOGICAL_OP,        // Operação lógica (AND, OR)
+    NODE_NOT_LOGICAL_OP,    // Operação lógica unária (NOT,!) 
 } NodeType;
 
 typedef enum
@@ -40,6 +43,20 @@ typedef enum
     // TYPE_FUNCTION,
 } VariableType;
 
+
+typedef enum
+{
+    OP_NONE,
+    OP_AND,           // AND
+    OP_OR,            // OR
+    OP_NOT,           // NOT, !
+    OP_EQUAL,         // ==
+    OP_NOT_EQUAL,     // !=
+    OP_LESS,          // <
+    OP_GREATER,       // >
+    OP_LESS_EQUAL,    // <=
+    OP_GREATER_EQUAL  // >=
+} LogicalOperator;
 
 //===================================================================
 // STRUCTS
@@ -72,10 +89,22 @@ typedef struct
 
 typedef struct
 {
+    LogicalOperator operator;
+    ASTNode* left;
+    ASTNode* right;
+} LogicalOpData;
+
+typedef struct
+{
     char operator;
     ASTNode* operand;
 } UnaryOpData;
 
+typedef struct
+{
+    LogicalOperator operator;
+    ASTNode* operand;
+} NotOpData;
 
 typedef struct
 {
@@ -140,6 +169,8 @@ typedef struct ASTNode
         VariableData        variable;
         BinaryOpData        binaryop;
         UnaryOpData         unaryop;
+        LogicalOpData       logicalop; 
+        NotOpData           notop;   
         AssignmentData      assignment;
         StatementListData   statementlist;
         PrintStatementData  printstatement;
@@ -180,6 +211,16 @@ ASTNode* create_print_node(int line, int column);
 ASTNode* create_color_node(TokenType color_token, int line, int column);
 ASTNode* create_alignment_node(TokenType alignment_token, int line, int column);
 ASTNode* create_width_node(int width_value, int line, int column);
+
+// Operações de comparação e lógicas
+ASTNode* create_comparison_op_node(LogicalOperator operator,
+                                   ASTNode* left, ASTNode* right, 
+                                   int line, int column);
+ASTNode* create_logical_op_node(LogicalOperator operator,
+                                ASTNode* left, ASTNode* right, 
+                                int line, int column);
+ASTNode* create_logical_not_node(ASTNode* operand, int line, int column);
+
 
 void print_node_add_item(ASTNode* print_node, ASTNode* expr_node);
 void print_set_newline(ASTNode* print_node, int has_newline);

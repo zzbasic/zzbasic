@@ -41,76 +41,92 @@ static Token lexer_read_string(Lexer* lexer);
 
 static const char* TOKEN_STRINGS[] = 
 {
-    "NULL",         // TOKEN_NULL      
-    "EOF",          // TOKEN_EOF
-    "EOL",          // TOKEN_EOL
-    "ERROR",        // TOKEN_ERROR
+    "NULL",             // TOKEN_NULL      
+    "EOF",              // TOKEN_EOF
+    "EOL",              // TOKEN_EOL
+    "ERROR",            // TOKEN_ERROR
 
-    "NUMBER",       // TOKEN_NUMBER
-    "STRING",        // TOKEN_STRING
+    "NUMBER",           // TOKEN_NUMBER
+    "STRING",           // TOKEN_STRING
 
-    "PLUS",         // TOKEN_PLUS
-    "MINUS",        // TOKEN_MINUS
-    "STAR",         // TOKEN_STAR
-    "SLASH",        // TOKEN_SLASH
-    "PERCENT",      // TOKEN_PERCENT
+    "PLUS",             // TOKEN_PLUS
+    "MINUS",            // TOKEN_MINUS
+    "STAR",             // TOKEN_STAR
+    "SLASH",            // TOKEN_SLASH
+    "PERCENT",          // TOKEN_PERCENT
 
-    "LPAREN",       // TOKEN_LPAREN
-    "RPAREN",       // TOKEN_RPAREN
+    "LPAREN",           // TOKEN_LPAREN
+    "RPAREN",           // TOKEN_RPAREN
 
-    "LET",          // TOKEN_LET          
-    "IDENTIFIER",   // TOKEN_IDENTIFIER 
-    "EQUAL",        // TOKEN_EQUAL 
+    "LET",              // TOKEN_LET          
+    "IDENTIFIER",       // TOKEN_IDENTIFIER 
+    "ASSIGN",           // TOKEN_ASSIGN 
 
-    "COLON",        // TOKEN_COLON      
-    "SEMICOLON",    // TOKEN_SEMICOLON   
+    "COLON",            // TOKEN_COLON      
+    "SEMICOLON",        // TOKEN_SEMICOLON   
 
-    "NL",           // TOKEN_NL   
+    "NL",               // TOKEN_NL   
 
-    "PRINT",        // TOKEN_PRINT       
-    "QUESTION",     // TOKEN_QUESTION     
+    "PRINT",            // TOKEN_PRINT       
+    "QUESTION",         // TOKEN_QUESTION     
 
     // Comandos de formatação
-    "WIDTH",        // TOKEN_WIDTH
-    "LEFT",         // TOKEN_LEFT
-    "RIGHT",        // TOKEN_RIGHT
-    "CENTER",       // TOKEN_CENTER
-    "NOCOLOR",      // TOKEN_NOCOLOR
+    "WIDTH",            // TOKEN_WIDTH
+    "LEFT",             // TOKEN_LEFT
+    "RIGHT",            // TOKEN_RIGHT
+    "CENTER",           // TOKEN_CENTER
+    "NOCOLOR",          // TOKEN_NOCOLOR
 
     // Cores normais (8)
-    "BLACK",        // TOKEN_BLACK
-    "RED",          // TOKEN_RED
-    "GREEN",        // TOKEN_GREEN
-    "YELLOW",       // TOKEN_YELLOW
-    "BLUE",         // TOKEN_BLUE
-    "MAGENTA",      // TOKEN_MAGENTA
-    "CYAN",         // TOKEN_CYAN
-    "WHITE",        // TOKEN_WHITE
+    "BLACK",            // TOKEN_BLACK
+    "RED",              // TOKEN_RED
+    "GREEN",            // TOKEN_GREEN
+    "YELLOW",           // TOKEN_YELLOW
+    "BLUE",             // TOKEN_BLUE
+    "MAGENTA",          // TOKEN_MAGENTA
+    "CYAN",             // TOKEN_CYAN
+    "WHITE",            // TOKEN_WHITE
 
     // Cores bright (8)
-    "BRED",         // TOKEN_BRED
-    "BGREEN",       // TOKEN_BGREEN
-    "BYELLOW",      // TOKEN_BYELLOW
-    "BBLUE",        // TOKEN_BBLUE
-    "BMAGENTA",     // TOKEN_BMAGENTA
-    "BCYAN",        // TOKEN_BCYAN
-    "BWHITE",       // TOKEN_BWHITE
+    "BRED",             // TOKEN_BRED
+    "BGREEN",           // TOKEN_BGREEN
+    "BYELLOW",          // TOKEN_BYELLOW
+    "BBLUE",            // TOKEN_BBLUE
+    "BMAGENTA",         // TOKEN_BMAGENTA
+    "BCYAN",            // TOKEN_BCYAN
+    "BWHITE",           // TOKEN_BWHITE
 
     // Background colors (8 - futuro)
-    "BGBLACK",      // TOKEN_BGBLACK
-    "BGRED",        // TOKEN_BGRED
-    "BGGREEN",      // TOKEN_BGGREEN
-    "BGYELLOW",     // TOKEN_BGYELLOW
-    "BGBLUE",       // TOKEN_BGBLUE
-    "BGMAGENTA",    // TOKEN_BGMAGENTA
-    "BGCYAN",       // TOKEN_BGCYAN
-    "BGWHITE",      // TOKEN_BGWHITE
+    "BGBLACK",          // TOKEN_BGBLACK
+    "BGRED",            // TOKEN_BGRED
+    "BGGREEN",          // TOKEN_BGGREEN
+    "BGYELLOW",         // TOKEN_BGYELLOW
+    "BGBLUE",           // TOKEN_BGBLUE
+    "BGMAGENTA",        // TOKEN_BGMAGENTA
+    "BGCYAN",           // TOKEN_BGCYAN
+    "BGWHITE",          // TOKEN_BGWHITE
 
-    "INPUT",        // TOKEN_INPUT
-    "TRUE",         // TOKEN_TRUE
-    "FALSE",        // TOKEN_FALSE
+    "INPUT",            // TOKEN_INPUT
+    "TRUE",             // TOKEN_TRUE
+    "FALSE",            // TOKEN_FALSE
 
-    "NOERROR"       // TOKEN_NOERROR
+    "IF",               // TOKEN_IF
+    "THEN",             // TOKEN_THEN
+    "ELSE",             // TOKEN_ELSE
+    "END",              // TOKEN_END
+    
+    "AND",              // TOKEN_AND
+    "OR",               // TOKEN_OR
+    "NOT",              // TOKEN_NOT
+    
+    "EQUAL",            // TOKEN_EQUAL
+    "NOT EQUAL",        // TOKEN_NOT_EQUAL
+    "LESS",             // TOKEN_LESS
+    "GREATER",          // TOKEN_GREATER
+    "LESS_EQUAL",       // TOKEN_LESS_EQUAL 
+    "GREATER EQUAL",    // TOKEN_GREATER_EQUAL
+
+    "NOERROR"           // TOKEN_NOERROR
 };
 
 
@@ -160,9 +176,17 @@ static Keyword keywords[] =
     {"true", TOKEN_TRUE},
     {"false", TOKEN_FALSE},
 
+    {"if", TOKEN_IF},
+    {"then", TOKEN_THEN},
+    {"else", TOKEN_ELSE},
+    {"end", TOKEN_END},
+
+    {"and", TOKEN_AND},
+    {"or", TOKEN_OR},
+    {"not", TOKEN_NOT},
+
     {NULL, TOKEN_NULL}
 };
-
 
 const char* token_type_to_string(TokenType type)
 {
@@ -222,7 +246,8 @@ static void lexer_advance(Lexer* lexer)
     }
     else
     {
-        if ((uc & 0b11000000) != 0b10000000) {
+        if ((uc & 0b11000000) != 0b10000000)
+        {
             lexer->column++;        
         }
     }
@@ -665,12 +690,84 @@ Token lexer_get_next_token(Lexer* lexer)
             return token;
 
         case '=':
-            lexer_advance(lexer);
-            token.type = TOKEN_EQUAL;
+        {
+            if(lexer_peek_next(lexer) == '=')
+            {
+                token.type = TOKEN_EQUAL;
+                strcpy(token.text, "==");
+                token.line = line;
+                token.column = column;
+                lexer_advance(lexer); // Primeiro '='
+                lexer_advance(lexer); // Segundo '='
+                return token;
+            }
+            token.type = TOKEN_ASSIGN;
             strcpy(token.text, "=");
             token.line = line;
             token.column = column;
+            lexer_advance(lexer);
+            return token;             
+        }
+
+        case '!':
+        {
+            if(lexer_peek_next(lexer) == '=')
+            {
+                token.type = TOKEN_NOT_EQUAL;
+                strcpy(token.text, "!=");
+                token.line = line;
+                token.column = column;
+                lexer_advance(lexer); 
+                lexer_advance(lexer); 
+                return token;
+            } 
+            token.type = TOKEN_NOT;
+            strcpy(token.text, "!");
+            token.line = line;
+            token.column = column;
+            lexer_advance(lexer);
+            return token;         
+        }
+
+        case '<':
+        {
+            if(lexer_peek_next(lexer) == '=')
+            {
+                token.type = TOKEN_LESS_EQUAL;
+                strcpy(token.text, "<=");
+                token.line = line;
+                token.column = column;
+                lexer_advance(lexer); 
+                lexer_advance(lexer); 
+                return token;
+            } 
+            token.type = TOKEN_LESS;
+            strcpy(token.text, "<");
+            token.line = line;
+            token.column = column;
+            lexer_advance(lexer);
             return token; 
+        }  
+
+        case '>':
+        {
+            if(lexer_peek_next(lexer) == '=')
+            {
+                token.type = TOKEN_GREATER_EQUAL;
+                strcpy(token.text, ">=");
+                token.line = line;
+                token.column = column;
+                lexer_advance(lexer); 
+                lexer_advance(lexer); 
+                return token;
+            } 
+            token.type = TOKEN_GREATER;
+            strcpy(token.text, ">");
+            token.line = line;
+            token.column = column;
+            lexer_advance(lexer);
+            return token; 
+        } 
 
         case '\n':
             lexer_advance(lexer);
@@ -786,9 +883,9 @@ int main()
 {
     setup_utf8();
     
-    printf("ZzBasic Lexer Test v0.5.0 - 'true' e 'false'\n\n");
-    lexer_print_all_tokens("let sucesso = true; let erro = false\n");
-    wait(); 
+    printf("ZzBasic Lexer Test v0.5.1 - 'true' e 'false'\n\n");
+    lexer_print_all_tokens("and or not = == ! != < <= > >= \n");
+    //wait(); 
     
     return 0;
 }
