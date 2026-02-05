@@ -1,4 +1,10 @@
-# ZzBasic v0.5.1 - implementa o tipo booleano (`true`, `false`), os operadores de comparação (`==' v '!=' , '<' , '>' , '<=' , '>=')  e  os operadores lógicos (`and`, `or`, `not`, `!`)
+# ZzBasic v0.5.1
+
+##implementa:
+
+* tipo booleano (`true`, `false`)
+* operadores de comparação (`==' v '!=' , '<' , '>' , '<=' , '>=')
+* operadores lógicos (`and`, `or`, `not`, `!`)
 
 ## EM DESENVOLVIMENTO
 
