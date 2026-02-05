@@ -1,4 +1,4 @@
-# ZzBasic v0.5.1
+# ZzBasic v0.5.1 
 
 ## implementa
 
@@ -6,6 +6,6 @@
 * operadores de comparação (`==` , `!=` , `<` , `>` , `<=` , `>=`)
 * operadores lógicos (`and`, `or`, `not`, `!`)
 
-## EM DESENVOLVIMENTO
+
 
 [Gramática](https://github.com/zzbasic/zzbasic/blob/main/0.5.1/zzbasic_gramática_v0.5.1.md)
