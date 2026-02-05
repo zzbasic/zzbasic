@@ -3,7 +3,7 @@
 ## implementa
 
 * tipo booleano (`true`, `false`)
-* operadores de comparação (`==' v '!=' , '<' , '>' , '<=' , '>=')
+* operadores de comparação (`==` , `!=` , `<` , `>` , `<=` , `>=`)
 * operadores lógicos (`and`, `or`, `not`, `!`)
 
 ## EM DESENVOLVIMENTO
