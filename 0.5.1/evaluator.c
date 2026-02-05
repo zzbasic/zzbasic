@@ -567,6 +567,46 @@ int execute_statement(ASTNode* node, SymbolTable* symbols)
 
         case NODE_INPUT:
             return evaluate_input_statement(node, symbols);
+
+        case NODE_COMPARISON_OP:
+        case NODE_LOGICAL_OP:
+        case NODE_NOT_LOGICAL_OP:
+        {
+            // Evaluate logical/comparison expression
+            EvaluatorResult result = evaluate_expression(node, symbols, CTX_ANY);
+            
+            if (result.type == RESULT_ERROR)
+            {
+                printf("%s\n", result.error_message);
+                return 0;
+            }
+            else
+            {
+                // Print the result
+                switch(result.type)
+                {
+                    case RESULT_BOOL:
+                    {
+                        if(result.value.boolean == 1){
+                            printf("true\n");
+                        }
+                        else{
+                            printf("false\n");
+                        }
+                        break;
+                    }
+                    case RESULT_NUMBER:
+                        printf("%g\n", result.value.number);
+                        break;
+                    case RESULT_STRING:
+                        printf("\"%s\"\n", result.value.string);
+                        break;
+                    default:
+                        break;
+                }
+                return 1;
+            }
+        }
             
         default:
             printf("Unsupported statement type: %d\n", node->type);

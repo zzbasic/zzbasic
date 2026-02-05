@@ -410,7 +410,7 @@ static ASTNode* parse_assignment_stmt(Parser* parser)
     parser_advance(parser);  // Consume identifier
     
      // Check '='
-    if (parser->current_token.type != TOKEN_EQUAL) {
+    if (parser->current_token.type != TOKEN_ASSIGN) {
         parser_set_error(parser, "Error: Expected '=' after variable name");
         return NULL;
     }
@@ -568,7 +568,8 @@ static ASTNode* parse_print_statement(Parser* parser)
         }
 
         // 3. EXPRESSÕES NORMAIS (números, strings, variáveis, etc)
-        ASTNode* item = parse_expression(parser);
+        //ASTNode* item = parse_expression(parser);
+        ASTNode* item = parse_logical_expr(parser);
         if (parser->has_error)
         {
             free_ast(print_node);
@@ -969,7 +970,7 @@ static ASTNode* parse_atom(Parser* parser)
         case TOKEN_LPAREN:
         {
             parser_advance(parser);  // Consume '('
-            ASTNode* node = parse_expression(parser);
+            ASTNode* node = parse_logical_expr(parser);
             if (parser->has_error) return NULL;
             
             if (!parser_expect(parser, TOKEN_RPAREN))
@@ -1063,7 +1064,7 @@ ASTNode* parse_single_statement(Lexer* lexer) {
     return result;
 }
 
-#ifdef TEST
+#ifdef TESTPARSER
 #include "color.h"
 #include "utils.h"
 

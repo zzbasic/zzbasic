@@ -81,20 +81,40 @@ void evaluator_color_reset(ExecutionContext* ctx);
 void evaluator_color_set(ExecutionContext* ctx, const char* ansi_color);
 void evaluator_color_apply_current(ExecutionContext* ctx);
 
-// Funções principais
+
+/********************************************************************
+FLUXO DO EVALUATOR
+
+evaluate_program() ==> execute_statement_list() ==> execute_statement()
+
+execute_statement():
+    NODE_ASSIGNMENT ==> evaluate_expression()
+
+    NODE_BOOL:
+    NODE_NUMBER:
+    NODE_BINARY_OP:
+    NODE_UNARY_OP:
+    NODE_VARIABLE: ==> evaluate_expression()
+
+    NODE_STRING ==> evaluate_print_statement()
+
+    NODE_STATEMENT_LIST ==> execute_statement_list()
+
+    NODE_INPUT ==> evaluate_input_statement()
+    
+
+********************************************************************/
 int evaluate_program(ASTNode* node, SymbolTable* symbols);
 int execute_statement_list(ASTNode* node, SymbolTable* symbols);
 int execute_statement(ASTNode* node, SymbolTable* symbols);
-
-int evaluate_print_statement_with_context(ASTNode* node, ExecutionContext* ctx);
-int evaluate_print_statement(ASTNode* node, SymbolTable* symbols);
-int evaluate_print_with_context(ASTNode* node, ExecutionContext* ctx);
 EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalContext ctx);
-int execute_statement_with_context(ASTNode* node, ExecutionContext* ctx);
-
-// Funções para input
+int evaluate_print_statement(ASTNode* node, SymbolTable* symbols);
 int evaluate_input_statement(ASTNode* node, SymbolTable* symbols);
 
+int evaluate_print_with_context(ASTNode* node, ExecutionContext* ctx);
+int evaluate_print_statement_with_context(ASTNode* node, ExecutionContext* ctx);
+
+int execute_statement_with_context(ASTNode* node, ExecutionContext* ctx);
 
 
 // Old function (for compatibility)
