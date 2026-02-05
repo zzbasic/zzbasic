@@ -1,6 +1,6 @@
 # ZzBasic v0.5.1
 
-##implementa:
+## implementa
 
 * tipo booleano (`true`, `false`)
 * operadores de comparação (`==' v '!=' , '<' , '>' , '<=' , '>=')
