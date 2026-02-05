@@ -917,6 +917,188 @@ EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalCon
         case NODE_STATEMENT_LIST:
             return create_error_result_fmt(node->line, node->column,
                  "Statement list cannot be used as expression");
+
+        case NODE_COMPARISON_OP:
+        {
+            // Operações de comparação: ==, !=, <, >, <=, >=
+            // Resultado é sempre booleano
+            
+            // Avalia lado esquerdo (pode ser número ou booleano)
+            EvaluatorResult left_result = evaluate_expression(
+                node->data.logicalop.left, symbols, CTX_ANY);
+            if (left_result.type == RESULT_ERROR) return left_result;
+            
+            // Avalia lado direito (pode ser número ou booleano)
+            EvaluatorResult right_result = evaluate_expression(
+                node->data.logicalop.right, symbols, CTX_ANY);
+            if (right_result.type == RESULT_ERROR) return right_result;
+            
+            // Ambos devem ser do mesmo tipo (número ou booleano)
+            if (left_result.type != right_result.type)
+            {
+                return create_error_result_fmt(node->line, node->column,
+                     "Type mismatch in comparison: cannot compare %s with %s",
+                     (left_result.type == RESULT_NUMBER ? "number" : "boolean"),
+                     (right_result.type == RESULT_NUMBER ? "number" : "boolean"));
+            }
+            
+            // Strings não podem ser comparadas (por enquanto)
+            if (left_result.type == RESULT_STRING)
+            {
+                return create_error_result_fmt(node->line, node->column,
+                     "String comparison not supported");
+            }
+            
+            int comparison_result = 0;
+            
+            // Comparação de números
+            if (left_result.type == RESULT_NUMBER)
+            {
+                double left = left_result.value.number;
+                double right = right_result.value.number;
+                
+                switch (node->data.logicalop.operator)
+                {
+                    case OP_EQUAL:
+                        comparison_result = (fabs(left - right) < EPSILON) ? 1 : 0;
+                        break;
+                    case OP_NOT_EQUAL:
+                        comparison_result = (fabs(left - right) >= EPSILON) ? 1 : 0;
+                        break;
+                    case OP_LESS:
+                        comparison_result = (left < right) ? 1 : 0;
+                        break;
+                    case OP_GREATER:
+                        comparison_result = (left > right) ? 1 : 0;
+                        break;
+                    case OP_LESS_EQUAL:
+                        comparison_result = (left <= right) ? 1 : 0;
+                        break;
+                    case OP_GREATER_EQUAL:
+                        comparison_result = (left >= right) ? 1 : 0;
+                        break;
+                    default:
+                        return create_error_result_fmt(node->line, node->column,
+                             "Invalid comparison operator");
+                }
+            }
+            // Comparação de booleanos
+            else if (left_result.type == RESULT_BOOL)
+            {
+                int left = left_result.value.boolean;
+                int right = right_result.value.boolean;
+                
+                switch (node->data.logicalop.operator)
+                {
+                    case OP_EQUAL:
+                        comparison_result = (left == right) ? 1 : 0;
+                        break;
+                    case OP_NOT_EQUAL:
+                        comparison_result = (left != right) ? 1 : 0;
+                        break;
+                    // Outros operadores não fazem sentido para booleanos
+                    default:
+                        return create_error_result_fmt(node->line, node->column,
+                             "Operator not supported for boolean values");
+                }
+            }
+            
+            return create_success_result_bool(comparison_result, 
+                                             node->line, node->column);
+        }
+
+        case NODE_LOGICAL_OP:
+        {
+            // Operações lógicas: AND, OR
+            // Resultado é sempre booleano
+            
+            LogicalOperator op = node->data.logicalop.operator;
+            
+            // Avalia lado esquerdo (deve ser booleano)
+            EvaluatorResult left_result = evaluate_expression(
+                node->data.logicalop.left, symbols, CTX_BOOL);
+            if (left_result.type == RESULT_ERROR) return left_result;
+            
+            // Verifica se é booleano
+            if (left_result.type != RESULT_BOOL)
+            {
+                return create_error_result_fmt(node->line, node->column,
+                     "Logical operator expects boolean, got %s",
+                     (left_result.type == RESULT_NUMBER ? "number" : "string"));
+            }
+            
+            int left = left_result.value.boolean;
+            
+            // OTIMIZAÇÃO: Short-circuit evaluation
+            // Se é AND e left é false, não precisa avaliar right
+            if (op == OP_AND && !left)
+            {
+                return create_success_result_bool(0, node->line, node->column);
+            }
+            
+            // Se é OR e left é true, não precisa avaliar right
+            if (op == OP_OR && left)
+            {
+                return create_success_result_bool(1, node->line, node->column);
+            }
+            
+            // Avalia lado direito (deve ser booleano)
+            EvaluatorResult right_result = evaluate_expression(
+                node->data.logicalop.right, symbols, CTX_BOOL);
+            if (right_result.type == RESULT_ERROR) return right_result;
+            
+            // Verifica se é booleano
+            if (right_result.type != RESULT_BOOL)
+            {
+                return create_error_result_fmt(node->line, node->column,
+                     "Logical operator expects boolean, got %s",
+                     (right_result.type == RESULT_NUMBER ? "number" : "string"));
+            }
+            
+            int right = right_result.value.boolean;
+            int logical_result = 0;
+            
+            switch (op)
+            {
+                case OP_AND:
+                    logical_result = left && right;
+                    break;
+                case OP_OR:
+                    logical_result = left || right;
+                    break;
+                default:
+                    return create_error_result_fmt(node->line, node->column,
+                         "Invalid logical operator");
+            }
+            
+            return create_success_result_bool(logical_result, 
+                                             node->line, node->column);
+        }
+
+        case NODE_NOT_LOGICAL_OP:
+        {
+            // Operação lógica unária: NOT (!)
+            // Resultado é sempre booleano
+            
+            // Avalia operando (deve ser booleano)
+            EvaluatorResult operand_result = evaluate_expression(
+                node->data.notop.operand, symbols, CTX_BOOL);
+            if (operand_result.type == RESULT_ERROR) return operand_result;
+            
+            // Verifica se é booleano
+            if (operand_result.type != RESULT_BOOL)
+            {
+                return create_error_result_fmt(node->line, node->column,
+                     "NOT operator expects boolean, got %s",
+                     (operand_result.type == RESULT_NUMBER ? "number" : "string"));
+            }
+            
+            int operand = operand_result.value.boolean;
+            int not_result = !operand;  // Inverte o valor
+            
+            return create_success_result_bool(not_result, 
+                                             node->line, node->column);
+        }
             
         default:
             return create_error_result_fmt(node->line, node->column,
@@ -989,7 +1171,7 @@ void evaluator_color_apply_current(ExecutionContext* ctx)
     }
 }
 
-// Função de execução com contexto (falta implementar)
+// Função de execução com contexto 
 int execute_statement_with_context(ASTNode* node, ExecutionContext* ctx)
 {
     if (!node || !ctx) return 0;
@@ -1091,4 +1273,98 @@ int evaluate_print_statement_with_context(ASTNode* node, ExecutionContext* ctx)
     return evaluate_print_with_context(node, ctx);
 }
 
+#ifdef TESTEVALUATOR
+#include "color.h"
+#include "utils.h"
+#include "lexer.h"
+#include "parser.h"
+#include "evaluator.h"
+#include "symbol_table.h"
+
+int main()
+{
+    setup_utf8();
+    
+    printf("%s=== TESTE EVALUATOR v0.5.1 comparação e lógica ===%s\n\n", 
+           COLOR_HEADER, COLOR_RESET);
+    
+    char* testes[] =
+    {
+        // Comparações numéricas
+        "5 == 5",
+        "5 != 10",
+        "5 < 10",
+        "10 > 5",
+        "5 <= 5",
+        "10 >= 5",
+        
+        // Comparações booleanas
+        "true == true",
+        "true != false",
+        
+        // Lógica simples
+        "true and false",
+        "true or false",
+        "not true",
+        "! false",
+        
+        // Expressões complexas
+        "(5 > 3) and (10 < 20)",
+        "not (5 > 10) or (true == true)",
+        "(5 + 3 > 7) and (10 - 5 < 10)",
+    };
+    
+    int num_testes = sizeof(testes) / sizeof(testes[0]);
+    SymbolTable* symbols = symbol_table_create();
+    
+    for (int i = 0; i < num_testes; i++)
+    {
+        printf("%s=== Teste %d: '%s' ===%s\n", 
+               COLOR_HEADER, i+1, testes[i], COLOR_RESET);
+        
+        Lexer lexer;
+        lexer_init(&lexer, testes[i]);
+        
+        ASTNode* ast = parse_single_statement(&lexer);
+        
+        if (ast)
+        {
+            EvaluatorResult result = evaluate_expression(ast, symbols, CTX_ANY);
+            
+            if (result.type == RESULT_ERROR)
+            {
+                printf("%s\n", result.error_message);
+            }
+            else if (result.type == RESULT_BOOL)
+            {
+                printf("Resultado: %s\n", 
+                       result.value.boolean ? "true" : "false");
+                printf("%sOK%s\n", COLOR_SUCCESS, COLOR_RESET);
+            }
+            else if (result.type == RESULT_NUMBER)
+            {
+                printf("Resultado: %g\n", result.value.number);
+                printf("%sOK%s\n", COLOR_SUCCESS, COLOR_RESET);
+            }
+            
+            free_ast(ast);
+        }
+        else
+        {
+            printf("%sERRO no parsing%s\n", COLOR_ERROR, COLOR_RESET);
+        }
+        
+        printf("\n");
+        wait();
+    }
+    
+    symbol_table_destroy(symbols);
+    
+    printf("\n%s=== TODOS OS TESTES COMPLETADOS ===%s\n", 
+           COLOR_SUCCESS, COLOR_RESET);
+    
+    a89check_leaks();
+    return 0;
+}
+#endif
 // Fim de evaluator.c
