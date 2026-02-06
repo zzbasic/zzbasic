@@ -878,6 +878,13 @@ EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalCon
                 return create_error_result("Mathematical operation with string", 
                                          node->line, node->column);
             }
+
+            // Both must be numbers
+            if (left_result.type == RESULT_BOOL || right_result.type == RESULT_BOOL )
+            {
+                return create_error_result("Mathematical operation with boolean", 
+                                         node->line, node->column);
+            }
             
             double result;
             switch (node->data.binaryop.operator)
