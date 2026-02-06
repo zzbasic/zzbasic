@@ -502,4 +502,6 @@ Copyright (c) 2026 arataca89
 
 **Última atualização:** Fevereiro de 2026
 **Versão:** 0.5.2
+---
+arataca89@gmail.com
 
