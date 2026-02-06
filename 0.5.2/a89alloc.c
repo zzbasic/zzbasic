@@ -125,8 +125,8 @@ void a89free(void* ptr) {
 
 void a89check_leaks(void) {
     if (total_allocations == 0) {
-        printf("SUCESSO: Nenhum vazamento de memoria detectado!\n");
-        printf("   Todas as alocacoes foram devidamente liberadas.\n");
+        //printf("SUCESSO: Nenhum vazamento de memoria detectado!\n");
+        //printf("   Todas as alocacoes foram devidamente liberadas.\n");        
         return;
     }
     
