@@ -4,7 +4,10 @@
 
 **ZzBasic** é uma linguagem de programação interpretada que combina a simplicidade do BASIC clássico com recursos modernos. É um projeto solo desenvolvido com cuidado e atenção aos detalhes.
 
-[Manual do Usuário](https://github.com/zzbasic/zzbasic/blob/main/0.5.2/zzbasic_0_5_2_manual.md)
+
+* [Manual do Usuário](zzbasic_0_5_2_manual.md)
+
+* [Realce de Sintaxe para o Editor Sublime Text](https://github.com/zzbasic/zzbasic/tree/main/editor-support/sublime-text)
 
 ## Versão Atual: **0.5.2**
 
