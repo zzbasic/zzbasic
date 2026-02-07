@@ -1,5 +1,14 @@
 // parser.c
+/********************************************************************
+OBSERVÇÕES:
 
+* As funções de criação de nodes não testam se o node foi criado 
+  com sucesso porque:
+    * estas funções chamam create_node()
+    * create_node() aloca memória através de A89ALLOC
+    * A89ALLOC, se não conseguir alocar memória, chama exit() para
+      encerrar o programa. 
+********************************************************************/
 #include "color.h"
 #include "ast.h"
 #include "parser.h"
@@ -27,7 +36,7 @@ static ASTNode* parse_print_statement(Parser* parser);
 static ASTNode* parse_color_statement(Parser* parser);
 static ASTNode* parse_input_statement(Parser* parser);
 
-// if_stmt
+static ASTNode* parse_if_statement(Parser* parser);
 
 static ASTNode* parse_expression_stmt(Parser* parser);
 
@@ -71,11 +80,6 @@ static int parser_expect(Parser* parser, TokenType expected_type)
     return parser->current_token.type == expected_type;
 }
 
-// static int parser_expect_operator(Parser* parser, char op) {
-//     return (parser->current_token.type == TOKEN_OPERATOR && 
-//             parser->current_token.operator == op);
-// }
-
 static void parser_set_error(Parser* parser, const char* message)
 {
     parser->has_error = 1;
@@ -94,21 +98,11 @@ static void parser_set_error(Parser* parser, const char* message)
     strncpy(parser->error_message, formatted_message, 
             sizeof(parser->error_message) - 1);
     parser->error_message[sizeof(parser->error_message) - 1] = '\0';
-
-
-    // printf("current_token.type  : %d\n", parser->current_token.type);
-    // printf("current_token.line  : %d\n", parser->current_token.line);
-    // printf("current_token.column: %d\n", parser->current_token.column);
 }
 
-// static int is_string_variable(const char* name) {
-//     int len = strlen(name);
-//     return (len > 0 && name[len - 1] == '$');
-// }
-
-
 // Verifica se um token é palavra-chave/comando
-static int is_keyword_token(TokenType type) {
+static int is_keyword_token(TokenType type)
+{
     switch (type) {
         case TOKEN_LET:      
         case TOKEN_PRINT:   
@@ -127,8 +121,10 @@ static int is_keyword_token(TokenType type) {
 }
 
 // Obtém nome amigável de uma palavra-chave
-static const char* get_keyword_name(TokenType type) {
-    switch (type) {
+static const char* get_keyword_name(TokenType type)
+{
+    switch (type)
+    {
         case TOKEN_LET:      return "let";
         case TOKEN_PRINT:    return "print";
         case TOKEN_QUESTION: return "?";
@@ -181,13 +177,13 @@ static void report_print_keyword_error(Parser* parser, Token token) {
     
     if (token.type == TOKEN_SEMICOLON) {
         snprintf(error_msg, sizeof(error_msg),
-            "Error [%d:%d]: print statement cannot have ';' after it. "
+            "Parser error [%d:%d]: print statement cannot have ';' after it. "
             "Remove the ';' or use: print \"text1\" \"text2\" nl",
             token.line, token.column);
     }
     else if (token.type == TOKEN_COLON) {
         snprintf(error_msg, sizeof(error_msg),
-            "Error [%d:%d]: print statement cannot have ':' after it. "
+            "Parser error [%d:%d]: print statement cannot have ':' after it. "
             "Use new line for next statement.",
             token.line, token.column);
     }
@@ -197,7 +193,7 @@ static void report_print_keyword_error(Parser* parser, Token token) {
         // Mensagens específicas por tipo de comando
         if (token.type == TOKEN_LET) {
             snprintf(error_msg, sizeof(error_msg),
-                "Error [%d:%d]: '%s' is a command, not a valid expression. "
+                "Parser error [%d:%d]: '%s' is a command, not a valid expression. "
                 "Assign variables BEFORE printing:\n"
                 "  let x = 5\n"
                 "  print x nl",
@@ -205,7 +201,7 @@ static void report_print_keyword_error(Parser* parser, Token token) {
         }
         else if (token.type == TOKEN_PRINT || token.type == TOKEN_QUESTION) {
             snprintf(error_msg, sizeof(error_msg),
-                "Error [%d:%d]: '%s' is a command, not a valid expression. "
+                "Parser error [%d:%d]: '%s' is a command, not a valid expression. "
                 "Use ONE print with multiple items:\n"
                 "  print \"text1\" \"text2\" nl  (instead of print \"text1\" print \"text2\")",
                 token.line, token.column, keyword_name);
@@ -213,14 +209,14 @@ static void report_print_keyword_error(Parser* parser, Token token) {
         else {
             // Mensagem genérica para outros comandos (futuro)
             snprintf(error_msg, sizeof(error_msg),
-                "Error [%d:%d]: '%s' is a command, not a valid expression in print statement.",
+                "Parser error [%d:%d]: '%s' is a command, not a valid expression in print statement.",
                 token.line, token.column, keyword_name);
         }
     }
     else {
         // Erro genérico para outros tokens inesperados
         snprintf(error_msg, sizeof(error_msg),
-            "Error [%d:%d]: Unexpected '%s' in print statement",
+            "Parser error [%d:%d]: Unexpected '%s' in print statement",
             token.line, token.column, token.text[0] ? token.text : "token");
     }
     
@@ -241,7 +237,7 @@ static void report_unexpected_token_error(Parser* parser, const char* context)
     if (is_operator_token(token.type))
     {
         snprintf(error_msg, sizeof(error_msg),
-            "Error: Operator    '%s ' cannot appear at this position in %s",
+            "Parser error: Operator    '%s ' cannot appear at this position in %s",
             token.text, context);
     }
     else if (token.type == TOKEN_ERROR)
@@ -252,7 +248,7 @@ static void report_unexpected_token_error(Parser* parser, const char* context)
     else
     {
         snprintf(error_msg, sizeof(error_msg),
-            "Error: Unexpected  '%s ' in %s (expected number, string, identifier or '(  ')",
+            "Parser error: Unexpected  '%s ' in %s (expected number, string, identifier or '(  ')",
             token.text, context);
     }
     
@@ -295,8 +291,10 @@ static ASTNode* parse_statement_list(Parser* parser)
     
     // Continua parseando enquanto encontrar separadores
     while (!parser->has_error && 
-           parser->current_token.type != TOKEN_EOF)
-    {
+           parser->current_token.type != TOKEN_EOF &&
+           parser->current_token.type != TOKEN_END &&
+           parser->current_token.type != TOKEN_ELSE)
+        {
         
         Token token = parser->current_token;
         
@@ -322,6 +320,12 @@ static ASTNode* parse_statement_list(Parser* parser)
                 break;
             }
 
+            if (parser->current_token.type == TOKEN_END ||
+                parser->current_token.type == TOKEN_ELSE)
+            {
+                break;
+            }
+
             // Parseia próximo statement
             stmt = parse_statement(parser);
             if (!stmt || parser->has_error)
@@ -342,11 +346,12 @@ static ASTNode* parse_statement_list(Parser* parser)
 }
 
 //==============================================================================
-// statement       := assignment_stmt
-//                  | input_stmt 
-//                  | print_stmt
-//                  | color_stmt 
-//                  | expression_stmt
+// statement           := assignment_stmt
+//                     | print_stmt
+//                     | color_stmt 
+//                     | input_stmt 
+//                     | if_stmt
+//                     | expression_stmt
 //==============================================================================
 static ASTNode* parse_statement(Parser* parser)
 {
@@ -354,10 +359,6 @@ static ASTNode* parse_statement(Parser* parser)
     {
         return parse_assignment_stmt(parser);
     }
-    else if(parser->current_token.type == TOKEN_INPUT)
-    {
-        return parse_input_statement(parser);
-    } 
     else if (parser->current_token.type == TOKEN_PRINT || 
              parser->current_token.type == TOKEN_QUESTION)
     {
@@ -367,6 +368,14 @@ static ASTNode* parse_statement(Parser* parser)
     {
         // aqui parseia nocolor sozinho
         return parse_color_statement(parser);
+    }
+    else if(parser->current_token.type == TOKEN_INPUT)
+    {
+        return parse_input_statement(parser);
+    } 
+    else if (parser->current_token.type == TOKEN_IF)  
+    {
+        return parse_if_statement(parser);            
     }
     else
     {
@@ -392,13 +401,13 @@ static ASTNode* parse_assignment_stmt(Parser* parser)
             const char* keyword_name = get_keyword_name(parser->current_token.type);
             char error_msg[BUFFER_SIZE];
             snprintf(error_msg, sizeof(error_msg),
-                "Error [%d:%d]: '%s' is a command keyword, cannot be used as variable name",
+                "Parser error [%d:%d]: '%s' is a command keyword, cannot be used as variable name",
                 parser->current_token.line, parser->current_token.column, keyword_name);
             parser_set_error(parser, error_msg);
         }
         else
         {
-            parser_set_error(parser, "Error: expected identifier");
+            parser_set_error(parser, "Parser error: expected identifier");
         }
         return NULL;
     }
@@ -411,7 +420,7 @@ static ASTNode* parse_assignment_stmt(Parser* parser)
     
      // Check '='
     if (parser->current_token.type != TOKEN_ASSIGN) {
-        parser_set_error(parser, "Error: Expected '=' after variable name");
+        parser_set_error(parser, "Parser error: Expected '=' after variable name");
         return NULL;
     }
     
@@ -455,11 +464,6 @@ static ASTNode* parse_print_statement(Parser* parser)
     
     // Cria nó do comando print
     ASTNode* print_node = create_print_node(line, column);
-    if (!print_node)
-    {
-        parser_set_error(parser, "Error: could not create print node");
-        return NULL;
-    }
     
     // Parseia os itens (expressões)
     while (!parser->has_error)
@@ -495,12 +499,7 @@ static ASTNode* parse_print_statement(Parser* parser)
             ASTNode* color_node = create_color_node(token.type, 
                                                    token.line, 
                                                    token.column);
-            if (!color_node)
-            {
-                parser_set_error(parser, "Error: could not create color node");
-                free_ast(print_node);
-                return NULL;
-            }
+
             print_node_add_item(print_node, color_node);
             parser_advance(parser);  // Consome o token de cor
             continue;  // Continua para próximo item
@@ -511,7 +510,7 @@ static ASTNode* parse_print_statement(Parser* parser)
             parser_advance(parser);  // Consome o 'width'
             if(parser->current_token.type != TOKEN_LPAREN)
             {
-                parser_set_error(parser, "Error: '(' expected");
+                parser_set_error(parser, "Parser error: '(' expected");
                 free_ast(print_node);
                 return NULL;
             }
@@ -520,7 +519,7 @@ static ASTNode* parse_print_statement(Parser* parser)
             // Valida se o usuario passou um numero como argumento do width()
             if(parser->current_token.type != TOKEN_NUMBER)
             {
-                parser_set_error(parser, "Error: number expected in width()");
+                parser_set_error(parser, "Parser error: number expected in width()");
                 free_ast(print_node);
                 return NULL;
             }
@@ -529,7 +528,7 @@ static ASTNode* parse_print_statement(Parser* parser)
 
             // Valida o intervalo aceitável para width
             if (width_value < 0 || width_value > 256) {
-                parser_set_error(parser, "Error: width must be between 1 and 256");
+                parser_set_error(parser, "Parser error: width must be between 1 and 256");
                 free_ast(print_node);
                 return NULL;
             }
@@ -537,7 +536,7 @@ static ASTNode* parse_print_statement(Parser* parser)
             parser_advance(parser);  // Consome o numero
             if(parser->current_token.type != TOKEN_RPAREN)
             {
-                parser_set_error(parser, "Error: ')' expected");
+                parser_set_error(parser, "Parser error: ')' expected");
                 free_ast(print_node);
                 return NULL;
             }           
@@ -603,7 +602,7 @@ static ASTNode* parse_color_statement(Parser* parser)
     {
         char error_msg[BUFFER_SIZE];
         snprintf(error_msg, sizeof(error_msg),
-            "Error [%d:%d]: Color '%s' cannot be used as standalone statement",
+            "Parser error [%d:%d]: Color '%s' cannot be used as standalone statement",
             token.line, token.column, token.text);
         parser_set_error(parser, error_msg);
         return NULL;
@@ -611,12 +610,7 @@ static ASTNode* parse_color_statement(Parser* parser)
     
     // Cria nó de cor
     ASTNode* node = create_color_node(token.type, token.line, token.column);
-    
-    if (!node) {
-        parser_set_error(parser, "Error: could not create color node");
-        return NULL;
-    }
-    
+
     parser_advance(parser);  // Consome o token
     
     return node;
@@ -647,7 +641,7 @@ static ASTNode* parse_input_statement(Parser* parser)
 
     if (parser->current_token.type != TOKEN_IDENTIFIER)
     {
-        parser_set_error(parser, "Error: Expected identifier after 'input' statment");
+        parser_set_error(parser, "Parser error: Expected identifier after 'input' statment");
         return NULL;        
     }
 
@@ -661,28 +655,293 @@ static ASTNode* parse_input_statement(Parser* parser)
 }
 
 //===================================================================
-// if_stmt
+// if_stmt := 'if' logical_expr 'then' EOL
+//                 statement_list
+//             ('else' 'if' logical_expr 'then' EOL
+//                 statement_list )*
+//             ('else' EOL
+//                 statement_list )?
+//            'end' 'if' EOL
 //===================================================================
-
-
+static ASTNode* parse_if_statement(Parser* parser)
+{
+    int line = parser->current_token.line;
+    int column = parser->current_token.column;
+    
+    parser_advance(parser);// Consome 'if'
+    
+    if (parser->current_token.type != TOKEN_LPAREN)
+    {
+        parser_set_error(parser, "Parser error: '(' expected after 'if'");
+        return NULL;
+    }
+    parser_advance(parser);// Consome '('
+    
+    ASTNode* condition = parse_logical_expr(parser);
+    if (parser->has_error || !condition)
+    {
+        return NULL;
+    }
+    
+    if (parser->current_token.type != TOKEN_RPAREN)
+    {
+        parser_set_error(parser, "Parser error: ')' expected after condition");
+        free_ast(condition);
+        return NULL;
+    }
+    parser_advance(parser);// Consome ')'
+    
+    if (parser->current_token.type != TOKEN_THEN)
+    {
+        parser_set_error(parser, "Parser error: 'then' expected after condition");
+        free_ast(condition);
+        return NULL;
+    }
+    parser_advance(parser);// Consome 'then'
+    
+    // Espera EOL/NL
+    if (parser->current_token.type != TOKEN_EOL && 
+        parser->current_token.type != TOKEN_NL)
+    {
+        parser_set_error(parser, "Parser error: newline expected after 'then'");
+        free_ast(condition);
+        return NULL;
+    }
+    parser_advance(parser);// Consome EOL/NL
+    
+    // Parse then body (statement list)
+    ASTNode* then_body = parse_statement_list(parser);
+    if (parser->has_error || !then_body)
+    {
+        free_ast(condition);
+        return NULL;
+    }
+    
+    // Processa múltiplos 'else if' (0 ou mais)
+    // ( 'else' 'if' logical_expr 'then' EOL statement_list )*
+    ASTNode* else_body = NULL;
+    while (parser->current_token.type == TOKEN_ELSE)
+    {
+        parser_advance(parser);// Consome 'else'
+        
+        // Verifica se é 'else if' ou 'else' final
+        if (parser->current_token.type == TOKEN_IF)
+        {
+            // É 'else if' - processa como novo IF sem 'if' keyword
+            parser_advance(parser);  // Consome 'if'
+            
+            if (parser->current_token.type != TOKEN_LPAREN)
+            {
+                parser_set_error(parser, "Parser error: '(' expected after 'if'");
+                free_ast(condition);
+                free_ast(then_body);
+                if (else_body) free_ast(else_body);
+                return NULL;
+            }
+            parser_advance(parser);  // Consome '('
+            
+            ASTNode* elif_condition = parse_logical_expr(parser);
+            if (parser->has_error || !elif_condition)
+            {
+                free_ast(condition);
+                free_ast(then_body);
+                if (else_body) free_ast(else_body);
+                return NULL;
+            }
+            
+            if (parser->current_token.type != TOKEN_RPAREN)
+            {
+                parser_set_error(parser, "Parser error: ')' expected after condition");
+                free_ast(condition);
+                free_ast(then_body);
+                free_ast(elif_condition);
+                if (else_body) free_ast(else_body);
+                return NULL;
+            }
+            parser_advance(parser);  // Consome ')'
+            
+            if (parser->current_token.type != TOKEN_THEN)
+            {
+                parser_set_error(parser, "Parser error: 'then' expected after condition");
+                free_ast(condition);
+                free_ast(then_body);
+                free_ast(elif_condition);
+                if (else_body) free_ast(else_body);
+                return NULL;
+            }
+            parser_advance(parser);  // Consome 'then'
+            
+            // Espera EOL/NL
+            if (parser->current_token.type != TOKEN_EOL && 
+                parser->current_token.type != TOKEN_NL)
+            {
+                parser_set_error(parser, "Parser error: newline expected after 'then'");
+                free_ast(condition);
+                free_ast(then_body);
+                free_ast(elif_condition);
+                if (else_body) free_ast(else_body);
+                return NULL;
+            }
+            parser_advance(parser);  // Consome EOL/NL
+            
+            // Parse elif body (statement list)
+            ASTNode* elif_body = parse_statement_list(parser);
+            if (parser->has_error || !elif_body)
+            {
+                free_ast(condition);
+                free_ast(then_body);
+                free_ast(elif_condition);
+                if (else_body) free_ast(else_body);
+                return NULL;
+            }
+            
+            // Cria um IF node para este 'else if'
+            // Este IF será o else_body do IF anterior
+            ASTNode* elif_node = create_if_node(elif_condition, elif_body, NULL, 
+                                                elif_condition->line, elif_condition->column);
+            if (!elif_node)
+            {
+                parser_set_error(parser, "Parser error: could not create elif node");
+                free_ast(condition);
+                free_ast(then_body);
+                free_ast(elif_condition);
+                free_ast(elif_body);
+                if (else_body) free_ast(else_body);
+                return NULL;
+            }
+            
+            // Encadeia: se else_body já existe, coloca elif_node como else_body dele
+            if (else_body)
+            {
+                // else_body é um IF node anterior
+                // Coloca elif_node como seu else_body
+                else_body->data.ifstatement.else_body = elif_node;
+            }
+            else
+            {
+                // Primeiro elif
+                else_body = elif_node;
+            }
+        }
+        else
+        {
+            // É 'else' final (não é 'else if')
+            // ( 'else' EOL statement_list )?
+            
+            // Espera EOL/NL
+            if (parser->current_token.type != TOKEN_EOL && 
+                parser->current_token.type != TOKEN_NL)
+            {
+                parser_set_error(parser, "Parser error: newline expected after 'else'");
+                free_ast(condition);
+                free_ast(then_body);
+                if (else_body) free_ast(else_body);
+                return NULL;
+            }
+            parser_advance(parser);  // Consome EOL/NL
+            
+            // Parse else body (statement list)
+            ASTNode* final_else_body = parse_statement_list(parser);
+            if (parser->has_error || !final_else_body)
+            {
+                free_ast(condition);
+                free_ast(then_body);
+                if (else_body) free_ast(else_body);
+                return NULL;
+            }
+            
+            // Coloca final_else_body como else_body do último elif
+            if (else_body)
+            {
+                // Encontra o último elif e coloca final_else_body nele
+                ASTNode* current = else_body;
+                while (current->data.ifstatement.else_body != NULL)
+                {
+                    current = current->data.ifstatement.else_body;
+                }
+                current->data.ifstatement.else_body = final_else_body;
+            }
+            else
+            {
+                // Não há elif, else_body é o final_else_body
+                else_body = final_else_body;
+            }
+            
+            // Sai do loop (else final encontrado)
+            break;
+        }
+    }
+    
+    // Verifica 'end if' (obrigatório)
+    if (parser->current_token.type != TOKEN_END)
+    {
+        parser_set_error(parser, "Parser error: 'end' expected");
+        free_ast(condition);
+        free_ast(then_body);
+        if (else_body) free_ast(else_body);
+        return NULL;
+    }
+    parser_advance(parser);  // Consome 'end'
+    
+    // Espera 'if'
+    if (parser->current_token.type != TOKEN_IF)
+    {
+        parser_set_error(parser, "Parser error: 'if' expected after 'end'");
+        free_ast(condition);
+        free_ast(then_body);
+        if (else_body) free_ast(else_body);
+        return NULL;
+    }
+    parser_advance(parser);  // Consome 'if'
+    
+    // Expect EOL/NL (ou EOF)
+    if (parser->current_token.type != TOKEN_EOL && 
+        parser->current_token.type != TOKEN_NL &&
+        parser->current_token.type != TOKEN_EOF)
+    {
+        parser_set_error(parser, "Parser error: newline expected after 'end if'");
+        free_ast(condition);
+        free_ast(then_body);
+        if (else_body) free_ast(else_body);
+        return NULL;
+    }
+    
+    // Consome EOL/NL se existir
+    if (parser->current_token.type == TOKEN_EOL || 
+        parser->current_token.type == TOKEN_NL)
+    {
+        parser_advance(parser);  // Consome EOL/NL
+    }
+    
+    // Create IF node
+    ASTNode* if_node = create_if_node(condition, then_body, else_body, line, column);
+    if (!if_node)
+    {
+        parser_set_error(parser, "Parser error: could not create if node");
+        free_ast(condition);
+        free_ast(then_body);
+        if (else_body) free_ast(else_body);
+        return NULL;
+    }
+    
+    return if_node;
+}
 //===================================================================
 // expression_stmt := logical_expr
 //===================================================================
-static ASTNode* parse_expression_stmt(Parser* parser) {
+static ASTNode* parse_expression_stmt(Parser* parser)
+{
     return parse_logical_expr(parser);
 }
-
 
 //===================================================================
 // logical_expr := logical_or_expr
 //===================================================================
-static ASTNode* parse_logical_expr(Parser* parser) {
+static ASTNode* parse_logical_expr(Parser* parser)
+{
     return parse_logical_or_expr(parser);
 }
 
-//===================================================================
-// logical_or_expr := logical_and_expr ('or' logical_and_expr)*
-//===================================================================
 //===================================================================
 // logical_or_expr := logical_and_expr ('or' logical_and_expr)*
 //===================================================================
@@ -901,7 +1160,7 @@ static ASTNode* parse_term(Parser* parser) {
 }
 
 //===================================================================
-// factor          := ('+' | '-')? atom
+// factor := ('+' | '-')? atom
 //===================================================================
 static ASTNode* parse_factor(Parser* parser)
 {
@@ -932,14 +1191,13 @@ static ASTNode* parse_factor(Parser* parser)
     return create_unary_op_node(op, operand, line, column);
 }
 
-
 //===================================================================
-// atom                := NUMBER 
-//                     | STRING 
-//                     | 'true' 
-//                     | 'false' 
-//                     | IDENTIFIER 
-//                     | '(' logical_expr ')'
+// atom := NUMBER 
+//      | STRING 
+//      | 'true' 
+//      | 'false' 
+//      | IDENTIFIER 
+//      | '(' logical_expr ')'
 //===================================================================
 static ASTNode* parse_atom(Parser* parser)
 {
@@ -976,7 +1234,7 @@ static ASTNode* parse_atom(Parser* parser)
             if (!parser_expect(parser, TOKEN_RPAREN))
             {
                 free_ast(node);
-                parser_set_error(parser, "Error: Expected ')'");
+                parser_set_error(parser, "Parser error: Expected ')'");
                 return NULL;
             }
             parser_advance(parser);  // Consume ')'
@@ -1028,7 +1286,7 @@ ASTNode* parse(Lexer* lexer)
         {
             free_ast(result);
         }
-        printf("Error: incomplete expression.\n");
+        printf("%sParser error: incomplete expression.%s\n", COLOR_ERROR, COLOR_RESET);
         return NULL;
     }
     
@@ -1038,25 +1296,29 @@ ASTNode* parse(Lexer* lexer)
 //===================================================================
 // FOR TESTING V0.2.0
 //===================================================================
-ASTNode* parse_single_statement(Lexer* lexer) {
+ASTNode* parse_single_statement(Lexer* lexer)
+{
     Parser parser;
     parser_init(&parser, lexer);
     
-    if (parser.current_token.type == TOKEN_EOF) {
+    if (parser.current_token.type == TOKEN_EOF)
+    {
         return NULL;
     }
     
     // Parse ONLY ONE statement (can be assignment OR expression)
     ASTNode* result = parse_statement(&parser);
     
-    if (parser.has_error) {
+    if (parser.has_error)
+    {
         if (result) free_ast(result);
         printf("%s\n", parser.error_message);
         return NULL;
     }
     
     // Check if everything was parsed
-    if (parser.current_token.type != TOKEN_EOF) {
+    if (parser.current_token.type != TOKEN_EOF)
+    {
         printf("Warning: remaining tokens not parsed\n");
         // But still returns the result
     }
@@ -1064,7 +1326,7 @@ ASTNode* parse_single_statement(Lexer* lexer) {
     return result;
 }
 
-#ifdef TESTPARSER
+#ifdef TEST
 #include "color.h"
 #include "utils.h"
 
@@ -1072,37 +1334,29 @@ int main()
 {
     setup_utf8();
     
-    printf("%s=== TESTE PARSER v0.5.1 expressões de comparação e lógicas ===%s\n\n", 
+    printf("%s=== TESTE PARSER v0.5.2 if...else ===%s\n\n", 
            COLOR_HEADER, COLOR_RESET);
     
     char* testes[] =
     {
 
-        // Expressões Simples
-        "5 + 3",
-        "x - y",
-        "a * b / c",
+        "if(idade >= 60) then\n"
+        "   print \"idoso\" nl \n"
+        "end if",
 
-        // Comparações
-        "5 == 5",
-        "x != 10",
-        "a < b",
-        "c > d",
-        "e <= f",
-        "g >= h",
+        "if (idade < 18) then\n"
+        "    print \"de menor\" nl\n"
+        "else\n"
+        "    print \"de maior\" nl\n"
+        "end if",
 
-        // Lógica Simples
-        "true and false",
-        "true or false",
-        "not true",
-        "! false",
-
-        // Expressões Complexas
-        "!(5 + 3) > 7 and (x < 10)",  
-        "not (5 > 10) or (y == 20)",
-        "(a > 0) and (b < 100) and (c != 50)",
-        "x > 5 or y < 10 and z == 15"
-
+        "if (idade > 60) then\n"
+        "    print \"idoso\" nl\n"
+        "else if(idade >= 18) then\n"
+        "    print \"de maior\" nl\n"
+        "else\n"
+        "    print \"de menor\" nl\n"
+        "end if"
     };
     
     int num_testes = sizeof(testes) / sizeof(testes[0]);

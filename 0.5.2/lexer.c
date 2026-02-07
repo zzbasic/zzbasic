@@ -330,7 +330,7 @@ static Token lexer_report_error(Lexer* lexer,
     char error_text[TOKENTEXT_SIZE];
     snprintf(error_text,
              sizeof(error_text),
-             "Error: %s",
+             "Lexer error: %s",
              message);
     
     Token token;
@@ -884,7 +884,7 @@ int main()
     setup_utf8();
     
     printf("ZzBasic Lexer Test v0.5.1 - 'true' e 'false'\n\n");
-    lexer_print_all_tokens("and or not = == ! != < <= > >= \n");
+    lexer_print_all_tokens("if then else end\n");
     //wait(); 
     
     return 0;

@@ -350,7 +350,7 @@ int evaluate_input_statement(ASTNode* node, SymbolTable* symbols)
 {
     if (!node || node->type != NODE_INPUT || !symbols)
     {
-        printf("Error: expected input statement node\n");
+        printf("Evaluator error: expected input statement node\n");
         return 0;
     }
     
@@ -361,7 +361,7 @@ int evaluate_input_statement(ASTNode* node, SymbolTable* symbols)
     char* input = read_user_input(prompt);
     if (!input)
     {
-        printf("Error reading input\n");
+        printf("Evaluator error: reading input\n");
         return 0;
     }
 
@@ -369,13 +369,13 @@ int evaluate_input_statement(ASTNode* node, SymbolTable* symbols)
     {
         if(strcmp(input, "true") == 0) {
             if (!symbol_table_set_bool(symbols, var_name, 1)) {
-                printf("Error assigning boolean to '%s'\n", var_name);
+                printf("Evaluator error: assigning boolean to '%s'\n", var_name);
                 return 0;
             }
         }
         else if(strcmp(input, "false") == 0) {
             if (!symbol_table_set_bool(symbols, var_name, 0)) {
-                printf("Error assigning boolean to '%s'\n", var_name);
+                printf("Evaluator error: assigning boolean to '%s'\n", var_name);
                 return 0;
             }
         }
@@ -385,7 +385,7 @@ int evaluate_input_statement(ASTNode* node, SymbolTable* symbols)
         double value = atof(input);
         if (!symbol_table_set_number(symbols, var_name, value))
         {
-            printf("Error assigning number to '%s'\n", var_name);
+            printf("Evaluator error: assigning number to '%s'\n", var_name);
             return 0;
         }
     }
@@ -393,7 +393,7 @@ int evaluate_input_statement(ASTNode* node, SymbolTable* symbols)
     {
         if (!symbol_table_set_string(symbols, var_name, input))
         {
-            printf("Error assigning string to '%s'\n", var_name);
+            printf("Evaluator error: assigning string to '%s'\n", var_name);
             return 0;
         }
         //printf("OK: %s = \"%s\" (from input)\n", var_name, input);
@@ -426,7 +426,7 @@ int execute_statement_list(ASTNode* node, SymbolTable* symbols)
 {
     if (!node || node->type != NODE_STATEMENT_LIST)
     {
-        printf("Error: expected statement list node\n");
+        printf("Evaluator error: expected statement list node\n");
         return 0;
     }
     
@@ -478,7 +478,7 @@ int execute_statement(ASTNode* node, SymbolTable* symbols)
             {
                 if (!symbol_table_set_string(symbols, var_name, value_result.value.string))
                 {
-                    printf("Error assigning string to '%s'\n", var_name);
+                    printf("Evaluator error: assigning string to '%s'\n", var_name);
                     return 0;
                 }
             }
@@ -486,7 +486,7 @@ int execute_statement(ASTNode* node, SymbolTable* symbols)
             {
                 if (!symbol_table_set_number(symbols, var_name, value_result.value.number))
                 {
-                    printf("Error assigning number to '%s'\n", var_name);
+                    printf("Evaluator error: assigning number to '%s'\n", var_name);
                     return 0;
                 }
             }
@@ -494,7 +494,7 @@ int execute_statement(ASTNode* node, SymbolTable* symbols)
              {  
                 if (!symbol_table_set_bool(symbols, var_name, value_result.value.boolean))
                 {
-                    printf("Error assigning boolean to '%s'\n", var_name);
+                    printf("Evaluator error: assigning boolean to '%s'\n", var_name);
                     return 0;
                 }
             }
@@ -557,7 +557,7 @@ int execute_statement(ASTNode* node, SymbolTable* symbols)
                 return 1;
             }
             // Outras cores sozinhas não fazem sentido como statements
-            printf("%s[%d:%d] Warning: color command without print has no effect%s\n",
+            printf("%s[%d:%d] Evaluator warning: color command without print has no effect%s\n",
                    COLOR_WARNING, node->line, node->column, COLOR_RESET);
             return 1;
 
@@ -607,9 +607,12 @@ int execute_statement(ASTNode* node, SymbolTable* symbols)
                 return 1;
             }
         }
+
+        case NODE_IF:
+            return execute_if_statement(node, symbols);
             
         default:
-            printf("Unsupported statement type: %d\n", node->type);
+            printf("Evaluator error: unsupported statement type: %d\n", node->type);
             return 0;
     }
 }
@@ -639,7 +642,7 @@ static int evaluate_print_statement_with_format(ASTNode* node, ExecutionContext*
 {
     if (!node || node->type != NODE_PRINT || !ctx)
     {
-        printf("Error: expected print statement node\n");
+        printf("Evaluator error: expected print statement node\n");
         return 0;
     }
     
@@ -764,7 +767,7 @@ EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalCon
 {
     if (node == NULL)
     {
-        return create_error_result("Error: AST node is null", 0, 0);
+        return create_error_result("Evaluator error: AST node is null", 0, 0);
     }
     
     switch (node->type)
@@ -775,7 +778,7 @@ EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalCon
             if (ctx == CTX_STRING)
             {
                 return create_error_result_fmt(node->line, node->column,
-                     "Boolean cannot be used as string");
+                     "Evaluator error: boolean cannot be used as string");
             }
             return create_success_result_bool(node->data.boolean.value, 
                                                node->line, node->column);
@@ -786,7 +789,7 @@ EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalCon
             if (ctx == CTX_STRING)
             {
                 return create_error_result_fmt(node->line, node->column,
-                     "Number cannot be used as string");
+                     "Evaluator error: number cannot be used as string");
             }
             return create_success_result_number(node->data.number.value, 
                                                node->line, node->column);
@@ -800,7 +803,7 @@ EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalCon
             if (!symbol_table_exists(symbols, var_name))
             {
                 return create_error_result_fmt(node->line, node->column,
-                     "Variable '%s' not declared. Use 'let %s = value'", 
+                     "Evaluator error: variable '%s' not declared. Use 'let %s = value'", 
                      var_name, var_name);
             }
             
@@ -811,7 +814,7 @@ EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalCon
                 if (ctx == CTX_STRING)
                 {
                     return create_error_result_fmt(node->line, node->column,
-                         "Variable '%s' is a number, cannot be used as string", 
+                         "Evaluator error: variable '%s' is a number, cannot be used as string", 
                          var_name);
                 }
                 return create_success_result_number(num_value, node->line, node->column);
@@ -824,7 +827,7 @@ EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalCon
                 if (ctx == CTX_NUMBER)
                 {
                     return create_error_result_fmt(node->line, node->column,
-                         "Variable '%s' is a string, cannot be used in mathematical operation", 
+                         "Evaluator error: variable '%s' is a string, cannot be used in mathematical operation", 
                          var_name);
                 }
                 return create_success_result_string(str_value, node->line, node->column);
@@ -837,13 +840,13 @@ EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalCon
                 if (ctx == CTX_NUMBER)
                 {
                     return create_error_result_fmt(node->line, node->column,
-                         "Variable '%s' is a boolean, cannot be used in mathematical operation", 
+                         "Evaluator error: variable '%s' is a boolean, cannot be used in mathematical operation", 
                          var_name);
                 }
                 if (ctx == CTX_STRING)
                 {
                     return create_error_result_fmt(node->line, node->column,
-                         "Variable '%s' is a boolean, cannot be used as string", 
+                         "Evaluator error: variable '%s' is a boolean, cannot be used as string", 
                          var_name);
                 }
                 return create_success_result_bool(bool_value, node->line, node->column);
@@ -851,7 +854,7 @@ EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalCon
             
             // Should not reach here
             return create_error_result_fmt(node->line, node->column,
-                 "Internal error: unknown variable type '%s'", var_name);
+                 "Evaluator error: internal error: unknown variable type '%s'", var_name);
         }
             
         case NODE_BINARY_OP:
@@ -860,7 +863,7 @@ EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalCon
             if (ctx == CTX_STRING)
             {
                 return create_error_result_fmt(node->line, node->column,
-                     "Mathematical operation cannot be used as string");
+                     "Evaluator error: mathematical operation cannot be used as string");
             }
             
             // Evaluate operands in number context
@@ -875,14 +878,14 @@ EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalCon
             // Both must be numbers
             if (left_result.type == RESULT_STRING || right_result.type == RESULT_STRING )
             {
-                return create_error_result("Mathematical operation with string", 
+                return create_error_result("Evaluator error: mathematical operation with string", 
                                          node->line, node->column);
             }
 
             // Both must be numbers
             if (left_result.type == RESULT_BOOL || right_result.type == RESULT_BOOL )
             {
-                return create_error_result("Mathematical operation with boolean", 
+                return create_error_result("Evaluator error: mathematical operation with boolean", 
                                          node->line, node->column);
             }
             
@@ -902,13 +905,13 @@ EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalCon
                     if (fabs(right_result.value.number) < EPSILON)
                     {
                         return create_error_result_fmt(node->line, node->column,
-                             "Division by zero");
+                             "Evaluator error: division by zero");
                     }
                     result = left_result.value.number / right_result.value.number; 
                     break;
                 default: 
                     return create_error_result_fmt(node->line, node->column,
-                         "Invalid operator '%c'", node->data.binaryop.operator);
+                         "Evaluator error: invalid operator '%c'", node->data.binaryop.operator);
             }
             
             return create_success_result_number(result, node->line, node->column);
@@ -920,7 +923,7 @@ EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalCon
             if (ctx == CTX_STRING)
             {
                 return create_error_result_fmt(node->line, node->column,
-                     "Unary operator cannot be applied to string");
+                     "Evaluator error: unary operator cannot be applied to string");
             }
             
             EvaluatorResult operand_result = evaluate_expression(
@@ -929,7 +932,7 @@ EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalCon
             
             if (operand_result.type == RESULT_STRING )
             {
-                return create_error_result("Unary operator '-' applied to string", 
+                return create_error_result("Evaluator error: unary operator '-' applied to string", 
                                          node->line, node->column);
             }
             
@@ -944,7 +947,7 @@ EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalCon
                     break;
                 default:
                     return create_error_result_fmt(node->line, node->column,
-                         "Invalid unary operator '%c'", node->data.unaryop.operator);
+                         "Evaluator error: invalid unary operator '%c'", node->data.unaryop.operator);
             }
             
             return create_success_result_number(result, node->line, node->column);
@@ -955,7 +958,7 @@ EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalCon
             if (ctx == CTX_NUMBER)
             {
                 return create_error_result_fmt(node->line, node->column,
-                     "String cannot be used as number");
+                     "Evaluator error: string cannot be used as number");
             }
             return create_success_result_string(node->data.string.value, 
                                                node->line, node->column);
@@ -963,7 +966,7 @@ EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalCon
 
         case NODE_STATEMENT_LIST:
             return create_error_result_fmt(node->line, node->column,
-                 "Statement list cannot be used as expression");
+                 "Evaluator error: statement list cannot be used as expression");
 
         case NODE_COMPARISON_OP:
         {
@@ -984,7 +987,7 @@ EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalCon
             if (left_result.type != right_result.type)
             {
                 return create_error_result_fmt(node->line, node->column,
-                     "Type mismatch in comparison: cannot compare %s with %s",
+                     "Evaluator error: type mismatch in comparison: cannot compare %s with %s",
                      (left_result.type == RESULT_NUMBER ? "number" : "boolean"),
                      (right_result.type == RESULT_NUMBER ? "number" : "boolean"));
             }
@@ -993,7 +996,7 @@ EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalCon
             if (left_result.type == RESULT_STRING)
             {
                 return create_error_result_fmt(node->line, node->column,
-                     "String comparison not supported");
+                     "Evaluator error: string comparison not supported");
             }
             
             int comparison_result = 0;
@@ -1026,7 +1029,7 @@ EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalCon
                         break;
                     default:
                         return create_error_result_fmt(node->line, node->column,
-                             "Invalid comparison operator");
+                             "Evaluator error: invalid comparison operator");
                 }
             }
             // Comparação de booleanos
@@ -1046,7 +1049,7 @@ EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalCon
                     // Outros operadores não fazem sentido para booleanos
                     default:
                         return create_error_result_fmt(node->line, node->column,
-                             "Operator not supported for boolean values");
+                             "Evaluator error: operator not supported for boolean values");
                 }
             }
             
@@ -1070,7 +1073,7 @@ EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalCon
             if (left_result.type != RESULT_BOOL)
             {
                 return create_error_result_fmt(node->line, node->column,
-                     "Logical operator expects boolean, got %s",
+                     "Evaluator error: logical operator expects boolean, got %s",
                      (left_result.type == RESULT_NUMBER ? "number" : "string"));
             }
             
@@ -1098,7 +1101,7 @@ EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalCon
             if (right_result.type != RESULT_BOOL)
             {
                 return create_error_result_fmt(node->line, node->column,
-                     "Logical operator expects boolean, got %s",
+                     "Evaluator error: logical operator expects boolean, got %s",
                      (right_result.type == RESULT_NUMBER ? "number" : "string"));
             }
             
@@ -1115,7 +1118,7 @@ EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalCon
                     break;
                 default:
                     return create_error_result_fmt(node->line, node->column,
-                         "Invalid logical operator");
+                         "Evaluator error: invalid logical operator");
             }
             
             return create_success_result_bool(logical_result, 
@@ -1136,7 +1139,7 @@ EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalCon
             if (operand_result.type != RESULT_BOOL)
             {
                 return create_error_result_fmt(node->line, node->column,
-                     "NOT operator expects boolean, got %s",
+                     "Evaluator error: NOT operator expects boolean, got %s",
                      (operand_result.type == RESULT_NUMBER ? "number" : "string"));
             }
             
@@ -1149,7 +1152,7 @@ EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalCon
             
         default:
             return create_error_result_fmt(node->line, node->column,
-                 "Unsupported node type: %d", node->type);
+                 "Evaluator error: unsupported node type: %d", node->type);
     }
 }
 
@@ -1160,7 +1163,7 @@ EvaluatorResult evaluate(ASTNode* node)
     SymbolTable* symbols = symbol_table_create();
     if (!symbols)
     {
-        return create_error_result("Error: could not create symbol table", 0, 0);
+        return create_error_result("Evaluator error: could not create symbol table", 0, 0);
     }
     
     EvaluatorResult result = evaluate_expression(node, symbols, CTX_ANY);
@@ -1238,12 +1241,12 @@ int execute_statement_with_context(ASTNode* node, ExecutionContext* ctx)
             
             if (value_result.type == RESULT_STRING) {
                 if (!symbol_table_set_string(ctx->symbols, var_name, value_result.value.string)) {
-                    printf("Error assigning string to '%s'\n", var_name);
+                    printf("Evaluator error: assigning string to '%s'\n", var_name);
                     return 0;
                 }
             } else {
                 if (!symbol_table_set_number(ctx->symbols, var_name, value_result.value.number)) {
-                    printf("Error assigning number to '%s'\n", var_name);
+                    printf("Evaluator error: assigning number to '%s'\n", var_name);
                     return 0;
                 }
             }
@@ -1259,7 +1262,7 @@ int execute_statement_with_context(ASTNode* node, ExecutionContext* ctx)
                 evaluator_color_reset(ctx);
                 return 1;
             }
-            printf("%s[%d:%d] Warning: color command without print has no effect%s\n",
+            printf("%s[%d:%d] Evaluator warning: color command without print has no effect%s\n",
                    COLOR_WARNING, node->line, node->column, COLOR_RESET);
             return 1;
             
@@ -1307,18 +1310,65 @@ int execute_statement_with_context(ASTNode* node, ExecutionContext* ctx)
             
         case NODE_STATEMENT_LIST:
             return execute_statement_list(node, ctx->symbols);
+
+        case NODE_IF:
+            return execute_if_statement_with_context(node, ctx);
             
         default:
-            printf("Unsupported statement type: %d\n", node->type);
+            printf("Evaluator error: unsupported statement type: %d\n", node->type);
             return 0;
     }
 }
 
-// Esta função também está declarada mas não implementada
-int evaluate_print_statement_with_context(ASTNode* node, ExecutionContext* ctx)
+int execute_if_statement(ASTNode* node, SymbolTable* symbols)
 {
-    return evaluate_print_with_context(node, ctx);
+    if (!node || !symbols) return 0;
+    
+    ExecutionContext* ctx = execution_context_create(symbols);
+    if (!ctx) return 0;
+    
+    int result = execute_if_statement_with_context(node, ctx);
+    
+    execution_context_destroy(ctx);
+    return result;
 }
+
+int execute_if_statement_with_context(ASTNode* node, ExecutionContext* ctx)
+{
+    if (!node || !ctx) return 0;
+    
+    // Evaluate condition
+    EvaluatorResult cond_result = evaluate_expression(
+                                  node->data.ifstatement.condition,
+                                  ctx->symbols, CTX_BOOL);
+    
+    if (cond_result.type == RESULT_ERROR)
+    {
+        printf("%s\n", cond_result.error_message);
+        return 0;
+    }
+    
+    // Execute appropriate branch
+    if (cond_result.value.boolean)
+    {
+        // Execute THEN body
+        return execute_statement_with_context(node->data.ifstatement.then_body, ctx);
+    }
+    else if (node->data.ifstatement.else_body)
+    {
+        // Execute ELSE body
+        return execute_statement_with_context(node->data.ifstatement.else_body, ctx);
+    }
+    
+    // No else body, just return success
+    return 1;
+}
+
+// Esta função também está declarada mas não implementada
+// int evaluate_print_statement_with_context(ASTNode* node, ExecutionContext* ctx)
+// {
+//     return evaluate_print_with_context(node, ctx);
+// }
 
 #ifdef TESTEVALUATOR
 #include "color.h"
