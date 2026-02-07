@@ -482,7 +482,7 @@ Para executar este tipo de instrução use parênteses:
 
 ## 📖 Documentação Adicional
 
-Para mais detalhes, consulte o **Manual do Usuário** (em desenvolvimento).
+Para mais detalhes, consulte o [Manual do Usuário](https://github.com/zzbasic/zzbasic/blob/main/0.5.2/zzbasic_0_5_2_manual.md)
 
 ---
 
