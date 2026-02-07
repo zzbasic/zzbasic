@@ -2,7 +2,7 @@
 
 ![ZzBasic](zzbasic_logo1.png)
 
-**Bem-vindo ao ZzBasic!** Este manual é o seu guia completo para aprender e dominar a linguagem de programação ZzBasic. Aqui você encontrará tudo o que precisa para começar, desde a instalação até a criação de programas úteis.
+Bem-vindo ao ZzBasic! Este manual é o seu guia completo para aprender e dominar a linguagem de programação ZzBasic. Aqui você encontrará tudo o que precisa para começar, desde a instalação até a criação de programas úteis.
 
 ---
 
@@ -66,7 +66,7 @@ O ZzBasic pode ser usado de duas maneiras:
 
 Comentários começam com `#` e vão até o final da linha. Eles são ignorados pelo interpretador e servem para documentar seu código.
 
-```basic
+```python
 # Este é um comentário
 let x = 10  # Este também é um comentário
 ```
@@ -91,7 +91,7 @@ Você não precisa declarar o tipo de uma variável. O ZzBasic descobre automati
 
 O comando `let` é usado para criar e atribuir valores a variáveis. Uma variável é um espaço na memória que armazena um valor.
 
-```basic
+```python
 let nome = "Zurg"
 let idade = 120
 let pi = 3.14
@@ -100,7 +100,7 @@ let ativo = true
 
 Os nomes de variáveis devem começar com uma letra ou `_` e podem conter letras, números e `_`. Use nomes descritivos para tornar seu código mais legível.
 
-```basic
+```python
 let nome_completo = "João Silva"  # Bom
 let n = "João Silva"              # Ruim - nome não descritivo
 ```
@@ -114,7 +114,7 @@ O ZzBasic suporta as quatro operações aritméticas básicas:
 - `*` (multiplicação)
 - `/` (divisão)
 
-```basic
+```python
 let soma = 10 + 5
 let produto = 3 * 4
 let media = (8.5 + 7.5) / 2
@@ -131,7 +131,7 @@ O ZzBasic suporta operadores de comparação para comparar valores:
 - `<=` (menor ou igual)
 - `>=` (maior ou igual)
 
-```basic
+```python
 let x = 10
 let y = 5
 
@@ -149,7 +149,7 @@ O ZzBasic suporta operadores lógicos para combinar condições:
 - `or` (OU lógico)
 - `not` ou `!` (NÃO lógico)
 
-```basic
+```python
 let x = 10
 let y = 5
 
@@ -171,7 +171,7 @@ O ZzBasic segue a ordem padrão de precedência de operadores:
 6. AND lógico: `and`
 7. OR lógico: `or`
 
-```basic
+```python
 let resultado = 2 + 3 * 4  # Resultado é 14, não 20
 let resultado = (2 + 3) * 4  # Resultado é 20
 let resultado = 5 > 3 and 2 < 4  # true
@@ -187,7 +187,7 @@ O comando `print` é usado para exibir valores na tela. Ele tem uma sintaxe flex
 
 ### Imprimindo Valores Simples
 
-```basic
+```python
 print "Olá Mundo"
 print 42
 print 3.14
@@ -196,7 +196,7 @@ print true
 
 ### Imprimindo Variáveis
 
-```basic
+```python
 let nome = "Zurg"
 print nome
 ```
@@ -205,19 +205,21 @@ print nome
 
 Você pode imprimir vários valores em um único comando. Eles são separados por espaços automaticamente.
 
-```basic
+```python
 let nome = "Zurg"
 let idade = 120
 print "Nome:" nome
 print "Idade:" idade
 print "Resultado:" 10 + 5
 ```
-Note que para imprimir vários valores no mesmo `print` estes devem estar separados por um espaço em branco.
+
+Note que para imprimir vários valores no mesmo print estes devem estar separados por um espaço em branco.
+
 ### Imprimindo Expressões
 
 Você pode imprimir o resultado de expressões diretamente:
 
-```basic
+```python
 print 5 > 3 nl           # true
 print true and false nl  # false
 print 10 + 5 * 2 nl      # 20
@@ -227,14 +229,14 @@ print 10 + 5 * 2 nl      # 20
 
 Por padrão, o `print` **não** quebra a linha. Para quebrar a linha, use `nl` no final do comando.
 
-```basic
+```python
 print "Olá"  # Fica na mesma linha
 print "Mundo" nl # Quebra a linha
 ```
 
 Isso é útil quando você quer construir uma linha gradualmente:
 
-```basic
+```python
 print "Progresso: ["
 print "."
 print "."
@@ -246,7 +248,7 @@ print "]" nl
 
 O `?` é um atalho para `print`. Use quando quiser digitar menos:
 
-```basic
+```python
 ? "Teste rápido" nl
 ? 10 + 20 nl
 ? true nl
@@ -258,7 +260,7 @@ O `print` suporta 24 cores para tornar a saída mais expressiva e legível.
 
 #### Cores Normais
 
-```basic
+```python
 print red "ERRO" nocolor ": Arquivo não encontrado" nl
 print green "SUCESSO" nocolor " - Operação concluída" nl
 print yellow "AVISO" nocolor ": Verifique os dados" nl
@@ -267,21 +269,21 @@ print blue "Informação" nocolor ": Leia com atenção" nl
 
 #### Cores Brilhantes
 
-```basic
+```python
 print bred "CRÍTICO" nocolor " - Sistema em risco" nl
 print bgreen "OK" nocolor " - Tudo funcionando" nl
 ```
 
 #### Cores de Fundo
 
-```basic
+```python
 print bgred "ALERTA" nocolor " - Ação necessária" nl
 print bgblue white "INFORMAÇÃO" nocolor " - Leia com atenção" nl
 ```
 
 #### Combinações
 
-```basic
+```python
 print bred bgblue "CRÍTICO" nocolor " - Sistema em risco" nl
 print cyan "Dica:" nocolor " Use 'nocolor' para resetar" nl
 ```
@@ -295,24 +297,100 @@ print cyan "Dica:" nocolor " Use 'nocolor' para resetar" nl
 | **Fundo** | `bgblack`, `bgred`, `bggreen`, `bgyellow`, `bgblue`, `bgmagenta`, `bgcyan`, `bgwhite` |
 | **Especial** | `nocolor` (reseta a cor para padrão) |
 
+### Largura de Campo e Alinhamento
+
+O `print` suporta controle de largura de campo e alinhamento para criar tabelas e formatação profissional.
+
+#### Largura de Campo (`width`)
+
+Use `width(n)` para especificar a largura mínima de um campo:
+
+```python
+print width(20) "Nome" nl
+print width(10) 42 nl
+```
+
+#### Alinhamento
+
+Use `left`, `right` ou `center` para controlar o alinhamento dentro do campo:
+
+```python
+print width(20) left "Esquerda" nl
+print width(20) right "Direita" nl
+print width(20) center "Centro" nl
+```
+
+#### Exemplos Práticos
+
+**Tabela Simples:**
+
+```python
+print width(20) left "Produto" " | " width(10) right "Preço" nl
+print width(20) left "Notebook" " | " width(10) right 4500.50 nl
+print width(20) left "Mouse" " | " width(10) right 89.90 nl
+```
+
+**Combinando com Cores:**
+
+```python
+print red width(40) center "ALERTA DE SEGURANÇA" nocolor nl
+print yellow width(40) center "Verifique as permissões" nocolor nl
+```
+
+**Tabela Formatada:**
+
+```python
+print cyan width(20) left "Produto" nocolor " | " cyan width(10) right "Preço" nocolor " | " cyan width(10) center "Estoque" nocolor nl
+print cyan "============================================" nocolor nl
+print width(20) left "Notebook" " | " width(10) right 4500.50 " | " width(10) center 15 nl
+print width(20) left "Mouse" " | " width(10) right 89.90 " | " width(10) center 120 nl
+print width(20) left "Teclado Mecânico" " | " width(10) right 350.00 " | " width(10) center 42 nl
+```
+
+#### Função `repeat()` (Futura)
+
+Nas próximas versões, será possível usar a função `repeat(char, n)` para criar linhas facilmente:
+
+```python
+# Futura sintaxe (v0.6.0)
+print repeat('=', 50) nl
+print repeat('-', 30) nl
+```
+
+Por enquanto, use strings com caracteres repetidos manualmente.
+
 ---
 
 ## Capítulo 5: Entrada de Dados
 
 ### Comando `input`
 
-O comando `input` é usado para ler uma linha de texto do usuário:
+O comando `input` é usado para ler uma linha de texto do usuário. A sintaxe é:
 
-```basic
-input "Digite seu nome: " 
+```python
+input "mensagem" variavel
+```
+
+**Exemplos:**
+
+```python
+input "Digite seu nome: " nome
 print "Olá, " nome nl
 ```
 
-### Exemplo Prático
-
-```basic
-input "Digite um número: " 
+```python
+input "Digite um número: " numero
 print "Você digitou: " numero nl
+```
+
+```python
+input "Digite sua idade: " idade
+
+if (idade >= 18) then
+    print "Você é maior de idade" nl
+else
+    print "Você é menor de idade" nl
+end if
 ```
 
 ---
@@ -323,7 +401,7 @@ print "Você digitou: " numero nl
 
 O comando `if` é usado para executar código condicionalmente:
 
-```basic
+```python
 let idade = 18
 
 if (idade >= 18) then
@@ -337,7 +415,7 @@ end if
 
 Você pode usar múltiplos `else if` para testar várias condições:
 
-```basic
+```python
 let nota = 7.5
 
 if (nota >= 9) then
@@ -353,7 +431,7 @@ end if
 
 ### Exemplos com Operadores Lógicos
 
-```basic
+```python
 let idade = 25
 let tem_carteira = true
 
@@ -364,7 +442,7 @@ else
 end if
 ```
 
-```basic
+```python
 let chovendo = true
 let frio = false
 
@@ -373,7 +451,7 @@ if (chovendo or frio) then
 end if
 ```
 
-```basic
+```python
 let numero = 10
 
 if (not (numero < 0)) then
@@ -387,7 +465,7 @@ end if
 
 ### Exemplo 1: Cálculo de Média
 
-```basic
+```python
 # Cálculo de média de notas
 let nota1 = 8.5
 let nota2 = 7.5
@@ -406,9 +484,9 @@ end if
 
 ### Exemplo 2: Validação de Idade
 
-```basic
+```python
 print "Digite sua idade: " nl
-let idade = input()
+input "Idade: " idade
 
 if (idade >= 18) then
     print green "Maior de idade" nocolor nl
@@ -421,7 +499,7 @@ end if
 
 ### Exemplo 3: Comparação de Números
 
-```basic
+```python
 let x = 10
 let y = 5
 let z = 10
@@ -445,7 +523,7 @@ end if
 
 ### Exemplo 4: Mensagem com Cores
 
-```basic
+```python
 # Mensagem com cores
 let status = "OK"
 print green "Status:" nocolor status nl
@@ -454,7 +532,7 @@ print blue "Sistema operacional" nocolor nl
 
 ### Exemplo 5: Construindo uma Linha
 
-```basic
+```python
 # Construindo uma linha progressivamente
 print "["
 print "="
@@ -465,7 +543,213 @@ print "]" nl
 
 ---
 
-## Capítulo 8: Comandos Úteis no REPL
+## Capítulo 8: Script de Teste Completo
+
+Aqui está um script completo que testa todas as funcionalidades implementadas até a v0.5.2:
+
+```python
+# ============================================================
+# ZzBasic v0.5.2 - Script de Teste Completo
+# Testa todas as funcionalidades implementadas até agora
+# ============================================================
+
+# Título
+print nl
+print blue "+============================================================+" nl
+print blue "|                  "cyan"ZzBasic v0.5.2                        "blue"|" nl
+print blue "+============================================================+" nl
+print nl
+
+# ============================================================
+# 1. Expressões Aritméticas (v0.1.0)
+# ============================================================
+nocolor
+print "==============================================================" nl
+print yellow "1. EXPRESSÕES ARITMÉTICAS" nl
+nocolor
+print "==============================================================" nl
+print nl
+
+print "2 + 3 = " 2 + 3 nl
+print "10 - 4 = " 10 - 4 nl
+print "5 * 6 = " 5 * 6 nl
+print "20 / 4 = " 20 / 4 nl
+print "-5 + 10 = " -5 + 10 nl
+print "(2 + 3) * 4 = " (2 + 3) * 4 nl
+print "10 / (2 + 3) = " 10 / (2 + 3) nl
+print nl
+
+# ============================================================
+# 2. Variáveis e Comando LET (v0.2.0)
+# ============================================================
+
+print "==============================================================" nl
+print yellow "2. VARIÁVEIS E COMANDO LET" nl
+nocolor
+print "==============================================================" nl
+print nl
+nocolor
+
+let pi = 3.14159
+let raio = 10
+let area = pi * (raio * raio)
+
+print "Valor de pi: " pi nl
+print "Raio: " raio nl
+print "Área do círculo: " area nl
+print nl
+
+let nome = "ZzBasic"
+let versao = "0.5.2"
+print "Linguagem: " nome " " versao nl
+print nl
+
+# ============================================================
+# 3. Comando PRINT (v0.4.0)
+# ============================================================
+
+print "==============================================================" nl
+print yellow "3. COMANDO PRINT" nl
+nocolor
+print "==============================================================" nl
+print nl
+
+print "Esta linha não pula para a próxima."
+print " Esta continua na mesma linha." nl
+print "Esta linha pula para a próxima." nl
+print nl
+
+# ============================================================
+# 4. Cores (v0.4.1)
+# ============================================================
+
+print "==============================================================" nl
+print yellow "4. CORES" nl
+nocolor
+print "==============================================================" nl
+print nl
+
+print red "ERRO:" nocolor " Arquivo não encontrado." nl
+print green "SUCESSO:" nocolor " Operação concluída." nl
+print yellow "AVISO:" nocolor " Verifique os dados." nl
+print blue "INFO:" nocolor " Leia com atenção." nl
+print nl
+
+# ============================================================
+# 5. Formatação (v0.4.2)
+# ============================================================
+
+print "==============================================================" nl
+print yellow "5. FORMATAÇÃO (WIDTH E ALINHAMENTO)" nl
+nocolor
+print "==============================================================" nl
+print nl
+
+# Tabela de Produtos
+print cyan width(20) left "Produto" nocolor " | " cyan width(10) right "Preço" nocolor " | " cyan width(10) center "Estoque" nocolor nl
+print cyan "============================================================" nocolor nl
+print width(20) left "Notebook" " | " width(10) right 4500.50 " | " width(10) center 15 nl
+print width(20) left "Mouse" " | " width(10) right 89.90 " | " width(10) center 120 nl
+print width(20) left "Teclado Mecânico" " | " width(10) right 350.00 " | " width(10) center 42 nl
+print nl
+
+# Combinação de Cores e Formatação
+print red width(40) center "ALERTA DE SEGURANÇA" nocolor nl
+print yellow width(40) center "Verifique as permissões do sistema" nocolor nl
+print nl
+
+# ============================================================
+# 6. Operadores de Comparação e Lógicos (v0.5.1)
+# ============================================================
+
+print "==============================================================" nl
+print yellow "6. OPERADORES DE COMPARAÇÃO E LÓGICOS" nl
+nocolor
+print "==============================================================" nl
+print nl
+
+print "5 == 5: " 5 == 5 nl
+print "5 != 3: " 5 != 3 nl
+print "3 < 5: " 3 < 5 nl
+print "5 > 3: " 5 > 3 nl
+print "5 <= 5: " 5 <= 5 nl
+print "5 >= 5: " 5 >= 5 nl
+print nl
+
+print "true and true: " true and true nl
+print "true or false: " true or false nl
+print "not true: " not true nl
+print "! false: " ! false nl
+print nl
+
+# ============================================================
+# 7. Entrada de Dados (v0.5.0)
+# ============================================================
+
+print "==============================================================" nl
+print yellow "7. ENTRADA DE DADOS" nl
+nocolor
+print "==============================================================" nl
+print nl
+
+input "Digite seu nome: " seu_nome
+print "Olá, " seu_nome "!" nl
+print nl
+
+# ============================================================
+# 8. Controle de Fluxo - IF...ELSE (v0.5.2)
+# ============================================================
+
+print "==============================================================" nl
+print yellow "8. CONTROLE DE FLUXO - IF...ELSE" nl
+nocolor
+print "==============================================================" nl
+print nl
+
+let idade = 25
+
+if (idade >= 18) then
+    print green "Você é maior de idade" nocolor nl
+else
+    print red "Você é menor de idade" nocolor nl
+end if
+
+print nl
+
+let nota = 7.5
+
+if (nota >= 9) then
+    print "Conceito: A (Excelente)" nl
+else if (nota >= 7) then
+    print "Conceito: B (Bom)" nl
+else if (nota >= 5) then
+    print "Conceito: C (Satisfatório)" nl
+else
+    print "Conceito: D (Insuficiente)" nl
+end if
+
+print nl
+
+# ============================================================
+# 9. Finalização
+# ============================================================
+
+print green "Todos os testes foram concluídos com sucesso!" nocolor nl
+print nl
+
+# Finalização
+print nl
+print blue "+============================================================+" nl
+print blue "|                  "cyan"FIM DO TESTE                          "blue"|" nl
+print blue "+============================================================+" nl
+print nl
+
+nocolor
+```
+
+---
+
+## Capítulo 9: Comandos Úteis no REPL
 
 O REPL oferece alguns comandos especiais para ajudá-lo a debugar e entender seu código.
 
@@ -473,7 +757,7 @@ O REPL oferece alguns comandos especiais para ajudá-lo a debugar e entender seu
 
 Exibe uma mensagem de ajuda:
 
-```basic
+```python
 >> help
 ```
 
@@ -481,7 +765,7 @@ Exibe uma mensagem de ajuda:
 
 Mostra como o ZzBasic interpreta sua entrada (análise léxica):
 
-```basic
+```python
 >> tokens print "Olá" 10 + 5 nl
 === LEXICAL ANALYSIS ===
   1: (1:1)[PRINT]: print
@@ -498,7 +782,7 @@ Mostra como o ZzBasic interpreta sua entrada (análise léxica):
 
 Mostra a Árvore Sintática Abstrata (AST) de sua entrada:
 
-```basic
+```python
 >> ast let x = 10 + 5
 AST for: "let x = 10 + 5"
 [1:1] STATEMENT_LIST (1 statements)
@@ -512,13 +796,13 @@ AST for: "let x = 10 + 5"
 
 Sai do REPL:
 
-```basic
+```python
 >> exit
 ```
 
 ou
 
-```basic
+```python
 >> quit
 ```
 
@@ -531,28 +815,18 @@ ou
 | `let` | Cria e atribui um valor a uma variável. | `let x = 10` |
 | `print` | Exibe um ou mais valores na tela. | `print "Olá" x nl` |
 | `?` | Atalho para `print`. | `? "Teste" nl` |
-| `input` | Lê uma linha de texto do usuário. | `input "Entre com um número: "` |
-| `if...then...else...end if` | Executa código condicionalmente. |[1] |
+| `input` | Lê uma linha de texto do usuário. | `input "Nome: " nome` |
+| `if...then...else...end if` | Executa código condicionalmente. | `if (x > 3) then print "OK" nl end if` |
+| `width(n)` | Define largura de campo. | `print width(20) "Texto"` |
+| `left` | Alinha à esquerda. | `print width(20) left "Texto"` |
+| `right` | Alinha à direita. | `print width(20) right 42` |
+| `center` | Alinha ao centro. | `print width(20) center "Texto"` |
 | `exit` | Sai do REPL. | `exit` |
 | `quit` | Sai do REPL. | `quit` |
 | `help` | Exibe ajuda no REPL. | `help` |
 | `tokens` | Exibe a análise léxica no REPL. | `tokens print "Olá"` |
 | `ast` | Exibe a AST no REPL. | `ast let x = 10` |
 
-[1] Exemplo do uso de `if...else`
-
-```basic
-let x = 5
-if (x > 3) then
-    print "X é maior que 3" nl
-end if
-
-if (x > 10) then
-    print "X é maior que 10" nl
-else
-    print "X é menor ou igual a 10" nl
-end if
-```
 ---
 
 ## Apêndice B: Operadores
@@ -592,7 +866,7 @@ end if
 
 ### Use Nomes Descritivos
 
-```basic
+```python
 # Bom
 let preco_unitario = 10.50
 let quantidade = 5
@@ -606,7 +880,7 @@ let t = p * q
 
 ### Use Comentários
 
-```basic
+```python
 # Calcula o preço total
 let preco_unitario = 10.50
 let quantidade = 5
@@ -615,15 +889,24 @@ let total = preco_unitario * quantidade  # Multiplica preço por quantidade
 
 ### Use Cores para Destacar Mensagens Importantes
 
-```basic
+```python
 print green "SUCESSO" nocolor ": Operação concluída" nl
 print red "ERRO" nocolor ": Arquivo não encontrado" nl
 print yellow "AVISO" nocolor ": Verifique os dados" nl
 ```
 
+### Use Width e Alinhamento para Tabelas
+
+```python
+# Tabela bem formatada
+print width(20) left "Nome" " | " width(10) right "Idade" nl
+print width(20) left "João" " | " width(10) right 25 nl
+print width(20) left "Maria" " | " width(10) right 30 nl
+```
+
 ### Quebre Linhas Longas
 
-```basic
+```python
 # Difícil de ler
 print "Nome:" nome "Idade:" idade "Cidade:" cidade "País:" pais nl
 
@@ -636,7 +919,7 @@ print "País:" pais nl
 
 ### Use Parênteses para Clareza
 
-```basic
+```python
 # Menos claro
 let resultado = 5 > 3 and 2 < 4
 
@@ -648,7 +931,7 @@ let resultado = (5 > 3) and (2 < 4)
 
 Use o REPL para testar expressões antes de usá-las em seu código:
 
-```basic
+```python
 >> 5 > 3 and 2 < 4 nl
 true
 
@@ -672,7 +955,7 @@ Você provavelmente digitou algo que o ZzBasic não conseguiu entender. Verifiqu
 
 Você tentou dividir um número por zero. Verifique sua expressão:
 
-```basic
+```python
 let resultado = 10 / 0  # ERRO!
 ```
 
@@ -687,7 +970,7 @@ Você provavelmente deixou uma expressão incompleta. Verifique se:
 
 Você provavelmente esqueceu de fechar um parêntese em uma condição:
 
-```basic
+```python
 if (x > 5  # ERRO! Falta fechar )
     print "OK" nl
 end if
@@ -697,7 +980,7 @@ end if
 
 Você provavelmente esqueceu de fechar um bloco `if`:
 
-```basic
+```python
 if (x > 5) then
     print "OK" nl
 # ERRO! Falta 'end if'
@@ -712,7 +995,7 @@ if (x > 5) then
 | 0.4.1 | Janeiro 2026 | Versão inicial com print, cores, variáveis |
 | 0.5.0 | Fevereiro 2026 | Tipo booleano |
 | 0.5.1 | Fevereiro 2026 | Operadores de comparação e lógicos |
-| 0.5.2 | Fevereiro 2026 | if...else |
+| 0.5.2 | Fevereiro 2026 | if...else com else if |
 
 ---
 
@@ -727,9 +1010,6 @@ As próximas versões do ZzBasic incluirão:
 
 - **v0.5.3:** loop `while` com `break` e `continue`
 - **v0.5.4:** loop `for`
-
----
-
-arataca89@gmail.com
-
-
+- **v0.5.5:** Arrays 
+- **v0.5.6:** Matrizes
+- **v0.6.0:** Funções/Procedures e função `repeat()`
