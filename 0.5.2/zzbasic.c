@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 #include <ctype.h>
 
+#include "help.h"  
 #include "color.h"  
 #include "utils.h"
 #include "zzbasic.h"
@@ -147,25 +148,7 @@ void run_repl(void)
         // Help command (placeholder for future)
         if (strcmp(line, "help") == 0 || strcmp(line, "?") == 0)
         {
-            printf("ZzBasic commands:\n");
-            printf("  exit, quit       - Exit REPL\n");
-            printf("  help, ?          - Show this help\n");
-            printf("  vars             - Show all variables\n");
-            printf("  reset            - Clear all variables\n");
-            printf("  clear            - Clear screen\n");
-            printf("  tokens code      - Show tokens for code\n");
-            printf("  ast code         - Show AST for code\n");
-            printf("  symbols          - Show Symbol Table\n");
-            printf("\nZzBasic language:\n");
-            printf("  let var = expr   - Assign variable\n");
-            printf("  expr1 : expr2    - Multiple statements\n");
-            printf("  expr1 ; expr2    - Multiple statements\n");
-            printf("\nExamples:\n");
-            printf("  let x = 5 : x * 2\n");
-            printf("  tokens x + 5 * 2\n");
-            printf("  ast (a + b) * c\n");
-            printf("\nEnter ZzBasic statements separated by : or ;\n");
-            printf("Example: let x = 5 : let y = x * 2 : x + y\n");
+            display_help();
             continue;
         }
 
@@ -370,14 +353,7 @@ int has_zz_extension(const char* filename)
     // Verifica se termina com ".zz" (case-insensitive)
     size_t len = strlen(dot);
     if (len != 3) return 0;  // ".zz" tem 3 caracteres
-    
-    // Converte para minúsculas para comparação
-    // char ext[4];
-    // ext[0] = tolower(dot[1]);
-    // ext[1] = tolower(dot[2]);
-    // ext[2] = tolower(dot[3] ? dot[3] : ' ');  // Segurança
-    // ext[3] = '\0';
-    
+
     return (strcmp(dot, ".zz") == 0);
 }
 
