@@ -816,7 +816,7 @@ ou
 | `print` | Exibe um ou mais valores na tela. | `print "Olá" x nl` |
 | `?` | Atalho para `print`. | `? "Teste" nl` |
 | `input` | Lê uma linha de texto do usuário. | `input "Nome: " nome` |
-| `if...then...else...end if` | Executa código condicionalmente. | `if (x > 3) then print "OK" nl end if` |
+| `if...then...else...end if` | Executa código condicionalmente. | [1] |
 | `width(n)` | Define largura de campo. | `print width(20) "Texto"` |
 | `left` | Alinha à esquerda. | `print width(20) left "Texto"` |
 | `right` | Alinha à direita. | `print width(20) right 42` |
@@ -826,6 +826,21 @@ ou
 | `help` | Exibe ajuda no REPL. | `help` |
 | `tokens` | Exibe a análise léxica no REPL. | `tokens print "Olá"` |
 | `ast` | Exibe a AST no REPL. | `ast let x = 10` |
+
+[1] Exemplo do uso de `if...else`
+
+```python
+let x = 5
+if (x > 3) then
+    print "X é maior que 3" nl
+end if
+
+if (x > 10) then
+    print "X é maior que 10" nl
+else
+    print "X é menor ou igual a 10" nl
+end if
+```
 
 ---
 
