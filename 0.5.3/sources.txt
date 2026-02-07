@@ -1,0 +1,15 @@
+# ============================================
+# ZzBasic v0.5.2 - if...else
+# ============================================
+
+utils.c
+color_mapping.c
+a89alloc.c
+lexer.c
+ast.c
+symbol_table.c
+parser.c
+evaluator.c
+zzbasic.c
+main.c
+
