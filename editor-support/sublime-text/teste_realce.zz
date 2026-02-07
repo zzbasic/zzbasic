@@ -1,0 +1,18 @@
+# Teste do Realce de Sintaxe ZzBasic
+let x = 10
+let mensagem = "Olá ZzBasic!"
+
+if (x > 5) then
+    print green "Sucesso!" nocolor nl
+    print "Mensagem: " mensagem nl
+else
+    print red "Falha" nocolor nl
+end if
+
+# Teste de cores
+print red "Vermelho" nocolor " " green "Verde" nocolor " " blue "Azul" nocolor nl
+print "Número: " 3.14 nl
+print "Booleano: " true nl
+
+
+

@@ -1,6 +1,6 @@
 # Realce de Sintaxe ZzBasic para Sublime Text
 
-![Logo ZzBasic](https://raw.githubusercontent.com/zzbasic/zzbasic/main/zzbasic_logo1.png)
+![Logo ZzBasic](zzbasic_logo1.png)
 
 Realce de sintaxe completo e tema de cores para a **linguagem de programação ZzBasic** no Sublime Text.
 
@@ -8,8 +8,8 @@ Realce de sintaxe completo e tema de cores para a **linguagem de programação Z
 
 | Arquivo | Descrição |
 |---------|-----------|
-| `ZzBasic.tmLanguage` | Definição de sintaxe para a linguagem ZzBasic |
-| `ZzBasic Monokai.sublime-color-scheme` | Tema de cores Monokai opcional |
+| [ZzBasic.tmLanguage](https://github.com/zzbasic/zzbasic/blob/main/editor-support/sublime-text/ZzBasic.tmLanguage) | Definição de sintaxe para a linguagem ZzBasic |
+| [ZzBasic Monokai.sublime-color-scheme](https://github.com/zzbasic/zzbasic/blob/main/editor-support/sublime-text/ZzBasic%20Monokai.sublime-color-scheme) | Tema de cores Monokai opcional |
 
 ## 🚀 Instalação
 
@@ -100,8 +100,8 @@ Para verificar se a instalação foi bem-sucedida:
 4. Se não aparecer, selecione manualmente: `View` → `Syntax` → `User` → `ZzBasic`
 
 ### Código de Teste
-Crie um arquivo `teste.zz`:
-```python
+Crie um arquivo `teste_realce.zz`:
+```ZzBasic
 # Teste do Realce de Sintaxe ZzBasic
 let x = 10
 let mensagem = "Olá ZzBasic!"
@@ -118,6 +118,10 @@ print red "Vermelho" nocolor " " green "Verde" nocolor " " blue "Azul" nocolor n
 print "Número: " 3.14 nl
 print "Booleano: " true nl
 ```
+
+### Como deve aparecer no Sublime Text
+
+![teste_realce.png](teste_realce.png)
 
 ## 🛠️ Solução de Problemas
 
