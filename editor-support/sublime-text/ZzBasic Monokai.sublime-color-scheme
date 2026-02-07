@@ -1,0 +1,254 @@
+{
+    "name": "ZzBasic Monokai",
+    "author": "ZzBasic Team",
+    "colorSpace": "srgb",
+    
+    "variables": {
+        "bg": "#272822",           // Fundo Monokai
+        "fg": "#f8f8f2",           // Texto principal
+        "comment": "#75715e",      // Comentários
+        "red": "#f92672",          // Vermelho Monokai
+        "orange": "#fd971f",       // Laranja
+        "yellow": "#e6db74",       // Amarelo
+        "green": "#a6e22e",        // Verde
+        "blue": "#66d9ef",         // Azul
+        "purple": "#ae81ff",       // Roxo
+        "cyan": "#a1efe4",         // Ciano
+        "pink": "#f92672"          // Rosa
+    },
+    
+    "globals": {
+        "background": "var(bg)",
+        "foreground": "var(fg)",
+        "caret": "var(fg)",
+        "invisibles": "var(comment)",
+        "lineHighlight": "#3E3D32",
+        "selection": "#49483E",
+        "selectionBorder": "#49483E",
+        "guide": "#3B3A32"
+    },
+    
+    "rules": [
+        // ============ ELEMENTOS GERAIS ============
+        {
+            "name": "Text",
+            "scope": "text",
+            "foreground": "var(fg)",
+            "background": "var(bg)"
+        },
+        
+        {
+            "name": "Source",
+            "scope": "source.zzbasic",
+            "foreground": "var(fg)",
+            "background": "var(bg)"
+        },
+        
+        // ============ COMENTÁRIOS ============
+        {
+            "name": "Comment",
+            "scope": "comment",
+            "foreground": "var(comment)",
+            "font_style": "italic"
+        },
+        
+        {
+            "name": "ZzBasic Comment",
+            "scope": "comment.line.number-sign.zzbasic",
+            "foreground": "var(comment)",
+            "font_style": "italic"
+        },
+        
+        // ============ PALAVRAS-CHAVE ZZBASIC ============
+        {
+            "name": "ZzBasic Keywords (if, then, else, end)",
+            "scope": "keyword.control.zzbasic",
+            "foreground": "var(red)",
+            "font_style": "bold"
+        },
+        
+        {
+            "name": "ZzBasic Operators (and, or, not)",
+            "scope": "keyword.operator.logical.zzbasic",
+            "foreground": "var(red)"
+        },
+        
+        {
+            "name": "ZzBasic Logical NOT",
+            "scope": "keyword.operator.logical.zzbasic:not",
+            "foreground": "var(red)",
+            "font_style": "bold"
+        },
+        
+        // ============ COMANDOS ZZBASIC ============
+        {
+            "name": "ZzBasic Commands (let, print, input)",
+            "scope": "keyword.other.zzbasic",
+            "foreground": "var(green)"
+        },
+        
+        {
+            "name": "ZzBasic nl command",
+            "scope": "keyword.other.zzbasic:nl",
+            "foreground": "var(cyan)"
+        },
+        
+        // ============ COMANDOS REPL ============
+        {
+            "name": "ZzBasic REPL Commands",
+            "scope": "support.function.zzbasic",
+            "foreground": "var(orange)"
+        },
+        
+        // ============ ATALHO ? ============
+        {
+            "name": "ZzBasic ? shortcut",
+            "scope": "keyword.operator.special.zzbasic",
+            "foreground": "var(red)",
+            "font_style": "bold"
+        },
+        
+        // ============ CORES ZZBASIC ============
+        {
+            "name": "ZzBasic Color Commands",
+            "scope": "support.constant.color.zzbasic",
+            "foreground": "var(yellow)"
+        },
+        
+        {
+            "name": "ZzBasic nocolor command",
+            "scope": "support.constant.color.zzbasic:nocolor",
+            "foreground": "var(cyan)"
+        },
+        
+        // ============ CORES BRILHANTES ============
+        {
+            "name": "ZzBasic Bright Colors",
+            "scope": "support.constant.color.bright.zzbasic",
+            "foreground": "var(yellow)",
+            "font_style": "bold"
+        },
+        
+        // ============ CORES DE FUNDO ============
+        {
+            "name": "ZzBasic Background Colors",
+            "scope": "support.constant.color.background.zzbasic",
+            "foreground": "var(purple)"
+        },
+        
+        // ============ FORMATAÇÃO ============
+        {
+            "name": "ZzBasic Formatting Commands",
+            "scope": "support.function.print-format.zzbasic",
+            "foreground": "var(blue)"
+        },
+        
+        // ============ BOOLEANOS ============
+        {
+            "name": "Boolean Values",
+            "scope": "constant.language.boolean.zzbasic",
+            "foreground": "var(purple)"
+        },
+        
+        // ============ STRINGS ============
+        {
+            "name": "String",
+            "scope": "string",
+            "foreground": "var(yellow)"
+        },
+        
+        {
+            "name": "ZzBasic String",
+            "scope": "string.quoted.double.zzbasic",
+            "foreground": "var(yellow)"
+        },
+        
+        // ============ NÚMEROS ============
+        {
+            "name": "Number",
+            "scope": "constant.numeric",
+            "foreground": "var(purple)"
+        },
+        
+        {
+            "name": "ZzBasic Number",
+            "scope": "constant.numeric.zzbasic",
+            "foreground": "var(purple)"
+        },
+        
+        // ============ OPERADORES ============
+        {
+            "name": "Operator",
+            "scope": "keyword.operator",
+            "foreground": "var(red)"
+        },
+        
+        {
+            "name": "ZzBasic Operators (+, -, *, /)",
+            "scope": "keyword.operator.arithmetic.zzbasic",
+            "foreground": "var(red)"
+        },
+        
+        {
+            "name": "ZzBasic Comparison Operators",
+            "scope": "keyword.operator.comparison.zzbasic",
+            "foreground": "var(red)"
+        },
+        
+        {
+            "name": "ZzBasic Assignment Operator",
+            "scope": "keyword.operator.assignment.zzbasic",
+            "foreground": "var(fg)"
+        },
+        
+        // ============ VARIÁVEIS ============
+        {
+            "name": "Variable",
+            "scope": "variable",
+            "foreground": "var(fg)"
+        },
+        
+        // ============ PONTUAÇÃO ============
+        {
+            "name": "Punctuation",
+            "scope": "punctuation",
+            "foreground": "var(fg)"
+        },
+        
+        // ============ PARÊNTESES ============
+        {
+            "name": "Parentheses",
+            "scope": "punctuation.parenthesis",
+            "foreground": "var(fg)"
+        },
+        
+        // ============ ERROS ============
+        {
+            "name": "Invalid",
+            "scope": "invalid",
+            "foreground": "#f8f8f0",
+            "background": "var(red)"
+        },
+        
+        // ============ LINHA ATUAL ============
+        {
+            "name": "Current Line",
+            "scope": "line.highlight",
+            "background": "var(lineHighlight)"
+        },
+        
+        // ============ SELEÇÃO ============
+        {
+            "name": "Selection",
+            "scope": "region.selection",
+            "background": "var(selection)"
+        },
+        
+        // ============ GUIAS ============
+        {
+            "name": "Indent Guide",
+            "scope": "guide.indent",
+            "foreground": "var(guide)"
+        }
+    ]
+}

@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>fileTypes</key>
+    <array>
+        <string>zz</string>
+        <string>zbasic</string>
+    </array>
+    
+    <key>name</key>
+    <string>ZzBasic</string>
+    
+    <key>patterns</key>
+    <array>
+        <!-- Comentários -->
+        <dict>
+            <key>name</key>
+            <string>comment.line.number-sign.zzbasic</string>
+            <key>match</key>
+            <string>#.*$</string>
+        </dict>
+        
+        <!-- Palavras-chave de controle -->
+        <dict>
+            <key>name</key>
+            <string>keyword.control.zzbasic</string>
+            <key>match</key>
+            <string>\b(if|then|else|end|and|or|not)\b</string>
+        </dict>
+        
+        <!-- Comandos -->
+        <dict>
+            <key>name</key>
+            <string>keyword.operator.word.zzbasic</string>
+            <key>match</key>
+            <string>\b(let|print|input|nl|exit|quit|help|vars|reset|clear|tokens|ast|symbols|repeat)\b</string>
+        </dict>
+        
+        <!-- Atalhos/Comandos REPL -->
+        <dict>
+            <key>name</key>
+            <string>keyword.other.special-method.zzbasic</string>
+            <key>match</key>
+            <string>\b(\?)\b</string>
+        </dict>
+        
+        <!-- Operadores lógicos -->
+        <dict>
+            <key>name</key>
+            <string>keyword.operator.logical.zzbasic</string>
+            <key>match</key>
+            <string>\b(!)\b</string>
+        </dict>
+        
+        <!-- Comandos de formatação -->
+        <dict>
+            <key>name</key>
+            <string>support.function.print-format.zzbasic</string>
+            <key>match</key>
+            <string>\b(width|left|right|center)\b</string>
+        </dict>
+        
+        <!-- Comandos de cor -->
+        <dict>
+            <key>name</key>
+            <string>support.constant.color.zzbasic</string>
+            <key>match</key>
+            <string>\b(nocolor|black|red|green|yellow|blue|magenta|cyan|white|bblack|bred|bgreen|byellow|bblue|bmagenta|bcyan|bwhite|bgblack|bgred|bggreen|bgyellow|bgblue|bgmagenta|bgcyan|bgwhite)\b</string>
+        </dict>
+        
+        <!-- Constantes booleanas -->
+        <dict>
+            <key>name</key>
+            <string>constant.language.boolean.zzbasic</string>
+            <key>match</key>
+            <string>\b(true|false)\b</string>
+        </dict>
+        
+        <!-- Números -->
+        <dict>
+            <key>name</key>
+            <string>constant.numeric.zzbasic</string>
+            <key>match</key>
+            <string>\b\d+(\.\d+)?\b</string>
+        </dict>
+        
+        <!-- Strings -->
+        <dict>
+            <key>name</key>
+            <string>string.quoted.double.zzbasic</string>
+            <key>begin</key>
+            <string>"</string>
+            <key>end</key>
+            <string>"</string>
+            <key>patterns</key>
+            <array>
+                <dict>
+                    <key>name</key>
+                    <string>constant.character.escape.zzbasic</string>
+                    <key>match</key>
+                    <string>\\.</string>
+                </dict>
+            </array>
+        </dict>
+        
+        <!-- Operadores -->
+        <dict>
+            <key>name</key>
+            <string>keyword.operator.zzbasic</string>
+            <key>match</key>
+            <string>(\+|\-|\*|/|==|!=|&lt;=|&gt;=|&lt;|&gt;|=)</string>
+        </dict>
+    </array>
+    
+    <key>scopeName</key>
+    <string>source.zzbasic</string>
+    
+    <key>uuid</key>
+    <string>a1b2c3d4-e5f6-7890-abcd-ef1234567890</string>
+</dict>
+</plist>
