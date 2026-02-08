@@ -1502,11 +1502,26 @@ ASTNode* parse_single_stmt(Lexer* lexer)
         printf("%s\n", parser.error_message);
         return NULL;
     }
+
+    // Para statements de bloco (while, if, break, continue),
+    // consome o EOL após eles se existir
+    if (result && (result->type == NODE_WHILE || 
+                   result->type == NODE_IF ||
+                   result->type == NODE_BREAK ||
+                   result->type == NODE_CONTINUE))
+    {
+        if (parser.current_token.type == TOKEN_EOL ||
+            parser.current_token.type == TOKEN_NL)
+        {
+            parser_advance(&parser);
+        }
+    }
+    
     
     // Check if everything was parsed
     if (parser.current_token.type != TOKEN_EOF)
     {
-        printf("Warning: remaining tokens not parsed\n");
+        printf("Parser warning: remaining tokens not parsed\n");
         // But still returns the result
     }
     
