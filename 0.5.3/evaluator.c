@@ -62,8 +62,6 @@ static int execute_while_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx);
 // void evaluator_color_reset(ExecutionContext* ctx);
 // void evaluator_color_set(ExecutionContext* ctx, const char* ansi_color);
 // void evaluator_color_apply_current(ExecutionContext* ctx);
-
-
 //===================================================================
 
 
@@ -1543,31 +1541,35 @@ int main()
         
         if (ast)
         {
-            EvaluatorResult result = evaluate_expr(ast, symbols, CTX_ANY);
+            // BUG CORRIGIDO - TESTES FALHAVAM COM MENSAGEM:
+            // Warning: remaining tokens not parsed
+            // [1:9] Evaluator error: unsupported node type: 7
+            // node type 7 é o NODE_WHILE
+            // SOLUÇÃO:
+            // Quando ast é um NODE_WHILE (ou qualquer statement),
+            // evaluate_expr() não sabe como lidar.
+            // evaluate_expr() não trata NODE_WHILE.
+            // evaluate_expr() é para avaliar expressões (números, variáveis, operações matemáticas)
+            // execute_stmt() é para executar statements (atribuições, loops, condicionais)
+            // Um NODE_WHILE é um statement, não uma expressão.
+            //
+            // LINHA QUE PROVOCAVA O ERRO
+            // EvaluatorResult result = evaluate_expr(ast, symbols, CTX_ANY);
+
+            int result = evaluate_program(ast, symbols);
             
-            if (result.type == RESULT_ERROR)
+            if (!result)
             {
-                printf("%s\n", result.error_message);
+                printf("Error executing statement\n");
             }
-            else if (result.type == RESULT_BOOL)
-            {
-                printf("Resultado: %s\n", 
-                       result.value.boolean ? "true" : "false");
-                printf("%sOK%s\n", COLOR_SUCCESS, COLOR_RESET);
-            }
-            else if (result.type == RESULT_NUMBER)
-            {
-                printf("Resultado: %g\n", result.value.number);
-                printf("%sOK%s\n", COLOR_SUCCESS, COLOR_RESET);
-            }
-            
-            free_ast(ast);
         }
-        else
+        else 
         {
-            printf("%sERRO no parsing%s\n", COLOR_ERROR, COLOR_RESET);
+            printf("Parse error\n");                
         }
-        
+            
+        free_ast(ast);
+
         printf("\n");
         wait();
     }
