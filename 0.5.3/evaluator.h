@@ -72,18 +72,6 @@ typedef struct
     int column; 
 } EvaluatorResult;
 
-
-// width e alignment
-ExecutionContext* execution_ctx_create(SymbolTable* symbols);
-void execution_ctx_destroy(ExecutionContext* ctx);
-void evaluator_reset_format(ExecutionContext* ctx);// Formatação
-
-// Funções de gerenciamento de cores
-void evaluator_color_reset(ExecutionContext* ctx);
-void evaluator_color_set(ExecutionContext* ctx, const char* ansi_color);
-void evaluator_color_apply_current(ExecutionContext* ctx);
-
-
 /********************************************************************
 FLUXO DO EVALUATOR
 
@@ -103,29 +91,41 @@ execute_stmt():
     NODE_STATEMENT_LIST ==> execute_stmt_list()
 
     NODE_INPUT ==> evaluate_input_stmt()
-    
+
+    NODE_COMPARISON_OP
+    NODE_LOGICAL_OP
+    NODE_NOT_LOGICAL_OP ==> evaluate_expr()
+
+    NODE_IF ==> execute_if_stmt()
+
+    NODE_WHILE ==> execution_ctx_create()
+                   execute_while_stmt_with_ctx()
+                   execution_ctx_destroy(ctx)
+
+    NODE_BREAK ==> return 0;
+
+    NODE_CONTINUE ==> return 0;
+
+    default ==> Evaluator error: unsupported statement type
+                return 0;
 
 ********************************************************************/
 int evaluate_program(ASTNode* node, SymbolTable* symbols);
 
-int execute_stmt_list(ASTNode* node, SymbolTable* symbols);
-int execute_stmt(ASTNode* node, SymbolTable* symbols);
-int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx);
-
 EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext ctx);
-
-int evaluate_print_stmt(ASTNode* node, SymbolTable* symbols);
-int evaluate_print_with_ctx(ASTNode* node, ExecutionContext* ctx);
-
-//int evaluate_print_statement_with_context(ASTNode* node, ExecutionContext* ctx);
-
-int evaluate_input_stmt(ASTNode* node, SymbolTable* symbols);
-
-int execute_if_stmt(ASTNode* node, SymbolTable* symbols);
-int execute_if_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx);
 
 // Old function (for compatibility)
 EvaluatorResult evaluate(ASTNode* node);
+
+// width e alignment
+ExecutionContext* execution_ctx_create(SymbolTable* symbols);
+void execution_ctx_destroy(ExecutionContext* ctx);
+void evaluator_reset_format(ExecutionContext* ctx);// Formatação
+
+// Funções de gerenciamento de cores
+void evaluator_color_reset(ExecutionContext* ctx);
+void evaluator_color_set(ExecutionContext* ctx, const char* ansi_color);
+void evaluator_color_apply_current(ExecutionContext* ctx);
 
 #endif
 // Fim de evaluator.h
