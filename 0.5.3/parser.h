@@ -26,7 +26,7 @@ ASTNode* parse(Lexer* lexer);
 void free_ast(ASTNode* node);
 void print_ast(ASTNode* node, int indent);
 
-ASTNode* parse_single_statement(Lexer* lexer);
+ASTNode* parse_single_stmt(Lexer* lexer);
 
 #endif // PARSER_H
 // Fim de parser.h

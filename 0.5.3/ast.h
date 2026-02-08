@@ -191,16 +191,16 @@ typedef struct ASTNode
         LogicalOpData           logicalop; 
         NotOpData               notop;   
         AssignmentData          assignment;
-        StatementListData       statementlist;
-        PrintStatementData      printstatement;
+        StatementListData       stmt_list; //stmt_list;
+        PrintStatementData      print_stmt; //print_stmt;
         ColorNodeData           color;
         AlignmentNodeData       alignment;
         WidthNodeData           width;
-        InputStatementNode      inputstatement;
-        IfStatementData         ifstatement;
-        WhileStatementData      whilestatement;
-        BreakStatementData      breakstatement;
-        ContinueStatementData   continuestatement;
+        InputStatementNode      input_stmt; //input_stmt;
+        IfStatementData         if_stmt; //if_stmt;
+        WhileStatementData      while_stmt; //while_stmt;
+        BreakStatementData      break_stmt; //break_stmt;
+        ContinueStatementData   continue_stmt; //continue_stmt;
 
     } data;
 
@@ -248,6 +248,14 @@ ASTNode* create_logical_not_node(ASTNode* operand, int line, int column);
 ASTNode* create_if_node(ASTNode* condition,
                         ASTNode* then_body, ASTNode* else_body,
                         int line, int column);
+
+
+ASTNode* create_while_node(ASTNode* condition, ASTNode* body,
+                           int line, int column);
+
+ASTNode* create_break_node(int line, int column);
+
+ASTNode* create_continue_node(int line, int column);
 
 
 void print_node_add_item(ASTNode* print_node, ASTNode* expr_node);

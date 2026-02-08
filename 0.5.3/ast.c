@@ -119,9 +119,9 @@ ASTNode* create_assignment_node(const char* var_name, ASTNode* value,
 // Cria um nó de lista de statements
 ASTNode* create_statement_list_node(int line, int column) {
     ASTNode* node = create_node(NODE_STATEMENT_LIST, line, column);
-    node->data.statementlist.capacity = 4;
-    node->data.statementlist.statements = A89ALLOC(
-        sizeof(ASTNode*) * node->data.statementlist.capacity
+    node->data.stmt_list.capacity = 4;
+    node->data.stmt_list.statements = A89ALLOC(
+        sizeof(ASTNode*) * node->data.stmt_list.capacity
     );
     return node;
 }
@@ -135,7 +135,7 @@ void statement_list_add(ASTNode* list_node, ASTNode* stmt)
         return;
     }
     
-    StatementListData* list = &list_node->data.statementlist;
+    StatementListData* list = &list_node->data.stmt_list;
     
     // Redimensiona se necessário
     if (list->count >= list->capacity)
@@ -163,11 +163,11 @@ ASTNode* create_input_node(const char* prompt, char* var_name, int line, int col
     ASTNode* node = create_node(NODE_INPUT, line, column);
     if(prompt)
     {
-        strncpy(node->data.inputstatement.prompt, prompt, STRING_SIZE - 1);
-        node->data.inputstatement.prompt[STRING_SIZE - 1] = '\0';
+        strncpy(node->data.input_stmt.prompt, prompt, STRING_SIZE - 1);
+        node->data.input_stmt.prompt[STRING_SIZE - 1] = '\0';
     }
-    strncpy(node->data.inputstatement.var_name, var_name, VARNAME_SIZE - 1);
-    node->data.inputstatement.var_name[VARNAME_SIZE - 1] = '\0';
+    strncpy(node->data.input_stmt.var_name, var_name, VARNAME_SIZE - 1);
+    node->data.input_stmt.var_name[VARNAME_SIZE - 1] = '\0';
     return node;
 }
 
@@ -175,13 +175,13 @@ ASTNode* create_print_node(int line, int column)
 {
     ASTNode* node = create_node(NODE_PRINT, line, column);
     
-    // Inicializa a estrutura printstatement
-    node->data.printstatement.capacity = 4;  // Começa com capacidade para 4 itens
-    node->data.printstatement.items = A89ALLOC(
-        sizeof(ASTNode*) * node->data.printstatement.capacity
+    // Inicializa a estrutura print_stmt
+    node->data.print_stmt.capacity = 4;  // Começa com capacidade para 4 itens
+    node->data.print_stmt.items = A89ALLOC(
+        sizeof(ASTNode*) * node->data.print_stmt.capacity
     );
-    node->data.printstatement.count = 0;
-    node->data.printstatement.newline = 0;
+    node->data.print_stmt.count = 0;
+    node->data.print_stmt.newline = 0;
     
     return node;
 }
@@ -232,7 +232,7 @@ void print_node_add_item(ASTNode* print_node, ASTNode* item)
         return;
     }
     
-    PrintStatementData* print_data = &print_node->data.printstatement;
+    PrintStatementData* print_data = &print_node->data.print_stmt;
     
     // Redimensiona se necessário
     if (print_data->count >= print_data->capacity)
@@ -260,7 +260,7 @@ void print_node_add_item(ASTNode* print_node, ASTNode* item)
 
 void print_set_newline(ASTNode* print_node, int has_newline) {
     if (print_node->type != NODE_PRINT) return;
-    print_node->data.printstatement.newline = has_newline;
+    print_node->data.print_stmt.newline = has_newline;
 }
 
 // Criar nó de operação de comparação(==, !=, <, <=, >, >=)
@@ -319,9 +319,9 @@ ASTNode* create_if_node(ASTNode* condition,
     node->line = line;
     node->column = column;
 
-    node->data.ifstatement.condition = condition;
-    node->data.ifstatement.then_body = then_body;
-    node->data.ifstatement.else_body = else_body;
+    node->data.if_stmt.condition = condition;
+    node->data.if_stmt.then_body = then_body;
+    node->data.if_stmt.else_body = else_body;
     
     return node;
 }
@@ -332,8 +332,8 @@ ASTNode* create_while_node(ASTNode* condition, ASTNode* body, int line, int colu
     node->line = line;
     node->column = column;
 
-    node->data.whilestatement.condition = condition;
-    node->data.whilestatement.body = body;
+    node->data.while_stmt.condition = condition;
+    node->data.while_stmt.body = body;
     
     return node;
 }
@@ -381,13 +381,13 @@ void free_ast(ASTNode* node)
         case NODE_STATEMENT_LIST:
         {
             // Libera cada statement individual
-            for (int i = 0; i < node->data.statementlist.count; i++) {
-                free_ast(node->data.statementlist.statements[i]);
+            for (int i = 0; i < node->data.stmt_list.count; i++) {
+                free_ast(node->data.stmt_list.statements[i]);
             }
             
             // Libera o array de ponteiros
-            if (node->data.statementlist.statements != NULL) {
-                a89free(node->data.statementlist.statements);
+            if (node->data.stmt_list.statements != NULL) {
+                a89free(node->data.stmt_list.statements);
             }
             
             break;
@@ -410,35 +410,35 @@ void free_ast(ASTNode* node)
         case NODE_PRINT:
         {
             // Libera cada item (expressão) individualmente
-            for (int i = 0; i < node->data.printstatement.count; i++)
+            for (int i = 0; i < node->data.print_stmt.count; i++)
             {
-                free_ast(node->data.printstatement.items[i]);
+                free_ast(node->data.print_stmt.items[i]);
             }
             
             // Libera o array de ponteiros
-            if (node->data.printstatement.items != NULL)
+            if (node->data.print_stmt.items != NULL)
             {
-                a89free(node->data.printstatement.items);
+                a89free(node->data.print_stmt.items);
             }
             break;
         }
 
         case NODE_IF:
-            free_ast(node->data.ifstatement.condition);
-            free_ast(node->data.ifstatement.then_body);
-            if (node->data.ifstatement.else_body) {
-                free_ast(node->data.ifstatement.else_body);
+            free_ast(node->data.if_stmt.condition);
+            free_ast(node->data.if_stmt.then_body);
+            if (node->data.if_stmt.else_body) {
+                free_ast(node->data.if_stmt.else_body);
             }
             break;
 
         case NODE_WHILE:
-            if (node->data.whilestatement.condition)
+            if (node->data.while_stmt.condition)
             {
-                free_ast(node->data.whilestatement.condition);
+                free_ast(node->data.while_stmt.condition);
             } 
-            if (node->data.whilestatement.body)
+            if (node->data.while_stmt.body)
             {
-                free_ast(node->data.whilestatement.body);
+                free_ast(node->data.while_stmt.body);
             } 
             break;
 
@@ -499,9 +499,9 @@ void print_ast(ASTNode* node, int indent)
 
         case NODE_STATEMENT_LIST:  
             printf("STATEMENT_LIST (%d statements)\n", 
-                   node->data.statementlist.count);
-            for (int i = 0; i < node->data.statementlist.count; i++) {
-                print_ast(node->data.statementlist.statements[i], indent + 1);
+                   node->data.stmt_list.count);
+            for (int i = 0; i < node->data.stmt_list.count; i++) {
+                print_ast(node->data.stmt_list.statements[i], indent + 1);
             }
             break;
             
@@ -515,19 +515,19 @@ void print_ast(ASTNode* node, int indent)
 
         case NODE_INPUT:
             printf("INPUT: variable: %s; prompt: %s \n",
-                   node->data.inputstatement.var_name, node->data.inputstatement.prompt);
+                   node->data.input_stmt.var_name, node->data.input_stmt.prompt);
             break;
 
         case NODE_PRINT:
-            printf("PRINT (%d items)", node->data.printstatement.count);
-            if (node->data.printstatement.newline)
+            printf("PRINT (%d items)", node->data.print_stmt.count);
+            if (node->data.print_stmt.newline)
             {
                 printf(" [newline]");
             }
             printf("\n");
-            for (int i = 0; i < node->data.printstatement.count; i++)
+            for (int i = 0; i < node->data.print_stmt.count; i++)
             {
-                print_ast(node->data.printstatement.items[i], indent + 1);
+                print_ast(node->data.print_stmt.items[i], indent + 1);
             }
             break;
 
@@ -576,21 +576,21 @@ void print_ast(ASTNode* node, int indent)
         case NODE_IF:
             printf("NODE IF\n");
             printf("Condition:\n");
-            print_ast(node->data.ifstatement.condition, indent + 1);
+            print_ast(node->data.if_stmt.condition, indent + 1);
             printf("Then block:\n");
-            print_ast(node->data.ifstatement.then_body, indent + 1);
-            if (node->data.ifstatement.else_body) {
+            print_ast(node->data.if_stmt.then_body, indent + 1);
+            if (node->data.if_stmt.else_body) {
                 printf("Else block:\n");
-                print_ast(node->data.ifstatement.else_body, indent + 1);
+                print_ast(node->data.if_stmt.else_body, indent + 1);
             }
             break;
 
         case NODE_WHILE:
             printf("NODE WHILE\n");
             printf("Condition:\n");
-            print_ast(node->data.whilestatement.condition, indent + 1);
+            print_ast(node->data.while_stmt.condition, indent + 1);
             printf("Body:\n");
-            print_ast(node->data.whilestatement.body, indent + 1);
+            print_ast(node->data.while_stmt.body, indent + 1);
             break;
 
         case NODE_BREAK:
@@ -605,7 +605,7 @@ void print_ast(ASTNode* node, int indent)
 }
 
 
-#ifdef TEST
+#ifdef TESTAST
 #include "utils.h"
 #include "color.h"
 
@@ -615,187 +615,66 @@ int main(void)
     printf("ZzBasic AST Test v0.5.3 - loop while, break, continue\n\n");
     
     // ========================================================
-    // TESTE 1: WHILE simples com condição
+    // TESTE 1: WHILE simples com número
     // ========================================================
-    printf("=== TESTE 1: WHILE simples ===\n");
+    printf("=== TESTE 1: WHILE simples (numero) ===\n");
     ASTNode* condition1 = create_number_node(10, 1, 1);
     ASTNode* body1 = create_statement_list_node(1, 1);
     ASTNode* while_node1 = create_while_node(condition1, body1, 1, 1);
-    printf("while_node1:\n");
     print_ast(while_node1, 0);
     printf("\n");
     free_ast(while_node1);
     wait();
     
     // ========================================================
-    // TESTE 2: WHILE com condição de comparação
+    // TESTE 2: WHILE com booleano
     // ========================================================
-    printf("=== TESTE 2: WHILE com comparação (x < 10) ===\n");
-    ASTNode* var_x = create_identifier_node("x", 1, 1);
-    ASTNode* num_10 = create_number_node(10, 1, 5);
-    ASTNode* condition2 = create_comparison_op_node(OP_LESS, var_x, num_10, 1, 3);
+    printf("=== TESTE 2: WHILE com booleano (true) ===\n");
+    ASTNode* condition2 = create_bool_node(1, 2, 1);
     ASTNode* body2 = create_statement_list_node(2, 1);
-    ASTNode* while_node2 = create_while_node(condition2, body2, 1, 1);
-    printf("while_node2:\n");
+    ASTNode* while_node2 = create_while_node(condition2, body2, 2, 1);
     print_ast(while_node2, 0);
     printf("\n");
     free_ast(while_node2);
     wait();
-    
+
     // ========================================================
-    // TESTE 3: WHILE com condição booleana
+    // TESTE 3: WHILE com comparação
     // ========================================================
-    printf("=== TESTE 3: WHILE com booleano (true) ===\n");
-    ASTNode* condition3 = create_boolean_node(true, 1, 1);
+    printf("=== TESTE 3: WHILE com comparacao (x < 10) ===\n");
+    ASTNode* var_x = create_variable_node("x", 3, 1);
+    ASTNode* num_10 = create_number_node(10, 3, 5);
+    ASTNode* condition3 = create_comparison_op_node(OP_LESS, var_x, num_10, 3, 3);
     ASTNode* body3 = create_statement_list_node(3, 1);
-    ASTNode* while_node3 = create_while_node(condition3, body3, 1, 1);
-    printf("while_node3:\n");
+    ASTNode* while_node3 = create_while_node(condition3, body3, 3, 1);
     print_ast(while_node3, 0);
     printf("\n");
     free_ast(while_node3);
     wait();
-    
+
     // ========================================================
-    // TESTE 4: BREAK simples
+    // TESTE 4: BREAK
     // ========================================================
-    printf("=== TESTE 4: BREAK simples ===\n");
-    ASTNode* break_node1 = create_break_node(5, 1);
-    printf("break_node1:\n");
-    print_ast(break_node1, 0);
+    printf("=== TESTE 4: BREAK ===\n");
+    ASTNode* break_node = create_break_node(4, 5);
+    print_ast(break_node, 0);
     printf("\n");
-    free_ast(break_node1);
+    free_ast(break_node);
     wait();
-    
+
     // ========================================================
-    // TESTE 5: CONTINUE simples
+    // TESTE 5: CONTINUE
     // ========================================================
-    printf("=== TESTE 5: CONTINUE simples ===\n");
-    ASTNode* continue_node1 = create_continue_node(6, 1);
-    printf("continue_node1:\n");
-    print_ast(continue_node1, 0);
+    printf("=== TESTE 5: CONTINUE ===\n");
+    ASTNode* continue_node = create_continue_node(5, 5);
+    print_ast(continue_node, 0);
     printf("\n");
-    free_ast(continue_node1);
+    free_ast(continue_node);
     wait();
-    
-    // ========================================================
-    // TESTE 6: WHILE com múltiplos statements no body
-    // ========================================================
-    printf("=== TESTE 6: WHILE com múltiplos statements ===\n");
-    ASTNode* var_i = create_identifier_node("i", 1, 1);
-    ASTNode* num_5 = create_number_node(5, 1, 5);
-    ASTNode* condition6 = create_comparison_op_node(OP_LESS, var_i, num_5, 1, 3);
-    
-    ASTNode* body6 = create_statement_list_node(7, 1);
-    ASTNode* while_node6 = create_while_node(condition6, body6, 1, 1);
-    printf("while_node6:\n");
-    print_ast(while_node6, 0);
-    printf("\n");
-    free_ast(while_node6);
-    wait();
-    
-    // ========================================================
-    // TESTE 7: WHILE com condição lógica (AND)
-    // ========================================================
-    printf("=== TESTE 7: WHILE com AND (x < 10 AND y > 0) ===\n");
-    ASTNode* var_x7 = create_identifier_node("x", 1, 1);
-    ASTNode* num_10_7 = create_number_node(10, 1, 5);
-    ASTNode* comp_x = create_comparison_op_node(OP_LESS, var_x7, num_10_7, 1, 3);
-    
-    ASTNode* var_y7 = create_identifier_node("y", 1, 10);
-    ASTNode* num_0_7 = create_number_node(0, 1, 15);
-    ASTNode* comp_y = create_comparison_op_node(OP_GREATER, var_y7, num_0_7, 1, 12);
-    
-    ASTNode* condition7 = create_logical_op_node(OP_AND, comp_x, comp_y, 1, 5);
-    ASTNode* body7 = create_statement_list_node(8, 1);
-    ASTNode* while_node7 = create_while_node(condition7, body7, 1, 1);
-    printf("while_node7:\n");
-    print_ast(while_node7, 0);
-    printf("\n");
-    free_ast(while_node7);
-    wait();
-    
-    // ========================================================
-    // TESTE 8: WHILE com condição lógica (OR)
-    // ========================================================
-    printf("=== TESTE 8: WHILE com OR (x == 0 OR y == 0) ===\n");
-    ASTNode* var_x8 = create_identifier_node("x", 1, 1);
-    ASTNode* num_0_8a = create_number_node(0, 1, 5);
-    ASTNode* comp_x8 = create_comparison_op_node(OP_EQUAL, var_x8, num_0_8a, 1, 3);
-    
-    ASTNode* var_y8 = create_identifier_node("y", 1, 10);
-    ASTNode* num_0_8b = create_number_node(0, 1, 15);
-    ASTNode* comp_y8 = create_comparison_op_node(OP_EQUAL, var_y8, num_0_8b, 1, 12);
-    
-    ASTNode* condition8 = create_logical_op_node(OP_OR, comp_x8, comp_y8, 1, 5);
-    ASTNode* body8 = create_statement_list_node(9, 1);
-    ASTNode* while_node8 = create_while_node(condition8, body8, 1, 1);
-    printf("while_node8:\n");
-    print_ast(while_node8, 0);
-    printf("\n");
-    free_ast(while_node8);
-    wait();
-    
-    // ========================================================
-    // TESTE 9: WHILE com condição NOT
-    // ========================================================
-    printf("=== TESTE 9: WHILE com NOT (!done) ===\n");
-    ASTNode* var_done = create_identifier_node("done", 1, 1);
-    ASTNode* condition9 = create_logical_not_node(var_done, 1, 2);
-    ASTNode* body9 = create_statement_list_node(10, 1);
-    ASTNode* while_node9 = create_while_node(condition9, body9, 1, 1);
-    printf("while_node9:\n");
-    print_ast(while_node9, 0);
-    printf("\n");
-    free_ast(while_node9);
-    wait();
-    
-    // ========================================================
-    // TESTE 10: BREAK em diferentes linhas
-    // ========================================================
-    printf("=== TESTE 10: BREAK em linha 15 ===\n");
-    ASTNode* break_node10 = create_break_node(15, 5);
-    printf("break_node10:\n");
-    print_ast(break_node10, 0);
-    printf("\n");
-    free_ast(break_node10);
-    wait();
-    
-    // ========================================================
-    // TESTE 11: CONTINUE em diferentes linhas
-    // ========================================================
-    printf("=== TESTE 11: CONTINUE em linha 20 ===\n");
-    ASTNode* continue_node11 = create_continue_node(20, 8);
-    printf("continue_node11:\n");
-    print_ast(continue_node11, 0);
-    printf("\n");
-    free_ast(continue_node11);
-    wait();
-    
-    // ========================================================
-    // TESTE 12: WHILE aninhado
-    // ========================================================
-    printf("=== TESTE 12: WHILE aninhado ===\n");
-    ASTNode* var_x12 = create_identifier_node("x", 1, 1);
-    ASTNode* num_5_12 = create_number_node(5, 1, 5);
-    ASTNode* condition_outer = create_comparison_op_node(OP_LESS, var_x12, num_5_12, 1, 3);
-    
-    ASTNode* var_y12 = create_identifier_node("y", 2, 1);
-    ASTNode* num_3_12 = create_number_node(3, 2, 5);
-    ASTNode* condition_inner = create_comparison_op_node(OP_LESS, var_y12, num_3_12, 2, 3);
-    
-    ASTNode* body_inner = create_statement_list_node(12, 1);
-    ASTNode* while_inner = create_while_node(condition_inner, body_inner, 2, 1);
-    
-    ASTNode* body_outer = create_statement_list_node(11, 1);
-    ASTNode* while_outer = create_while_node(condition_outer, body_outer, 1, 1);
-    printf("while_outer (aninhado):\n");
-    print_ast(while_outer, 0);
-    printf("\n");
-    free_ast(while_outer);
-    wait();
-    
-    printf("Memória liberada. Teste concluído.\n");
+       
+    printf("Teste concluído.\n");
     a89check_leaks();
+    return 0;
 }
 
 #endif

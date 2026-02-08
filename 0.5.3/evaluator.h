@@ -48,13 +48,15 @@ typedef enum
 } ResultType;
 
 // =================================================
-// Contexto de execução - print usa
+// Contexto de execução - print e while usam
 // =================================================
 typedef struct {
     SymbolTable* symbols;        // Tabela de símbolos
     const char* current_color;   // Cor atual aplicada
     int color_enabled;           // Se cores estão habilitadas
     OutputFormat format;         // Formatação (width e alignment)
+    int should_break;      
+    int should_continue;   
 } ExecutionContext;
 
 typedef struct
@@ -72,8 +74,8 @@ typedef struct
 
 
 // width e alignment
-ExecutionContext* execution_context_create(SymbolTable* symbols);
-void execution_context_destroy(ExecutionContext* ctx);
+ExecutionContext* execution_ctx_create(SymbolTable* symbols);
+void execution_ctx_destroy(ExecutionContext* ctx);
 void evaluator_reset_format(ExecutionContext* ctx);// Formatação
 
 // Funções de gerenciamento de cores
@@ -85,42 +87,42 @@ void evaluator_color_apply_current(ExecutionContext* ctx);
 /********************************************************************
 FLUXO DO EVALUATOR
 
-evaluate_program() ==> execute_statement_list() ==> execute_statement()
+evaluate_program() ==> execute_stmt_list() ==> execute_stmt()
 
-execute_statement():
-    NODE_ASSIGNMENT ==> evaluate_expression()
+execute_stmt():
+    NODE_ASSIGNMENT ==> evaluate_expr()
 
     NODE_BOOL:
     NODE_NUMBER:
     NODE_BINARY_OP:
     NODE_UNARY_OP:
-    NODE_VARIABLE: ==> evaluate_expression()
+    NODE_VARIABLE: ==> evaluate_expr()
 
-    NODE_STRING ==> evaluate_print_statement()
+    NODE_STRING ==> evaluate_print_stmt()
 
-    NODE_STATEMENT_LIST ==> execute_statement_list()
+    NODE_STATEMENT_LIST ==> execute_stmt_list()
 
-    NODE_INPUT ==> evaluate_input_statement()
+    NODE_INPUT ==> evaluate_input_stmt()
     
 
 ********************************************************************/
 int evaluate_program(ASTNode* node, SymbolTable* symbols);
 
-int execute_statement_list(ASTNode* node, SymbolTable* symbols);
-int execute_statement(ASTNode* node, SymbolTable* symbols);
-int execute_statement_with_context(ASTNode* node, ExecutionContext* ctx);
+int execute_stmt_list(ASTNode* node, SymbolTable* symbols);
+int execute_stmt(ASTNode* node, SymbolTable* symbols);
+int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx);
 
-EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalContext ctx);
+EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext ctx);
 
-int evaluate_print_statement(ASTNode* node, SymbolTable* symbols);
-int evaluate_print_with_context(ASTNode* node, ExecutionContext* ctx);
+int evaluate_print_stmt(ASTNode* node, SymbolTable* symbols);
+int evaluate_print_with_ctx(ASTNode* node, ExecutionContext* ctx);
 
 //int evaluate_print_statement_with_context(ASTNode* node, ExecutionContext* ctx);
 
-int evaluate_input_statement(ASTNode* node, SymbolTable* symbols);
+int evaluate_input_stmt(ASTNode* node, SymbolTable* symbols);
 
-int execute_if_statement(ASTNode* node, SymbolTable* symbols);
-int execute_if_statement_with_context(ASTNode* node, ExecutionContext* ctx);
+int execute_if_stmt(ASTNode* node, SymbolTable* symbols);
+int execute_if_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx);
 
 // Old function (for compatibility)
 EvaluatorResult evaluate(ASTNode* node);

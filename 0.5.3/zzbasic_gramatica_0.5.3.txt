@@ -1,7 +1,7 @@
 # =====================================================================
 # ZzBasic - GRAMÁTICA v0.5.3
 # Loop while; break e continue
-# Última atualização: 20260207
+# Última atualização: 20260208
 # =====================================================================
 
 # =====================================================================
@@ -9,7 +9,9 @@
 # =====================================================================
 program             := statement_list
 
-statement_list      := statement (EOL statement)* EOL?
+statement_list      := statement (separator+ statement)*
+
+separator           := EOL | ':' | ';'
 
 statement           := assignment_stmt
                     | print_stmt
@@ -82,7 +84,7 @@ if_stmt             := 'if' logical_expr 'then' EOL
                            statement_list )*
                        ( 'else' EOL
                            statement_list )?
-                       'end' 'if' EOL
+                       'end' 'if' 
 
 
 # =====================================================================
@@ -90,7 +92,7 @@ if_stmt             := 'if' logical_expr 'then' EOL
 # =====================================================================
 while_stmt := 'while' '(' logical_expr ')' 'do' EOL
                  statement_list*
-              'end' 'while' EOL
+              'end' 'while' 
 
 # =====================================================================
 # BREAK STATEMENT

@@ -15,7 +15,7 @@ OBSERVÇÕES:
 #include "a89alloc.h"
 
 //===================================================================
-// PROTÓTIPOS DAS FUNÇÕES DESTE ARQUIVO
+// PROTÓTIPOS DAS FUNÇÕES 
 //===================================================================
 static void parser_init(Parser* parser, Lexer* lexer);
 static void parser_advance(Parser* parser);
@@ -29,16 +29,20 @@ static const char* get_color_name(TokenType type);
 static void report_print_keyword_error(Parser* parser, Token token);
 
 static ASTNode* parse_program(Parser* parser);
-static ASTNode* parse_statement_list(Parser* parser);
-static ASTNode* parse_statement(Parser* parser);
+static ASTNode* parse_stmt_list(Parser* parser);
+static ASTNode* parse_stmt(Parser* parser);
 static ASTNode* parse_assignment_stmt(Parser* parser);
-static ASTNode* parse_print_statement(Parser* parser);
-static ASTNode* parse_color_statement(Parser* parser);
-static ASTNode* parse_input_statement(Parser* parser);
+static ASTNode* parse_print_stmt(Parser* parser);
+static ASTNode* parse_color_stmt(Parser* parser);
+static ASTNode* parse_input_stmt(Parser* parser);
 
-static ASTNode* parse_if_statement(Parser* parser);
+static ASTNode* parse_if_stmt(Parser* parser);
 
-static ASTNode* parse_expression_stmt(Parser* parser);
+static ASTNode* parse_while_stmt(Parser* parser);
+static ASTNode* parse_break_stmt(Parser* parser);
+static ASTNode* parse_continue_stmt(Parser* parser);
+
+static ASTNode* parse_expr_stmt(Parser* parser);
 
 // EXPRESSÕES LÓGICAS
 static ASTNode* parse_logical_expr(Parser* parser);
@@ -48,13 +52,13 @@ static ASTNode* parse_not_expr(Parser* parser);
 static ASTNode* parse_comparison_expr(Parser* parser);
 
 // EXPRESSÕES ARITMÉTICAS
-static ASTNode* parse_expression(Parser* parser);
+static ASTNode* parse_expr(Parser* parser);
 static ASTNode* parse_term(Parser* parser);
 static ASTNode* parse_factor(Parser* parser);
 static ASTNode* parse_atom(Parser* parser);
 
 // ASTNode* parse(Lexer* lexer)
-// ASTNode* parse_single_statement(Lexer* lexer) 
+// ASTNode* parse_single_stmt(Lexer* lexer) 
 //===================================================================
 
 
@@ -143,7 +147,7 @@ static int is_color_token(TokenType type)
 }
 
 // Verifica se um token pode ser statement sozinho (nocolor)
-static int is_color_statement_token(TokenType type) {
+static int is_color_stmt_token(TokenType type) {
     return (type == TOKEN_NOCOLOR);  // Apenas nocolor pode ser statement
 }
 
@@ -271,10 +275,21 @@ static ASTNode* parse_program(Parser* parser)
         parser_advance(parser);
     }
 
-    return parse_statement_list(parser);
+    return parse_stmt_list(parser);
 }
 
-static ASTNode* parse_statement_list(Parser* parser)
+//===================================================================
+// statement_list := statement (separator statement)*
+// separator      := EOL | ':' | ';'
+//
+// Parseia uma lista de statements até encontrar (mas não consome):
+// - TOKEN_END   (ex: antes de 'end while', 'end if', etc...)
+// - TOKEN_ELSE  (ex: antes do 'else' em if-then-else) 
+// - TOKEN_EOF   (fim de arquivo)
+//
+// Exige pelo menos um statement. Blocos vazios são proibidos.
+//===================================================================
+static ASTNode* parse_stmt_list(Parser* parser)
 {
     ASTNode* list = create_statement_list_node(
         parser->current_token.line,
@@ -282,7 +297,7 @@ static ASTNode* parse_statement_list(Parser* parser)
     );
     
     // Parseia o primeiro statement
-    ASTNode* stmt = parse_statement(parser);
+    ASTNode* stmt = parse_stmt(parser);
     if (!stmt || parser->has_error) {
         free_ast(list);
         return NULL;
@@ -294,7 +309,7 @@ static ASTNode* parse_statement_list(Parser* parser)
            parser->current_token.type != TOKEN_EOF &&
            parser->current_token.type != TOKEN_END &&
            parser->current_token.type != TOKEN_ELSE)
-        {
+    {
         
         Token token = parser->current_token;
         
@@ -316,7 +331,7 @@ static ASTNode* parse_statement_list(Parser* parser)
             // Se após separador for EOF ou EOL, para (statements opcionais)
             if (parser->current_token.type == TOKEN_EOF)
             {
-                // Permite separadores no final (BASIC tradicional)
+                // Permite separadores no final 
                 break;
             }
 
@@ -327,7 +342,7 @@ static ASTNode* parse_statement_list(Parser* parser)
             }
 
             // Parseia próximo statement
-            stmt = parse_statement(parser);
+            stmt = parse_stmt(parser);
             if (!stmt || parser->has_error)
             {
                 free_ast(list);
@@ -346,14 +361,17 @@ static ASTNode* parse_statement_list(Parser* parser)
 }
 
 //==============================================================================
-// statement           := assignment_stmt
-//                     | print_stmt
-//                     | color_stmt 
-//                     | input_stmt 
-//                     | if_stmt
-//                     | expression_stmt
+// statement := assignment_stmt
+//           | print_stmt
+//           | color_stmt 
+//           | input_stmt 
+//           | if_stmt
+//           | while_stmt
+//           | break_stmt
+//           | continue_stmt
+//           | expression_stmt
 //==============================================================================
-static ASTNode* parse_statement(Parser* parser)
+static ASTNode* parse_stmt(Parser* parser)
 {
     if (parser->current_token.type == TOKEN_LET)
     {
@@ -362,24 +380,36 @@ static ASTNode* parse_statement(Parser* parser)
     else if (parser->current_token.type == TOKEN_PRINT || 
              parser->current_token.type == TOKEN_QUESTION)
     {
-        return parse_print_statement(parser);  
+        return parse_print_stmt(parser);  
     }
-    else if (is_color_statement_token(parser->current_token.type))
+    else if (is_color_stmt_token(parser->current_token.type))
     {
         // aqui parseia nocolor sozinho
-        return parse_color_statement(parser);
+        return parse_color_stmt(parser);
     }
     else if(parser->current_token.type == TOKEN_INPUT)
     {
-        return parse_input_statement(parser);
+        return parse_input_stmt(parser);
     } 
     else if (parser->current_token.type == TOKEN_IF)  
     {
-        return parse_if_statement(parser);            
+        return parse_if_stmt(parser);            
+    }
+    else if (parser->current_token.type == TOKEN_WHILE)
+    {
+        return parse_while_stmt(parser);
+    }
+    else if (parser->current_token.type == TOKEN_BREAK)
+    {
+        return parse_break_stmt(parser);
+    }
+    else if (parser->current_token.type == TOKEN_CONTINUE)
+    {
+        return parse_continue_stmt(parser);
     }
     else
     {
-        return parse_expression_stmt(parser);
+        return parse_expr_stmt(parser);
     }
 }
 
@@ -440,7 +470,7 @@ static ASTNode* parse_assignment_stmt(Parser* parser)
                                       string_node->column);
     }
 
-    ASTNode* expr = parse_expression(parser);
+    ASTNode* expr = parse_expr(parser);
     if (parser->has_error) {
         return NULL;
     }
@@ -454,7 +484,7 @@ static ASTNode* parse_assignment_stmt(Parser* parser)
 // print_item      := expression | 'width'(NUMBER)? |  ('left' | 'right' | 'center')? 
 // nl              := 'nl'        # New line - quando presente, quebra linha
 //===================================================================
-static ASTNode* parse_print_statement(Parser* parser)
+static ASTNode* parse_print_stmt(Parser* parser)
 {
     // Salva posição do print/?
     int line = parser->current_token.line;
@@ -510,7 +540,10 @@ static ASTNode* parse_print_statement(Parser* parser)
             parser_advance(parser);  // Consome o 'width'
             if(parser->current_token.type != TOKEN_LPAREN)
             {
-                parser_set_error(parser, "Parser error: '(' expected");
+                parser_set_error(parser,
+                    "Parser error: '(' expected after 'width'."
+                    " 'width' parameter requires value in parentheses."
+                    " Example: width(10)");
                 free_ast(print_node);
                 return NULL;
             }
@@ -519,7 +552,9 @@ static ASTNode* parse_print_statement(Parser* parser)
             // Valida se o usuario passou um numero como argumento do width()
             if(parser->current_token.type != TOKEN_NUMBER)
             {
-                parser_set_error(parser, "Parser error: number expected in width()");
+                parser_set_error(parser,
+                    "Parser error: number expected in width()"
+                    " Example: width(10)");
                 free_ast(print_node);
                 return NULL;
             }
@@ -536,7 +571,10 @@ static ASTNode* parse_print_statement(Parser* parser)
             parser_advance(parser);  // Consome o numero
             if(parser->current_token.type != TOKEN_RPAREN)
             {
-                parser_set_error(parser, "Parser error: ')' expected");
+                parser_set_error(parser,
+                    "Parser error: ')' expected."
+                    " 'width' parameter requires value in parentheses."
+                    " Example: width(10)");
                 free_ast(print_node);
                 return NULL;
             }           
@@ -567,7 +605,7 @@ static ASTNode* parse_print_statement(Parser* parser)
         }
 
         // 3. EXPRESSÕES NORMAIS (números, strings, variáveis, etc)
-        //ASTNode* item = parse_expression(parser);
+        //ASTNode* item = parse_expr(parser);
         ASTNode* item = parse_logical_expr(parser);
         if (parser->has_error)
         {
@@ -593,12 +631,12 @@ static ASTNode* parse_print_statement(Parser* parser)
 //===================================================================
 // color_stmt := COLOR_TOKEN (apenas nocolor por enquanto)
 //===================================================================
-static ASTNode* parse_color_statement(Parser* parser)
+static ASTNode* parse_color_stmt(Parser* parser)
 {
     Token token = parser->current_token;
     
     // Verifica se é um token de cor permitido como statement
-    if (!is_color_statement_token(token.type))
+    if (!is_color_stmt_token(token.type))
     {
         char error_msg[BUFFER_SIZE];
         snprintf(error_msg, sizeof(error_msg),
@@ -620,7 +658,7 @@ static ASTNode* parse_color_statement(Parser* parser)
 //===================================================================
 // input_stmt       := 'INPUT' (STRING)? IDENTIFIER  
 //===================================================================
-static ASTNode* parse_input_statement(Parser* parser)
+static ASTNode* parse_input_stmt(Parser* parser)
 {
     // Salva posição do input
     int line = parser->current_token.line;
@@ -663,7 +701,7 @@ static ASTNode* parse_input_statement(Parser* parser)
 //                 statement_list )?
 //            'end' 'if' EOL
 //===================================================================
-static ASTNode* parse_if_statement(Parser* parser)
+static ASTNode* parse_if_stmt(Parser* parser)
 {
     int line = parser->current_token.line;
     int column = parser->current_token.column;
@@ -685,7 +723,7 @@ static ASTNode* parse_if_statement(Parser* parser)
     
     if (parser->current_token.type != TOKEN_RPAREN)
     {
-        parser_set_error(parser, "Parser error: ')' expected after condition");
+        parser_set_error(parser, "Parser error: ')' expected after condition in 'if' statement");
         free_ast(condition);
         return NULL;
     }
@@ -693,7 +731,7 @@ static ASTNode* parse_if_statement(Parser* parser)
     
     if (parser->current_token.type != TOKEN_THEN)
     {
-        parser_set_error(parser, "Parser error: 'then' expected after condition");
+        parser_set_error(parser, "Parser error: 'then' expected after condition in 'if' statement");
         free_ast(condition);
         return NULL;
     }
@@ -703,14 +741,14 @@ static ASTNode* parse_if_statement(Parser* parser)
     if (parser->current_token.type != TOKEN_EOL && 
         parser->current_token.type != TOKEN_NL)
     {
-        parser_set_error(parser, "Parser error: newline expected after 'then'");
+        parser_set_error(parser, "Parser error: newline expected after 'then' in 'if' statement");
         free_ast(condition);
         return NULL;
     }
     parser_advance(parser);// Consome EOL/NL
     
     // Parse then body (statement list)
-    ASTNode* then_body = parse_statement_list(parser);
+    ASTNode* then_body = parse_stmt_list(parser);
     if (parser->has_error || !then_body)
     {
         free_ast(condition);
@@ -751,7 +789,7 @@ static ASTNode* parse_if_statement(Parser* parser)
             
             if (parser->current_token.type != TOKEN_RPAREN)
             {
-                parser_set_error(parser, "Parser error: ')' expected after condition");
+                parser_set_error(parser, "Parser error: ')' expected after condition in 'if' statement");
                 free_ast(condition);
                 free_ast(then_body);
                 free_ast(elif_condition);
@@ -762,7 +800,7 @@ static ASTNode* parse_if_statement(Parser* parser)
             
             if (parser->current_token.type != TOKEN_THEN)
             {
-                parser_set_error(parser, "Parser error: 'then' expected after condition");
+                parser_set_error(parser, "Parser error: 'then' expected after condition in 'if' statement");
                 free_ast(condition);
                 free_ast(then_body);
                 free_ast(elif_condition);
@@ -775,7 +813,7 @@ static ASTNode* parse_if_statement(Parser* parser)
             if (parser->current_token.type != TOKEN_EOL && 
                 parser->current_token.type != TOKEN_NL)
             {
-                parser_set_error(parser, "Parser error: newline expected after 'then'");
+                parser_set_error(parser, "Parser error: newline expected after 'then' in 'if' statement");
                 free_ast(condition);
                 free_ast(then_body);
                 free_ast(elif_condition);
@@ -785,7 +823,7 @@ static ASTNode* parse_if_statement(Parser* parser)
             parser_advance(parser);  // Consome EOL/NL
             
             // Parse elif body (statement list)
-            ASTNode* elif_body = parse_statement_list(parser);
+            ASTNode* elif_body = parse_stmt_list(parser);
             if (parser->has_error || !elif_body)
             {
                 free_ast(condition);
@@ -799,23 +837,13 @@ static ASTNode* parse_if_statement(Parser* parser)
             // Este IF será o else_body do IF anterior
             ASTNode* elif_node = create_if_node(elif_condition, elif_body, NULL, 
                                                 elif_condition->line, elif_condition->column);
-            if (!elif_node)
-            {
-                parser_set_error(parser, "Parser error: could not create elif node");
-                free_ast(condition);
-                free_ast(then_body);
-                free_ast(elif_condition);
-                free_ast(elif_body);
-                if (else_body) free_ast(else_body);
-                return NULL;
-            }
             
             // Encadeia: se else_body já existe, coloca elif_node como else_body dele
             if (else_body)
             {
                 // else_body é um IF node anterior
                 // Coloca elif_node como seu else_body
-                else_body->data.ifstatement.else_body = elif_node;
+                else_body->data.if_stmt.else_body = elif_node;
             }
             else
             {
@@ -832,7 +860,7 @@ static ASTNode* parse_if_statement(Parser* parser)
             if (parser->current_token.type != TOKEN_EOL && 
                 parser->current_token.type != TOKEN_NL)
             {
-                parser_set_error(parser, "Parser error: newline expected after 'else'");
+                parser_set_error(parser, "Parser error: newline expected after 'else' in 'if' statement");
                 free_ast(condition);
                 free_ast(then_body);
                 if (else_body) free_ast(else_body);
@@ -841,7 +869,7 @@ static ASTNode* parse_if_statement(Parser* parser)
             parser_advance(parser);  // Consome EOL/NL
             
             // Parse else body (statement list)
-            ASTNode* final_else_body = parse_statement_list(parser);
+            ASTNode* final_else_body = parse_stmt_list(parser);
             if (parser->has_error || !final_else_body)
             {
                 free_ast(condition);
@@ -855,11 +883,11 @@ static ASTNode* parse_if_statement(Parser* parser)
             {
                 // Encontra o último elif e coloca final_else_body nele
                 ASTNode* current = else_body;
-                while (current->data.ifstatement.else_body != NULL)
+                while (current->data.if_stmt.else_body != NULL)
                 {
-                    current = current->data.ifstatement.else_body;
+                    current = current->data.if_stmt.else_body;
                 }
-                current->data.ifstatement.else_body = final_else_body;
+                current->data.if_stmt.else_body = final_else_body;
             }
             else
             {
@@ -875,7 +903,7 @@ static ASTNode* parse_if_statement(Parser* parser)
     // Verifica 'end if' (obrigatório)
     if (parser->current_token.type != TOKEN_END)
     {
-        parser_set_error(parser, "Parser error: 'end' expected");
+        parser_set_error(parser, "Parser error: 'end' expected in 'if' statement");
         free_ast(condition);
         free_ast(then_body);
         if (else_body) free_ast(else_body);
@@ -907,29 +935,188 @@ static ASTNode* parse_if_statement(Parser* parser)
     }
     
     // Consome EOL/NL se existir
+    // if (parser->current_token.type == TOKEN_EOL || 
+    //     parser->current_token.type == TOKEN_NL)
+    // {
+    //     parser_advance(parser);  // Consome EOL/NL
+    // }
+    
+    // Create IF node
+    ASTNode* if_node = create_if_node(condition, then_body, else_body, line, column);
+    
+    return if_node;
+}
+
+//===================================================================
+// while_stmt := 'while' '(' logical_expr ')' 'do' EOL
+//                  statement_list*
+//               'end' 'while' EOL
+//===================================================================
+static ASTNode* parse_while_stmt(Parser* parser)
+{
+    int line = parser->current_token.line;
+    int column = parser->current_token.column;
+    
+    parser_advance(parser);  // Consome 'while'
+    
+    if (parser->current_token.type != TOKEN_LPAREN)
+    {
+        parser_set_error(parser, "Parser error: '(' expected after 'while' statement");
+        return NULL;
+    }
+    parser_advance(parser);  // Consome '('
+    
+    ASTNode* condition = parse_logical_expr(parser);
+    if (parser->has_error || !condition)
+    {
+        return NULL;
+    }
+    
+    if (parser->current_token.type != TOKEN_RPAREN)
+    {
+        parser_set_error(parser, "Parser error: ')' expected after condition in 'while' statement");
+        free_ast(condition);
+        return NULL;
+    }
+    parser_advance(parser);  // Consome ')'
+    
+    if (parser->current_token.type != TOKEN_DO)
+    {
+        parser_set_error(parser, "Parser error: 'do' expected after condition in 'while' statement");
+        free_ast(condition);
+        return NULL;
+    }
+    parser_advance(parser);  // Consome 'do'
+    
+    // Espera EOL/NL
+    if (parser->current_token.type != TOKEN_EOL && 
+        parser->current_token.type != TOKEN_NL)
+    {
+        parser_set_error(parser, "Parser error: newline expected after 'do' in 'while' statement");
+        free_ast(condition);
+        return NULL;
+    }
+    parser_advance(parser);  // Consome EOL/NL
+    
+    // Parse body (statement list)
+    ASTNode* body = parse_stmt_list(parser);
+    if (parser->has_error || !body)
+    {
+        free_ast(condition);
+        return NULL;
+    }
+    
+
+    // Expect 'end' 'while'
+    if (parser->current_token.type != TOKEN_END)
+    {
+        parser_set_error(parser, "Parser error: 'end' expected in 'while' statement");
+        free_ast(condition);
+        free_ast(body);
+        return NULL;
+    }
+    parser_advance(parser);  // Consome 'end'
+    
+    // Expect 'while'
+    if (parser->current_token.type != TOKEN_WHILE)
+    {
+        parser_set_error(parser, "Parser error: 'while' expected after 'end' in 'while' statement");
+        free_ast(condition);
+        free_ast(body);
+        return NULL;
+    }
+    parser_advance(parser);  // Consome 'while'
+    
+    // Expect EOL/NL
+    if (parser->current_token.type != TOKEN_EOL && 
+        parser->current_token.type != TOKEN_NL &&
+        parser->current_token.type != TOKEN_EOF)
+    {
+        parser_set_error(parser, "Parser error: newline expected after 'end while'");
+        free_ast(condition);
+        free_ast(body);
+        return NULL;
+    }
+    
+    // if (parser->current_token.type == TOKEN_EOL || 
+    //     parser->current_token.type == TOKEN_NL)
+    // {
+    //     parser_advance(parser);  // Consome EOL/NL
+    // }
+    
+    // Create WHILE node
+    ASTNode* while_node = create_while_node(condition, body, line, column);
+    
+    return while_node;
+}
+
+//===================================================================
+// break_stmt := 'break' EOL
+//===================================================================
+static ASTNode* parse_break_stmt(Parser* parser)
+{
+    int line = parser->current_token.line;
+    int column = parser->current_token.column;
+    
+    parser_advance(parser);  // Consome 'break'
+    
+    // Expect EOL/NL
+    if (parser->current_token.type != TOKEN_EOL && 
+        parser->current_token.type != TOKEN_NL &&
+        parser->current_token.type != TOKEN_EOF)
+    {
+        parser_set_error(parser, "Error: newline expected after 'break'");
+        return NULL;
+    }
+    
     if (parser->current_token.type == TOKEN_EOL || 
         parser->current_token.type == TOKEN_NL)
     {
         parser_advance(parser);  // Consome EOL/NL
     }
     
-    // Create IF node
-    ASTNode* if_node = create_if_node(condition, then_body, else_body, line, column);
-    if (!if_node)
+    // Create BREAK node
+    ASTNode* break_node = create_break_node(line, column);
+    
+    return break_node;
+}
+
+//===================================================================
+// continue_stmt := 'continue' EOL
+//===================================================================
+static ASTNode* parse_continue_stmt(Parser* parser)
+{
+    int line = parser->current_token.line;
+    int column = parser->current_token.column;
+    
+    parser_advance(parser);  // Consome 'continue'
+    
+    // Expect EOL/NL
+    if (parser->current_token.type != TOKEN_EOL && 
+        parser->current_token.type != TOKEN_NL &&
+        parser->current_token.type != TOKEN_EOF)
     {
-        parser_set_error(parser, "Parser error: could not create if node");
-        free_ast(condition);
-        free_ast(then_body);
-        if (else_body) free_ast(else_body);
+        parser_set_error(parser, "Error: newline expected after 'continue'");
         return NULL;
     }
     
-    return if_node;
+    if (parser->current_token.type == TOKEN_EOL || 
+        parser->current_token.type == TOKEN_NL)
+    {
+        parser_advance(parser);  // Consome EOL/NL
+    }
+    
+    // Create CONTINUE node
+    ASTNode* continue_node = create_continue_node(line, column);
+
+    return continue_node;
 }
+
+
 //===================================================================
 // expression_stmt := logical_expr
 //===================================================================
-static ASTNode* parse_expression_stmt(Parser* parser)
+static ASTNode* parse_expr_stmt(Parser* parser)
 {
     return parse_logical_expr(parser);
 }
@@ -1023,7 +1210,7 @@ static ASTNode* parse_not_expr(Parser* parser)
 //===================================================================
 static ASTNode* parse_comparison_expr(Parser* parser)
 {
-    ASTNode* left = parse_expression(parser);  
+    ASTNode* left = parse_expr(parser);  
     if (parser->has_error || !left) return NULL;
     
     // Verifica operadores relacionais
@@ -1078,7 +1265,7 @@ static ASTNode* parse_comparison_expr(Parser* parser)
         parser_advance(parser);
         
         // Parseia o lado direito
-        ASTNode* right = parse_expression(parser);
+        ASTNode* right = parse_expr(parser);
         if (parser->has_error || !right)
         {
             free_ast(left);
@@ -1095,7 +1282,7 @@ static ASTNode* parse_comparison_expr(Parser* parser)
 //===================================================================
 // expression := term (('+' | '-') term)*
 //===================================================================
-static ASTNode* parse_expression(Parser* parser) {
+static ASTNode* parse_expr(Parser* parser) {
     ASTNode* node = parse_term(parser);
     if (parser->has_error || !node) return NULL;
     
@@ -1296,7 +1483,7 @@ ASTNode* parse(Lexer* lexer)
 //===================================================================
 // FOR TESTING V0.2.0
 //===================================================================
-ASTNode* parse_single_statement(Lexer* lexer)
+ASTNode* parse_single_stmt(Lexer* lexer)
 {
     Parser parser;
     parser_init(&parser, lexer);
@@ -1307,7 +1494,7 @@ ASTNode* parse_single_statement(Lexer* lexer)
     }
     
     // Parse ONLY ONE statement (can be assignment OR expression)
-    ASTNode* result = parse_statement(&parser);
+    ASTNode* result = parse_stmt(&parser);
     
     if (parser.has_error)
     {
@@ -1326,7 +1513,7 @@ ASTNode* parse_single_statement(Lexer* lexer)
     return result;
 }
 
-#ifdef TEST
+#ifdef TESTPARSER
 #include "color.h"
 #include "utils.h"
 
@@ -1334,29 +1521,60 @@ int main()
 {
     setup_utf8();
     
-    printf("%s=== TESTE PARSER v0.5.2 if...else ===%s\n\n", 
+    printf("%s=== TESTE PARSER v0.5.3 loop while ===%s\n\n", 
            COLOR_HEADER, COLOR_RESET);
     
     char* testes[] =
     {
 
-        "if(idade >= 60) then\n"
-        "   print \"idoso\" nl \n"
-        "end if",
+        "let x = 0\n"
+        "while (x < 5) do\n"
+        "    print x nl\n"
+        "    let x = x + 1\n"
+        "end while",
 
-        "if (idade < 18) then\n"
-        "    print \"de menor\" nl\n"
-        "else\n"
-        "    print \"de maior\" nl\n"
-        "end if",
+        "let x = 0\n"
+        "while (x < 10) do\n"
+        "    if (x == 5) then\n"
+        "        break\n"
+        "    end if\n"
+        "    print x nl\n"
+        "    let x = x + 1\n"
+        "end while\n"
 
-        "if (idade > 60) then\n"
-        "    print \"idoso\" nl\n"
-        "else if(idade >= 18) then\n"
-        "    print \"de maior\" nl\n"
-        "else\n"
-        "    print \"de menor\" nl\n"
-        "end if"
+        "print \"Saiu do loop\" nl",
+
+        "let x = 0\n"
+        "while (x < 5) do\n"
+        "    let x = x + 1\n"
+        "    if (x == 3) then\n"
+        "        continue\n"
+        "    end if\n"
+        "    print x nl\n"
+        "end while",
+
+        "let i = 0\n"
+        "while (i < 3) do\n"
+        "    let j = 0\n"
+        "    while (j < 3) do\n"
+        "        print i " " j nl\n"
+        "        let j = j + 1\n"
+        "    end while\n"
+        "    let i = i + 1\n"
+        "end while",
+
+        "let x = 0\n"
+        "while (x < 10) do\n"
+        "    let x = x + 1\n"
+        "    if (x == 3) then\n"
+        "        continue\n"
+        "    end if\n"
+        "    if (x == 7) then\n"
+        "        break\n"
+        "    end if\n"
+        "    print x nl\n"
+        "end while"
+
     };
     
     int num_testes = sizeof(testes) / sizeof(testes[0]);
@@ -1380,7 +1598,7 @@ int main()
         }
         else
         {
-            printf("%sERRO no parsing%s\n", COLOR_ERROR, COLOR_RESET);
+            //printf("%sERRO no parsing%s\n", COLOR_ERROR, COLOR_RESET);
         }
         
         printf("\n");

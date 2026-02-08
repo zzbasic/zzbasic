@@ -16,9 +16,6 @@ static const char* current_color_global = "";
 static int colors_enabled_global = 1;
 
 
-//===================================================================
-// FUNÇÕES DESTE ARQUIVO
-//===================================================================
 static EvaluatorResult create_success_result_bool(int value, int line, int column);
 static EvaluatorResult create_success_result_number(double value, int line, int column);
 static EvaluatorResult create_success_result_string(const char* value, int line, int column);
@@ -37,26 +34,26 @@ static void update_format_from_node(ASTNode* node, ExecutionContext* ctx);
 static void apply_format(const char* str, OutputFormat* format);
 void evaluator_reset_format(ExecutionContext* ctx);
 
-ExecutionContext* execution_context_create(SymbolTable* symbols);
-void execution_context_destroy(ExecutionContext* ctx);
+ExecutionContext* execution_ctx_create(SymbolTable* symbols);
+void execution_ctx_destroy(ExecutionContext* ctx);
 
-static int evaluate_print_statement_with_format(ASTNode* node, ExecutionContext* ctx);
-int evaluate_print_with_context(ASTNode* node, ExecutionContext* ctx);
-int evaluate_input_statement(ASTNode* node, SymbolTable* symbols);
+static int evaluate_print_stmt_with_format(ASTNode* node, ExecutionContext* ctx);
+int evaluate_print_with_ctx(ASTNode* node, ExecutionContext* ctx);
+int evaluate_input_stmt(ASTNode* node, SymbolTable* symbols);
 
-
+static int execute_while_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx);
 
 // FUNÇÕES PÚBLICAS
 
 // int evaluate_program(ASTNode* node, SymbolTable* symbols);
-// int evaluate_print_statement(ASTNode* node, SymbolTable* symbols);
-// EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalContext ctx);
+// int evaluate_print_stmt(ASTNode* node, SymbolTable* symbols);
+// EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext ctx);
 
 // // Old function (for compatibility)
 // EvaluatorResult evaluate(ASTNode* node);
 
-// int execute_statement_list(ASTNode* node, SymbolTable* symbols);
-// int execute_statement(ASTNode* node, SymbolTable* symbols);
+// int execute_stmt_list(ASTNode* node, SymbolTable* symbols);
+// int execute_stmt(ASTNode* node, SymbolTable* symbols);
 //===================================================================
 
 
@@ -209,7 +206,7 @@ static void reset_format(ExecutionContext* ctx)
     {
         ctx->format.width = 0;
         ctx->format.align = ALIGN_LEFT;
-        ctx->format.has_format = 0;
+        ctx->format.has_format = 0; 
     }
 }
 
@@ -282,18 +279,20 @@ static void apply_format(const char* str, OutputFormat* format)
 }
 
 // Cria contexto de execução
-ExecutionContext* execution_context_create(SymbolTable* symbols)
+ExecutionContext* execution_ctx_create(SymbolTable* symbols)
 {
     ExecutionContext* ctx = A89ALLOC(sizeof(ExecutionContext));
     ctx->symbols = symbols;
     ctx->current_color = "";
     ctx->color_enabled = 1;
+    ctx->should_break = 0;      
+    ctx->should_continue = 0;  
     reset_format(ctx);    
     return ctx;
 }
 
 // Destrói contexto de execução
-void execution_context_destroy(ExecutionContext* ctx)
+void execution_ctx_destroy(ExecutionContext* ctx)
 {
     if (ctx)
     {
@@ -346,7 +345,7 @@ static char* read_user_input(const char* prompt)
 }
 
 // Avalia statement input
-int evaluate_input_statement(ASTNode* node, SymbolTable* symbols)
+int evaluate_input_stmt(ASTNode* node, SymbolTable* symbols)
 {
     if (!node || node->type != NODE_INPUT || !symbols)
     {
@@ -354,8 +353,8 @@ int evaluate_input_statement(ASTNode* node, SymbolTable* symbols)
         return 0;
     }
     
-    const char* prompt = node->data.inputstatement.prompt;
-    const char* var_name = node->data.inputstatement.var_name;
+    const char* prompt = node->data.input_stmt.prompt;
+    const char* var_name = node->data.input_stmt.var_name;
     
     // Lê entrada do usuário
     char* input = read_user_input(prompt);
@@ -410,11 +409,11 @@ int evaluate_program(ASTNode* node, SymbolTable* symbols) {
     if (!node) return 0;
     
     if (node->type == NODE_STATEMENT_LIST) {
-        return execute_statement_list(node, symbols);
+        return execute_stmt_list(node, symbols);
     }
     else {
         // Programa com apenas um statement (backward compatibility)
-        return execute_statement(node, symbols);
+        return execute_stmt(node, symbols);
     }
 }
 
@@ -422,7 +421,7 @@ int evaluate_program(ASTNode* node, SymbolTable* symbols) {
 // ==================================================================
 // Executa uma lista de statements
 // ==================================================================
-int execute_statement_list(ASTNode* node, SymbolTable* symbols)
+int execute_stmt_list(ASTNode* node, SymbolTable* symbols)
 {
     if (!node || node->type != NODE_STATEMENT_LIST)
     {
@@ -430,14 +429,14 @@ int execute_statement_list(ASTNode* node, SymbolTable* symbols)
         return 0;
     }
     
-    StatementListData* list = &node->data.statementlist;
+    StatementListData* list = &node->data.stmt_list;
     int all_success = 1;
     
     // Executa cada statement em sequência
     for (int i = 0; i < list->count; i++)
     {
         ASTNode* stmt = list->statements[i];
-        int success = execute_statement(stmt, symbols);
+        int success = execute_stmt(stmt, symbols);
         
         if (!success)
         {
@@ -453,7 +452,7 @@ int execute_statement_list(ASTNode* node, SymbolTable* symbols)
 // ============================================
 // EXECUTE STATEMENT (uses CTX_ANY by default)
 // ============================================
-int execute_statement(ASTNode* node, SymbolTable* symbols)
+int execute_stmt(ASTNode* node, SymbolTable* symbols)
 {
     if (!node) return 0;
     
@@ -464,7 +463,7 @@ int execute_statement(ASTNode* node, SymbolTable* symbols)
             ASTNode* value_node = node->data.assignment.value;
             
             // Evaluate value (any type)
-            EvaluatorResult value_result = evaluate_expression(
+            EvaluatorResult value_result = evaluate_expr(
                 value_node, symbols, CTX_ANY);
             
             if (value_result.type == RESULT_ERROR)
@@ -508,7 +507,7 @@ int execute_statement(ASTNode* node, SymbolTable* symbols)
         case NODE_VARIABLE:
         {
             // Evaluate for display (any type)
-            EvaluatorResult result = evaluate_expression(node, symbols, CTX_ANY);
+            EvaluatorResult result = evaluate_expr(node, symbols, CTX_ANY);
             if(result.type == RESULT_ERROR)
             {
                 printf("%s\n", result.error_message);
@@ -547,7 +546,7 @@ int execute_statement(ASTNode* node, SymbolTable* symbols)
         }
 
         case NODE_PRINT:
-            return evaluate_print_statement(node, symbols);
+            return evaluate_print_stmt(node, symbols);
 
         case NODE_COLOR:
             // Comando nocolor sozinho (ex: "nocolor" como statement)
@@ -563,17 +562,17 @@ int execute_statement(ASTNode* node, SymbolTable* symbols)
 
 
         case NODE_STATEMENT_LIST:  
-            return execute_statement_list(node, symbols);
+            return execute_stmt_list(node, symbols);
 
         case NODE_INPUT:
-            return evaluate_input_statement(node, symbols);
+            return evaluate_input_stmt(node, symbols);
 
         case NODE_COMPARISON_OP:
         case NODE_LOGICAL_OP:
         case NODE_NOT_LOGICAL_OP:
         {
             // Evaluate logical/comparison expression
-            EvaluatorResult result = evaluate_expression(node, symbols, CTX_ANY);
+            EvaluatorResult result = evaluate_expr(node, symbols, CTX_ANY);
             
             if (result.type == RESULT_ERROR)
             {
@@ -609,7 +608,7 @@ int execute_statement(ASTNode* node, SymbolTable* symbols)
         }
 
         case NODE_IF:
-            return execute_if_statement(node, symbols);
+            return execute_if_stmt(node, symbols);
             
         default:
             printf("Evaluator error: unsupported statement type: %d\n", node->type);
@@ -622,23 +621,23 @@ int execute_statement(ASTNode* node, SymbolTable* symbols)
 // ============================================
 
 // Função pública para avaliar print com contexto
-int evaluate_print_with_context(ASTNode* node, ExecutionContext* ctx)
+int evaluate_print_with_ctx(ASTNode* node, ExecutionContext* ctx)
 {
-    return evaluate_print_statement_with_format(node, ctx);
+    return evaluate_print_stmt_with_format(node, ctx);
 }
 
-int evaluate_print_statement(ASTNode* node, SymbolTable* symbols)
+int evaluate_print_stmt(ASTNode* node, SymbolTable* symbols)
 {
-    ExecutionContext* ctx = execution_context_create(symbols);
+    ExecutionContext* ctx = execution_ctx_create(symbols);
     if (!ctx) return 0;
     
-    int result = evaluate_print_statement_with_format(node, ctx);
+    int result = evaluate_print_stmt_with_format(node, ctx);
     
-    execution_context_destroy(ctx);
+    execution_ctx_destroy(ctx);
     return result;
 }
 
-static int evaluate_print_statement_with_format(ASTNode* node, ExecutionContext* ctx)
+static int evaluate_print_stmt_with_format(ASTNode* node, ExecutionContext* ctx)
 {
     if (!node || node->type != NODE_PRINT || !ctx)
     {
@@ -646,7 +645,7 @@ static int evaluate_print_statement_with_format(ASTNode* node, ExecutionContext*
         return 0;
     }
     
-    PrintStatementData* print_data = &node->data.printstatement;
+    PrintStatementData* print_data = &node->data.print_stmt;
     int printed_something = 0;
 
     // Se não tem itens (print vazio) → linha em branco
@@ -685,7 +684,7 @@ static int evaluate_print_statement_with_format(ASTNode* node, ExecutionContext*
         // ======================================================
         // CASO NORMAL: Expressão (número, string, variável, etc)
         // ======================================================
-        EvaluatorResult result = evaluate_expression(item_node, ctx->symbols, CTX_ANY);
+        EvaluatorResult result = evaluate_expr(item_node, ctx->symbols, CTX_ANY);
         if (result.type == RESULT_ERROR) {
             printf("%s\n", result.error_message);
             return 0;
@@ -763,7 +762,7 @@ static int evaluate_print_statement_with_format(ASTNode* node, ExecutionContext*
 // ============================================
 // EVALUATE EXPRESSIONS (with context)
 // ============================================
-EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalContext ctx)
+EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext ctx)
 {
     if (node == NULL)
     {
@@ -867,11 +866,11 @@ EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalCon
             }
             
             // Evaluate operands in number context
-            EvaluatorResult left_result = evaluate_expression(
+            EvaluatorResult left_result = evaluate_expr(
                 node->data.binaryop.left, symbols, CTX_NUMBER);
             if (left_result.type == RESULT_ERROR) return left_result;
             
-            EvaluatorResult right_result = evaluate_expression(
+            EvaluatorResult right_result = evaluate_expr(
                 node->data.binaryop.right, symbols, CTX_NUMBER);
             if (right_result.type == RESULT_ERROR) return right_result;
             
@@ -926,7 +925,7 @@ EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalCon
                      "Evaluator error: unary operator cannot be applied to string");
             }
             
-            EvaluatorResult operand_result = evaluate_expression(
+            EvaluatorResult operand_result = evaluate_expr(
                 node->data.unaryop.operand, symbols, CTX_NUMBER);
             if (operand_result.type == RESULT_ERROR)  return operand_result;
             
@@ -974,12 +973,12 @@ EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalCon
             // Resultado é sempre booleano
             
             // Avalia lado esquerdo (pode ser número ou booleano)
-            EvaluatorResult left_result = evaluate_expression(
+            EvaluatorResult left_result = evaluate_expr(
                 node->data.logicalop.left, symbols, CTX_ANY);
             if (left_result.type == RESULT_ERROR) return left_result;
             
             // Avalia lado direito (pode ser número ou booleano)
-            EvaluatorResult right_result = evaluate_expression(
+            EvaluatorResult right_result = evaluate_expr(
                 node->data.logicalop.right, symbols, CTX_ANY);
             if (right_result.type == RESULT_ERROR) return right_result;
             
@@ -1065,7 +1064,7 @@ EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalCon
             LogicalOperator op = node->data.logicalop.operator;
             
             // Avalia lado esquerdo (deve ser booleano)
-            EvaluatorResult left_result = evaluate_expression(
+            EvaluatorResult left_result = evaluate_expr(
                 node->data.logicalop.left, symbols, CTX_BOOL);
             if (left_result.type == RESULT_ERROR) return left_result;
             
@@ -1093,7 +1092,7 @@ EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalCon
             }
             
             // Avalia lado direito (deve ser booleano)
-            EvaluatorResult right_result = evaluate_expression(
+            EvaluatorResult right_result = evaluate_expr(
                 node->data.logicalop.right, symbols, CTX_BOOL);
             if (right_result.type == RESULT_ERROR) return right_result;
             
@@ -1131,7 +1130,7 @@ EvaluatorResult evaluate_expression(ASTNode* node, SymbolTable* symbols, EvalCon
             // Resultado é sempre booleano
             
             // Avalia operando (deve ser booleano)
-            EvaluatorResult operand_result = evaluate_expression(
+            EvaluatorResult operand_result = evaluate_expr(
                 node->data.notop.operand, symbols, CTX_BOOL);
             if (operand_result.type == RESULT_ERROR) return operand_result;
             
@@ -1166,7 +1165,7 @@ EvaluatorResult evaluate(ASTNode* node)
         return create_error_result("Evaluator error: could not create symbol table", 0, 0);
     }
     
-    EvaluatorResult result = evaluate_expression(node, symbols, CTX_ANY);
+    EvaluatorResult result = evaluate_expr(node, symbols, CTX_ANY);
     symbol_table_destroy(symbols);
     return result;
 }
@@ -1222,7 +1221,7 @@ void evaluator_color_apply_current(ExecutionContext* ctx)
 }
 
 // Função de execução com contexto 
-int execute_statement_with_context(ASTNode* node, ExecutionContext* ctx)
+int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
 {
     if (!node || !ctx) return 0;
     
@@ -1231,7 +1230,7 @@ int execute_statement_with_context(ASTNode* node, ExecutionContext* ctx)
             const char* var_name = node->data.assignment.var_name;
             ASTNode* value_node = node->data.assignment.value;
             
-            EvaluatorResult value_result = evaluate_expression(
+            EvaluatorResult value_result = evaluate_expr(
                 value_node, ctx->symbols, CTX_ANY);
             
             if (value_result.type == RESULT_ERROR) {
@@ -1254,7 +1253,7 @@ int execute_statement_with_context(ASTNode* node, ExecutionContext* ctx)
         }
             
         case NODE_PRINT:
-            return evaluate_print_with_context(node, ctx);
+            return evaluate_print_with_ctx(node, ctx);
             
         case NODE_COLOR:
             // Comando nocolor sozinho
@@ -1273,7 +1272,7 @@ int execute_statement_with_context(ASTNode* node, ExecutionContext* ctx)
         case NODE_UNARY_OP:
         case NODE_VARIABLE:
         {
-            EvaluatorResult result = evaluate_expression(node, ctx->symbols, CTX_ANY);
+            EvaluatorResult result = evaluate_expr(node, ctx->symbols, CTX_ANY);
             if (result.type == RESULT_ERROR)
             {
                 printf("%s\n", result.error_message);
@@ -1309,10 +1308,21 @@ int execute_statement_with_context(ASTNode* node, ExecutionContext* ctx)
             return 1;
             
         case NODE_STATEMENT_LIST:
-            return execute_statement_list(node, ctx->symbols);
+            return execute_stmt_list(node, ctx->symbols);
 
         case NODE_IF:
-            return execute_if_statement_with_context(node, ctx);
+            return execute_if_stmt_with_ctx(node, ctx);
+
+        case NODE_WHILE:
+            return execute_while_stmt_with_ctx(node, ctx);
+
+        case NODE_BREAK:
+            ctx->should_break = 1;
+            return 1;
+
+        case NODE_CONTINUE:
+            ctx->should_continue = 1;
+            return 1;
             
         default:
             printf("Evaluator error: unsupported statement type: %d\n", node->type);
@@ -1320,26 +1330,26 @@ int execute_statement_with_context(ASTNode* node, ExecutionContext* ctx)
     }
 }
 
-int execute_if_statement(ASTNode* node, SymbolTable* symbols)
+int execute_if_stmt(ASTNode* node, SymbolTable* symbols)
 {
     if (!node || !symbols) return 0;
     
-    ExecutionContext* ctx = execution_context_create(symbols);
+    ExecutionContext* ctx = execution_ctx_create(symbols);
     if (!ctx) return 0;
     
-    int result = execute_if_statement_with_context(node, ctx);
+    int result = execute_if_stmt_with_ctx(node, ctx);
     
-    execution_context_destroy(ctx);
+    execution_ctx_destroy(ctx);
     return result;
 }
 
-int execute_if_statement_with_context(ASTNode* node, ExecutionContext* ctx)
+int execute_if_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
 {
     if (!node || !ctx) return 0;
     
     // Evaluate condition
-    EvaluatorResult cond_result = evaluate_expression(
-                                  node->data.ifstatement.condition,
+    EvaluatorResult cond_result = evaluate_expr(
+                                  node->data.if_stmt.condition,
                                   ctx->symbols, CTX_BOOL);
     
     if (cond_result.type == RESULT_ERROR)
@@ -1352,25 +1362,80 @@ int execute_if_statement_with_context(ASTNode* node, ExecutionContext* ctx)
     if (cond_result.value.boolean)
     {
         // Execute THEN body
-        return execute_statement_with_context(node->data.ifstatement.then_body, ctx);
+        return execute_stmt_with_ctx(node->data.if_stmt.then_body, ctx);
     }
-    else if (node->data.ifstatement.else_body)
+    else if (node->data.if_stmt.else_body)
     {
         // Execute ELSE body
-        return execute_statement_with_context(node->data.ifstatement.else_body, ctx);
+        return execute_stmt_with_ctx(node->data.if_stmt.else_body, ctx);
     }
     
     // No else body, just return success
     return 1;
 }
 
+static int execute_while_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
+{
+    if (!node || !ctx)
+    {
+        return 0;
+    }
+    
+    ASTNode* condition = node->data.while_stmt.condition;
+    ASTNode* body = node->data.while_stmt.body;
+    
+    // Loop enquanto condição for verdadeira
+    while (1)
+    {
+        // Avalia condição
+        EvaluatorResult cond_result = evaluate_expr(
+            condition, ctx->symbols, CTX_BOOL);
+        
+        if (cond_result.type == RESULT_ERROR)
+        {
+            printf("%s\n", cond_result.error_message);
+            return 0;
+        }
+        
+        // Se condição for falsa, sai do loop
+        if (!cond_result.value.boolean)
+        {
+            break;
+        }
+        
+        // Executa body
+        int success = execute_stmt_with_ctx(body, ctx);
+        if (!success)
+        {
+            return 0;
+        }
+        
+        // Verifica se deve sair do loop (break)
+        if (ctx->should_break)
+        {
+            ctx->should_break = 0;  // Reset
+            break;
+        }
+        
+        // Verifica se deve pular para próxima iteração (continue)
+        if (ctx->should_continue)
+        {
+            ctx->should_continue = 0;  // Reset
+            continue;
+        }
+    }
+    
+    return 1;
+}
+
+
 // Esta função também está declarada mas não implementada
 // int evaluate_print_statement_with_context(ASTNode* node, ExecutionContext* ctx)
 // {
-//     return evaluate_print_with_context(node, ctx);
+//     return evaluate_print_with_ctx(node, ctx);
 // }
 
-#ifdef TESTEVALUATOR
+#ifdef TEST
 #include "color.h"
 #include "utils.h"
 #include "lexer.h"
@@ -1382,33 +1447,60 @@ int main()
 {
     setup_utf8();
     
-    printf("%s=== TESTE EVALUATOR v0.5.1 comparação e lógica ===%s\n\n", 
+    printf("%s=== TESTE EVALUATOR v0.5.3 - loop while ===%s\n\n", 
            COLOR_HEADER, COLOR_RESET);
     
     char* testes[] =
     {
-        // Comparações numéricas
-        "5 == 5",
-        "5 != 10",
-        "5 < 10",
-        "10 > 5",
-        "5 <= 5",
-        "10 >= 5",
-        
-        // Comparações booleanas
-        "true == true",
-        "true != false",
-        
-        // Lógica simples
-        "true and false",
-        "true or false",
-        "not true",
-        "! false",
-        
-        // Expressões complexas
-        "(5 > 3) and (10 < 20)",
-        "not (5 > 10) or (true == true)",
-        "(5 + 3 > 7) and (10 - 5 < 10)",
+
+        "let x = 0\n"
+        "while (x < 5) do\n"
+        "    print x nl\n"
+        "    let x = x + 1\n"
+        "end while",
+
+        "let x = 0\n"
+        "while (x < 10) do\n"
+        "    if (x == 5) then\n"
+        "        break\n"
+        "    end if\n"
+        "    print x nl\n"
+        "    let x = x + 1\n"
+        "end while\n"
+
+        "print \"Saiu do loop\" nl",
+
+        "let x = 0\n"
+        "while (x < 5) do\n"
+        "    let x = x + 1\n"
+        "    if (x == 3) then\n"
+        "        continue\n"
+        "    end if\n"
+        "    print x nl\n"
+        "end while",
+
+        "let i = 0\n"
+        "while (i < 3) do\n"
+        "    let j = 0\n"
+        "    while (j < 3) do\n"
+        "        print i " " j nl\n"
+        "        let j = j + 1\n"
+        "    end while\n"
+        "    let i = i + 1\n"
+        "end while",
+
+        "let x = 0\n"
+        "while (x < 10) do\n"
+        "    let x = x + 1\n"
+        "    if (x == 3) then\n"
+        "        continue\n"
+        "    end if\n"
+        "    if (x == 7) then\n"
+        "        break\n"
+        "    end if\n"
+        "    print x nl\n"
+        "end while"
+
     };
     
     int num_testes = sizeof(testes) / sizeof(testes[0]);
@@ -1422,11 +1514,11 @@ int main()
         Lexer lexer;
         lexer_init(&lexer, testes[i]);
         
-        ASTNode* ast = parse_single_statement(&lexer);
+        ASTNode* ast = parse_single_stmt(&lexer);
         
         if (ast)
         {
-            EvaluatorResult result = evaluate_expression(ast, symbols, CTX_ANY);
+            EvaluatorResult result = evaluate_expr(ast, symbols, CTX_ANY);
             
             if (result.type == RESULT_ERROR)
             {
