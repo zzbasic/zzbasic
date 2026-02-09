@@ -1,0 +1,62 @@
+# --- Jogo de Adivinhar o Número ---
+# Demonstração de todos os recursos do ZzBasic v0.5.3
+
+print cyan "=========================================" nocolor nl
+print "===   Bem-vindo ao Jogo de Adivinha   ===" nl
+print cyan "=========================================" nocolor nl
+
+# --- Configurações do Jogo ---
+let secret_number = 42
+let max_attempts = 7
+let attempts_left = max_attempts
+let guessed_correctly = 0
+
+print "Eu pensei em um número entre 1 e 100." nl
+print "Você tem " max_attempts " tentativas para adivinhar." nl
+print "" nl
+
+# --- Loop Principal do Jogo ---
+while (attempts_left > 0) do
+    input "Qual é o seu palpite? " guess
+
+    # --- Validação do Palpite (demonstra 'continue') ---
+    if (guess < 1 or guess > 100) then
+        print magenta "-> Palpite inválido! Por favor, digite um número entre 1 e 100." nocolor nl
+        continue
+    end if
+
+    # --- Decrementa as tentativas ---
+    let attempts_left = attempts_left - 1
+
+    # --- Comparação do Palpite (demonstra 'if/else if/else') ---
+    if (guess == secret_number) then
+        let guessed_correctly = 1
+        break
+    else if (guess < secret_number) then
+        print blue "-> Muito baixo!" nocolor nl
+    else
+        print red "-> Muito alto!" nocolor nl
+    end if
+
+    # --- Mostra tentativas restantes ---
+    if (attempts_left > 0) then
+        print yellow "Você ainda tem " attempts_left " tentativas." nocolor nl
+    end if
+end while
+
+# --- Fim de Jogo ---
+print "" nl
+print cyan "=========================================" nocolor nl
+
+if (guessed_correctly == 1) then
+    # --- Mensagem de Vitória ---
+    print green "*** PARABÉNS! VOCÊ ACERTOU! ***" nocolor nl
+    print "O número secreto era " secret_number "." nl
+else
+    # --- Mensagem de Derrota ---
+    print red "--- FIM DE JOGO! VOCÊ PERDEU! ---" nocolor nl
+    print "O número secreto era " secret_number "." nl
+end if
+
+print cyan "=========================================" nocolor nl
+print "Obrigado por jogar!" nl

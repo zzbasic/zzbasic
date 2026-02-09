@@ -295,7 +295,22 @@ static ASTNode* parse_stmt_list(Parser* parser)
         parser->current_token.line,
         parser->current_token.column
     );
+
+    // Pula EOLs iniciais (linhas vazias ou com apenas comentários)
+    while (parser->current_token.type == TOKEN_EOL)
+    {
+        parser_advance(parser);
+    }
     
+    // Verifica se há statements
+    if (parser->current_token.type == TOKEN_EOF ||
+        parser->current_token.type == TOKEN_END ||
+        parser->current_token.type == TOKEN_ELSE)
+    {
+        // Lista vazia é permitida
+        return list;
+    }
+        
     // Parseia o primeiro statement
     ASTNode* stmt = parse_stmt(parser);
     if (!stmt || parser->has_error) {
