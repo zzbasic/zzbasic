@@ -40,20 +40,19 @@ void execution_ctx_destroy(ExecutionContext* ctx);
 static int is_numeric_string(const char* str);
 static char* read_user_input(const char* prompt);
 
-static int evaluate_input_stmt(ASTNode* node, SymbolTable* symbols);
+static int evaluate_input_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx);
 
-static int execute_stmt_list(ASTNode* node, SymbolTable* symbols);
-static int execute_stmt(ASTNode* node, SymbolTable* symbols);
+static int execute_stmt_list_with_ctx(ASTNode* node, ExecutionContext* ctx);
+
 static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx);
 
-static int evaluate_print_with_ctx(ASTNode* node, ExecutionContext* ctx);
-static int evaluate_print_stmt(ASTNode* node, SymbolTable* symbols);
+static int evaluate_print_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx);
 static int evaluate_print_stmt_with_format(ASTNode* node, ExecutionContext* ctx);
 
-static int execute_if_stmt(ASTNode* node, SymbolTable* symbols);
 static int execute_if_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx);
 
 static int execute_while_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx);
+
 
 // FUNÇÕES PÚBLICAS
 // int evaluate_program(ASTNode* node, SymbolTable* symbols);
@@ -351,12 +350,14 @@ static char* read_user_input(const char* prompt)
     return buffer;
 }
 
-// Avalia statement input
-static int evaluate_input_stmt(ASTNode* node, SymbolTable* symbols)
+// ===================================================
+// EVALUATE INPUT STATEMENT WITH CONTEXT
+// ===================================================
+static int evaluate_input_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
 {
-    if (!node || node->type != NODE_INPUT || !symbols)
+    if (!node || node->type != NODE_INPUT || !ctx)
     {
-        printf("Evaluator error: expected input statement node\n");
+        printf("Evaluator error: expected input statement node and context\n");
         return 0;
     }
     
@@ -374,13 +375,13 @@ static int evaluate_input_stmt(ASTNode* node, SymbolTable* symbols)
     if(!strcmp(input, "true") || !strcmp(input, "false") )
     {
         if(strcmp(input, "true") == 0) {
-            if (!symbol_table_set_bool(symbols, var_name, 1)) {
+            if (!symbol_table_set_bool(ctx->symbols, var_name, 1)) {
                 printf("Evaluator error: assigning boolean to '%s'\n", var_name);
                 return 0;
             }
         }
         else if(strcmp(input, "false") == 0) {
-            if (!symbol_table_set_bool(symbols, var_name, 0)) {
+            if (!symbol_table_set_bool(ctx->symbols, var_name, 0)) {
                 printf("Evaluator error: assigning boolean to '%s'\n", var_name);
                 return 0;
             }
@@ -389,7 +390,7 @@ static int evaluate_input_stmt(ASTNode* node, SymbolTable* symbols)
     else if (is_numeric_string(input))
     {
         double value = atof(input);
-        if (!symbol_table_set_number(symbols, var_name, value))
+        if (!symbol_table_set_number(ctx->symbols, var_name, value))
         {
             printf("Evaluator error: assigning number to '%s'\n", var_name);
             return 0;
@@ -397,25 +398,24 @@ static int evaluate_input_stmt(ASTNode* node, SymbolTable* symbols)
     }
     else
     {
-        if (!symbol_table_set_string(symbols, var_name, input))
+        if (!symbol_table_set_string(ctx->symbols, var_name, input))
         {
             printf("Evaluator error: assigning string to '%s'\n", var_name);
             return 0;
         }
-        //printf("OK: %s = \"%s\" (from input)\n", var_name, input);
     }
     
     return 1;
 }
 
-// ==================================================================
-// Executa uma lista de statements
-// ==================================================================
-static int execute_stmt_list(ASTNode* node, SymbolTable* symbols)
+// ============================================
+// EXECUTE STATEMENT LIST WITH CONTEXT
+// ============================================
+static int execute_stmt_list_with_ctx(ASTNode* node, ExecutionContext* ctx)
 {
-    if (!node || node->type != NODE_STATEMENT_LIST)
+    if (!node || !ctx || node->type != NODE_STATEMENT_LIST)
     {
-        printf("Evaluator error: expected statement list node\n");
+        printf("Evaluator error: expected statement list node and context\n");
         return 0;
     }
     
@@ -426,101 +426,60 @@ static int execute_stmt_list(ASTNode* node, SymbolTable* symbols)
     for (int i = 0; i < list->count; i++)
     {
         ASTNode* stmt = list->statements[i];
-        int success = execute_stmt(stmt, symbols);
+        int success = execute_stmt_with_ctx(stmt, ctx);
         
         if (!success)
         {
             all_success = 0;
-            // Não para no primeiro erro? Decisão de design.
-            // Por enquanto, continua executando os outros.
-        }
-    }
-    
-    return all_success;
-}
-
-// ==================================================================
-// Executa uma lista de statements com contexto
-// ==================================================================
-static int execute_stmt_list_with_ctx(ASTNode* node, ExecutionContext* ctx)
-{
-    if (!node || node->type != NODE_STATEMENT_LIST)
-    {
-        return 0;
-    }
-    
-    StatementList* stmt_list = &node->data.stmt_list;
-    
-    for (int i = 0; i < stmt_list->count; i++)
-    {
-        ASTNode* stmt = stmt_list->statements[i];
-        
-        int success = execute_stmt_with_ctx(stmt, ctx);
-        if (!success)
-        {
-            return 0;
         }
         
-        // Se deve sair do loop (break) ou pular (continue), retorna
+        // Se deve sair do loop (break) ou pular (continue), para a execução
         if (ctx->should_break || ctx->should_continue)
         {
             break;
         }
     }
     
-    return 1;
+    return all_success;
 }
 
-
-// ============================================
-// EXECUTE STATEMENT (uses CTX_ANY by default)
-// ============================================
-static int execute_stmt(ASTNode* node, SymbolTable* symbols)
+// Função de execução com contexto 
+static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
 {
-    if (!node) return 0;
+    if (!node || !ctx) return 0;
     
-    switch (node->type)
-    {
+    switch (node->type) {
         case NODE_ASSIGNMENT: {
             const char* var_name = node->data.assignment.var_name;
             ASTNode* value_node = node->data.assignment.value;
             
-            // Evaluate value (any type)
             EvaluatorResult value_result = evaluate_expr(
-                                           value_node, symbols, CTX_ANY);
+                value_node, ctx->symbols, CTX_ANY);
             
-            if (value_result.type == RESULT_ERROR)
-            {
+            if (value_result.type == RESULT_ERROR) {
                 printf("%s\n", value_result.error_message);
                 return 0;
             }
             
             // Store based on type
-            if (value_result.type == RESULT_STRING)
-            {
-                if (!symbol_table_set_string(symbols, var_name, value_result.value.string))
-                {
+            if (value_result.type == RESULT_STRING) {
+                if (!symbol_table_set_string(ctx->symbols, var_name, value_result.value.string)) {
                     printf("Evaluator error: assigning string to '%s'\n", var_name);
                     return 0;
                 }
             }
-            else if (value_result.type == RESULT_NUMBER)
-            {
-                if (!symbol_table_set_number(symbols, var_name, value_result.value.number))
-                {
+            else if (value_result.type == RESULT_NUMBER) {
+                if (!symbol_table_set_number(ctx->symbols, var_name, value_result.value.number)) {
                     printf("Evaluator error: assigning number to '%s'\n", var_name);
                     return 0;
                 }
             }
-            else if (value_result.type == RESULT_BOOL)
-             {  
-                if (!symbol_table_set_bool(symbols, var_name, value_result.value.boolean))
-                {
+            else if (value_result.type == RESULT_BOOL) {
+                if (!symbol_table_set_bool(ctx->symbols, var_name, value_result.value.boolean)) {
                     printf("Evaluator error: assigning boolean to '%s'\n", var_name);
                     return 0;
                 }
             }
-            
             return 1;
         }
             
@@ -531,8 +490,8 @@ static int execute_stmt(ASTNode* node, SymbolTable* symbols)
         case NODE_VARIABLE:
         {
             // Evaluate for display (any type)
-            EvaluatorResult result = evaluate_expr(node, symbols, CTX_ANY);
-            if(result.type == RESULT_ERROR)
+            EvaluatorResult result = evaluate_expr(node, ctx->symbols, CTX_ANY);
+            if (result.type == RESULT_ERROR)
             {
                 printf("%s\n", result.error_message);
                 return 0;
@@ -563,19 +522,20 @@ static int execute_stmt(ASTNode* node, SymbolTable* symbols)
         }
             
         case NODE_STRING:
+        {
             // Standalone string
-            printf("= \"%s\"\n", node->data.string.value);
+            printf("\"%s\"\n", node->data.string.value);
             return 1;
+        }
 
         case NODE_PRINT:
-            return evaluate_print_stmt(node, symbols);
+            return evaluate_print_stmt_with_ctx(node, ctx);
 
         case NODE_COLOR:
             // Comando nocolor sozinho (ex: "nocolor" como statement)
             // Apenas reseta a cor
-            if (node->data.color.color_token_id == 0)
-            {  // CLR_NOCOLOR
-                reset_current_color();
+            if (node->data.color.color_token_id == 0) {  // CLR_NOCOLOR
+                evaluator_color_reset(ctx);
                 return 1;
             }
             // Outras cores sozinhas não fazem sentido como statements
@@ -583,18 +543,18 @@ static int execute_stmt(ASTNode* node, SymbolTable* symbols)
                    COLOR_WARNING, node->line, node->column, COLOR_RESET);
             return 1;
 
-        case NODE_STATEMENT_LIST:  
-            return execute_stmt_list(node, symbols);
+        case NODE_STATEMENT_LIST:
+            return execute_stmt_list_with_ctx(node, ctx);
 
         case NODE_INPUT:
-            return evaluate_input_stmt(node, symbols);
+            return evaluate_input_stmt_with_ctx(node, ctx);
 
         case NODE_COMPARISON_OP:
         case NODE_LOGICAL_OP:
         case NODE_NOT_LOGICAL_OP:
         {
             // Evaluate logical/comparison expression
-            EvaluatorResult result = evaluate_expr(node, symbols, CTX_ANY);
+            EvaluatorResult result = evaluate_expr(node, ctx->symbols, CTX_ANY);
             
             if (result.type == RESULT_ERROR)
             {
@@ -630,150 +590,15 @@ static int execute_stmt(ASTNode* node, SymbolTable* symbols)
         }
 
         case NODE_IF:
-            return execute_if_stmt(node, symbols);
-
-        case NODE_WHILE:
-        {
-            ExecutionContext* ctx = execution_ctx_create(symbols);
-            if (!ctx) return 0;
-            
-            int result = execute_while_stmt_with_ctx(node, ctx);
-            
-            execution_ctx_destroy(ctx);
-
-            return result;
-        }
-
-        case NODE_BREAK:
-            printf("Evaluator error: 'break' outside of loop\n");
-            return 0;
-
-        case NODE_CONTINUE:
-            printf("Evaluator error: 'continue' outside of loop\n");
-            return 0;
-            
-        default:
-            printf("Evaluator error: unsupported statement type: %d\n", node->type);
-            return 0;
-    }
-}
-
-//===================================================================
-// EXECUTE STATEMENT WITh CONTEXT
-//===================================================================
-static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
-{
-    if (!node || !ctx) return 0;
-    
-    switch (node->type) {
-        case NODE_ASSIGNMENT:
-        {
-            const char* var_name = node->data.assignment.var_name;
-            ASTNode* value_node = node->data.assignment.value;
-            
-            EvaluatorResult value_result = evaluate_expr(
-                                           value_node, ctx->symbols, CTX_ANY);
-            
-            if (value_result.type == RESULT_ERROR) {
-                printf("%s\n", value_result.error_message);
-                return 0;
-            }
-            
-            if (value_result.type == RESULT_STRING) {
-                if (!symbol_table_set_string(ctx->symbols, var_name, value_result.value.string))
-                {
-                    printf("Evaluator error: assigning string to '%s'\n", var_name);
-                    return 0;
-                }
-            }
-            else if (value_result.type == RESULT_NUMBER)
-            {
-                if (!symbol_table_set_number(ctx->symbols, var_name, value_result.value.number))
-                {
-                    printf("Evaluator error: assigning number to '%s'\n", var_name);
-                    return 0;
-                }
-            }
-            else if (value_result.type == RESULT_BOOL)
-             {  
-                if (!symbol_table_set_bool(symbols, var_name, value_result.value.boolean))
-                {
-                    printf("Evaluator error: assigning boolean to '%s'\n", var_name);
-                    return 0;
-                }
-            }
-
-            return 1;
-        }
-
-        case NODE_BOOL:
-        case NODE_NUMBER:
-        case NODE_BINARY_OP:
-        case NODE_UNARY_OP:
-        case NODE_VARIABLE:
-        {
-            EvaluatorResult result = evaluate_expr(node, ctx->symbols, CTX_ANY);
-            if (result.type == RESULT_ERROR)
-            {
-                printf("%s\n", result.error_message);
-                return 0;
-            }
-            else
-            {
-                switch(result.type)
-                {
-                    case RESULT_STRING:
-                        printf("\"%s\"\n", result.value.string);
-                        break;
-                    case RESULT_NUMBER:
-                        printf("%g\n", result.value.number);
-                        break;
-                    case RESULT_BOOL:
-                    {
-                        if(result.value.boolean == 1){
-                            printf("true\n");
-                        }
-                        else{
-                            printf("false\n");
-                        }
-                        break;
-                    }
-                }
-                return 1;
-            }
-        }
-
-        case NODE_STRING:
-            printf("\"%s\"\n", node->data.string.value);
-            return 1;
-
-        case NODE_PRINT:
-            return evaluate_print_with_ctx(node, ctx);
-            
-        case NODE_COLOR:
-            // Comando nocolor sozinho
-            if (node->data.color.color_token_id == 0)
-            {
-                evaluator_color_reset(ctx);
-                return 1;
-            }
-            printf("%s[%d:%d] Evaluator warning: color command without print has no effect%s\n",
-                   COLOR_WARNING, node->line, node->column, COLOR_RESET);
-            return 1;
-            
-        case NODE_STATEMENT_LIST:
-            return execute_if_stmt_with_ctx(node, ctx->symbols);
-
-        case NODE_IF:
             return execute_if_stmt_with_ctx(node, ctx);
-
+        
         case NODE_WHILE:
             return execute_while_stmt_with_ctx(node, ctx);
-
+        
         case NODE_BREAK:
             ctx->should_break = 1;
             return 1;
-
+        
         case NODE_CONTINUE:
             ctx->should_continue = 1;
             return 1;
@@ -790,20 +615,9 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
 // ============================================
 
 // Função pública para avaliar print com contexto
-static int evaluate_print_with_ctx(ASTNode* node, ExecutionContext* ctx)
+static int evaluate_print_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
 {
     return evaluate_print_stmt_with_format(node, ctx);
-}
-
-static int evaluate_print_stmt(ASTNode* node, SymbolTable* symbols)
-{
-    ExecutionContext* ctx = execution_ctx_create(symbols);
-    if (!ctx) return 0;
-    
-    int result = evaluate_print_stmt_with_format(node, ctx);
-    
-    execution_ctx_destroy(ctx);
-    return result;
 }
 
 static int evaluate_print_stmt_with_format(ASTNode* node, ExecutionContext* ctx)
@@ -928,19 +742,6 @@ static int evaluate_print_stmt_with_format(ASTNode* node, ExecutionContext* ctx)
     return printed_something ? 1 : 0;
 }
 
-static int execute_if_stmt(ASTNode* node, SymbolTable* symbols)
-{
-    if (!node || !symbols) return 0;
-    
-    ExecutionContext* ctx = execution_ctx_create(symbols);
-    if (!ctx) return 0;
-    
-    int result = execute_if_stmt_with_ctx(node, ctx);
-    
-    execution_ctx_destroy(ctx);
-    return result;
-}
-
 static int execute_if_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
 {
     if (!node || !ctx) return 0;
@@ -1026,24 +827,31 @@ static int execute_while_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
     return 1;
 }
 
-
-
 // ===================================================
 // EVALUATE PROGRAM 
 // Função principal para avaliar um programa completo
 // ===================================================
-int evaluate_program(ASTNode* node, SymbolTable* symbols) {
-    if (!node) return 0;
+int evaluate_program(ASTNode* node, SymbolTable* symbols)
+{
+    if (!node || !symbols) return 0;
     
-    if (node->type == NODE_STATEMENT_LIST) {
-        return execute_stmt_list(node, symbols);
+    // Cria contexto para a execução
+    ExecutionContext* ctx = execution_ctx_create(symbols);
+    if (!ctx) return 0;
+    
+    int result;
+    if (node->type != NODE_STATEMENT_LIST)
+    {
+        result = execute_stmt_with_ctx(node, ctx);
     }
-    else {
-        // Programa com apenas um statement (backward compatibility)
-        return execute_stmt(node, symbols);
+    else
+    {
+        result = execute_stmt_list_with_ctx(node, ctx);
     }
+    
+    execution_ctx_destroy(ctx);
+    return result;
 }
-
 
 // ============================================
 // EVALUATE EXPRESSIONS (with context)
@@ -1506,129 +1314,4 @@ void evaluator_color_apply_current(ExecutionContext* ctx)
     }
 }
 
-#ifdef TEST
-#include "color.h"
-#include "utils.h"
-#include "lexer.h"
-#include "parser.h"
-#include "evaluator.h"
-#include "symbol_table.h"
-
-int main()
-{
-    setup_utf8();
-    
-    printf("%s=== TESTE EVALUATOR v0.5.3 - loop while ===%s\n\n", 
-           COLOR_HEADER, COLOR_RESET);
-    
-    char* testes[] =
-    {
-
-        "let x = 0\n"
-        "while (x < 5) do\n"
-        "    print x nl\n"
-        "    let x = x + 1\n"
-        "end while",
-
-        "let x = 0\n"
-        "while (x < 10) do\n"
-        "    if (x == 5) then\n"
-        "        break\n"
-        "    end if\n"
-        "    print x nl\n"
-        "    let x = x + 1\n"
-        "end while\n"
-
-        "print \"Saiu do loop\" nl",
-
-        "let x = 0\n"
-        "while (x < 5) do\n"
-        "    let x = x + 1\n"
-        "    if (x == 3) then\n"
-        "        continue\n"
-        "    end if\n"
-        "    print x nl\n"
-        "end while",
-
-        "let i = 0\n"
-        "while (i < 3) do\n"
-        "    let j = 0\n"
-        "    while (j < 3) do\n"
-        "        print i " " j nl\n"
-        "        let j = j + 1\n"
-        "    end while\n"
-        "    let i = i + 1\n"
-        "end while",
-
-        "let x = 0\n"
-        "while (x < 10) do\n"
-        "    let x = x + 1\n"
-        "    if (x == 3) then\n"
-        "        continue\n"
-        "    end if\n"
-        "    if (x == 7) then\n"
-        "        break\n"
-        "    end if\n"
-        "    print x nl\n"
-        "end while"
-
-    };
-    
-    int num_testes = sizeof(testes) / sizeof(testes[0]);
-    SymbolTable* symbols = symbol_table_create();
-    
-    for (int i = 0; i < num_testes; i++)
-    {
-        printf("%s=== Teste %d: '%s' ===%s\n", 
-               COLOR_HEADER, i+1, testes[i], COLOR_RESET);
-        
-        Lexer lexer;
-        lexer_init(&lexer, testes[i]);
-        
-        ASTNode* ast = parse_single_stmt(&lexer);
-        
-        if (ast)
-        {
-            // BUG CORRIGIDO - TESTES FALHAVAM COM MENSAGEM:
-            // Warning: remaining tokens not parsed
-            // [1:9] Evaluator error: unsupported node type: 7
-            // node type 7 é o NODE_WHILE
-            // SOLUÇÃO:
-            // Quando ast é um NODE_WHILE (ou qualquer statement),
-            // evaluate_expr() não sabe como lidar.
-            // evaluate_expr() não trata NODE_WHILE.
-            // evaluate_expr() é para avaliar expressões (números, variáveis, operações matemáticas)
-            // execute_stmt() é para executar statements (atribuições, loops, condicionais)
-            // Um NODE_WHILE é um statement, não uma expressão.
-            //
-            // LINHA QUE PROVOCAVA O ERRO
-            // EvaluatorResult result = evaluate_expr(ast, symbols, CTX_ANY);
-
-            int result = evaluate_program(ast, symbols);
-            
-            if (!result)
-            {
-                printf("Error executing statement\n");
-            }
-        }
-        else 
-        {
-            printf("Parse error\n");                
-        }
-            
-        free_ast(ast);
-
-        printf("\n");
-        wait();
-    }
-    
-    symbol_table_destroy(symbols);
-    
-    printf("\n%s=== TODOS OS TESTES COMPLETADOS ===%s\n", 
-           COLOR_SUCCESS, COLOR_RESET);
-    
-    a89check_leaks();
-    return 0;
-}
-#endif
 // Fim de evaluator.c

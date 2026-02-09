@@ -1,0 +1,11 @@
+print "ZzBasic v0.5.3 - loop while - teste4" nl
+
+let i = 0
+while (i < 3) do
+  let j = 0
+  while (j < 3) do
+    print i " " j nl
+    let j = j + 1
+  end while
+  let i = i + 1
+end while

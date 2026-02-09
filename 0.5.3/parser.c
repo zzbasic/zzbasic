@@ -1510,21 +1510,25 @@ ASTNode* parse_single_stmt(Lexer* lexer)
                    result->type == NODE_BREAK ||
                    result->type == NODE_CONTINUE))
     {
-        if (parser.current_token.type == TOKEN_EOL ||
-            parser.current_token.type == TOKEN_NL)
-        {
+        while(parser.current_token.type == TOKEN_EOL ||
+              parser.current_token.type == TOKEN_NL)
+        { 
             parser_advance(&parser);
         }
     }
     
     
     // Check if everything was parsed
-    if (parser.current_token.type != TOKEN_EOF)
-    {
-        printf("Parser warning: remaining tokens not parsed\n");
-        // But still returns the result
-    }
-    
+    // if (parser.current_token.type != TOKEN_EOF)
+    // {
+    //     printf("Parser warning: remaining tokens not parsed\n");
+        
+    //     printf("  Current token type: %d, value: '%s'\n", 
+    //                              parser.current_token.type, 
+    //                              parser.current_token.value.varname);
+    //     // But still returns the result
+    // }
+        
     return result;
 }
 

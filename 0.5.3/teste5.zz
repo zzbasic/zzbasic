@@ -1,0 +1,16 @@
+print "ZzBasic v0.5.3 - loop while - teste5" nl
+
+let x = 0
+
+while (x < 10) do
+  let x = x + 1
+  if (x == 3) then
+    continue
+  end if
+
+  if (x == 7) then
+    break
+  end if
+
+  print x nl
+end while

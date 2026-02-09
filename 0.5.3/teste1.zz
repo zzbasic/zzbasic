@@ -1,0 +1,8 @@
+print "ZzBasic v0.5.3 - loop while - teste1" nl
+
+let x = 0
+
+while (x < 5) do
+    print x nl
+    let x = x + 1
+end while

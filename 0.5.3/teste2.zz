@@ -1,0 +1,14 @@
+print "ZzBasic v0.5.3 - loop while - teste2" nl
+
+let x = 0
+
+while (x < 10) do
+    if (x == 5) then
+        break
+    end if
+    
+    print x nl
+    let x = x + 1
+end while
+
+print "Saiu do loop" nl
