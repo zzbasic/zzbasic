@@ -33,7 +33,9 @@ typedef enum
     NODE_IF,
     NODE_WHILE,
     NODE_BREAK,
-    NODE_CONTINUE
+    NODE_CONTINUE,
+    NODE_FOR
+
 } NodeType;
 
 typedef enum
@@ -65,7 +67,8 @@ typedef enum
 //===================================================================
 // STRUCTS
 //===================================================================
-typedef struct{
+typedef struct
+{
     enum
     {
         FALSE,
@@ -150,29 +153,43 @@ typedef struct
     int value;
 } WidthNodeData;
 
-typedef struct {
+typedef struct
+{
     char prompt[STRING_SIZE];// Prompt opcional (ex: "Digite: ")
     char var_name[VARNAME_SIZE];// Nome da variável 
 } InputStatementNode;
 
-typedef struct {
+typedef struct
+{
     ASTNode* condition;         // Expressão da condição
     ASTNode* then_body;         // Statements do then
     ASTNode* else_body;         // Statements do else (pode ser NULL)
 } IfStatementData;
 
-typedef struct {
+typedef struct
+{
     ASTNode* condition;
     ASTNode* body;
 } WhileStatementData;
 
-typedef struct {
+typedef struct
+{
     int dummy;  // break não precisa de dados
 } BreakStatementData;
 
-typedef struct {
+typedef struct
+{
     int dummy;  // continue não precisa de dados
 } ContinueStatementData;
+
+typedef struct
+{
+    char var_name[VARNAME_SIZE];
+    ASTNode* init_value;    
+    ASTNode* end_value;    
+    ASTNode* step_value;   
+    ASTNode* body;        
+} ForStatementData;
 
 typedef struct ASTNode
 {
@@ -191,16 +208,17 @@ typedef struct ASTNode
         LogicalOpData           logicalop; 
         NotOpData               notop;   
         AssignmentData          assignment;
-        StatementListData       stmt_list; //stmt_list;
-        PrintStatementData      print_stmt; //print_stmt;
+        StatementListData       stmt_list; 
+        PrintStatementData      print_stmt; 
         ColorNodeData           color;
         AlignmentNodeData       alignment;
         WidthNodeData           width;
-        InputStatementNode      input_stmt; //input_stmt;
-        IfStatementData         if_stmt; //if_stmt;
-        WhileStatementData      while_stmt; //while_stmt;
-        BreakStatementData      break_stmt; //break_stmt;
-        ContinueStatementData   continue_stmt; //continue_stmt;
+        InputStatementNode      input_stmt; 
+        IfStatementData         if_stmt; 
+        WhileStatementData      while_stmt; 
+        BreakStatementData      break_stmt;
+        ContinueStatementData   continue_stmt; 
+        ForStatementData        for_stmt; 
 
     } data;
 
@@ -256,6 +274,13 @@ ASTNode* create_while_node(ASTNode* condition, ASTNode* body,
 ASTNode* create_break_node(int line, int column);
 
 ASTNode* create_continue_node(int line, int column);
+
+ASTNode* create_for_node(char var_name[],
+                         ASTNode* init_value, 
+                         ASTNode* end_value,
+                         ASTNode* step_value, 
+                         ASTNode* body,
+                         int line, int column);
 
 
 void print_node_add_item(ASTNode* print_node, ASTNode* expr_node);

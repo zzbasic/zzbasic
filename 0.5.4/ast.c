@@ -356,6 +356,27 @@ ASTNode* create_continue_node(int line, int column)
     return node;
 }
 
+ASTNode* create_for_node(char var_name[],
+                         ASTNode* init_value, 
+                         ASTNode* end_value,
+                         ASTNode* step_value, 
+                         ASTNode* body,
+                         int line, int column)
+{
+    ASTNode* node = create_node(NODE_FOR, line, column);
+    node->line = 0;
+    node->column = 0;
+    
+    strncpy(node->data.for_stmt.var_name, var_name, VARNAME_SIZE - 1);
+    node->data.for_stmt.var_name[VARNAME_SIZE - 1] = '\0';
+
+    node->data.for_stmt.init_value = init_value;
+    node->data.for_stmt.end_value = end_value;
+    node->data.for_stmt.step_value = step_value;
+    node->data.for_stmt.body = body;
+
+    return node;
+}
 
 //===================================================================
 // MEMORY DEALLOCATION
@@ -440,6 +461,21 @@ void free_ast(ASTNode* node)
             {
                 free_ast(node->data.while_stmt.body);
             } 
+            break;
+
+        case NODE_FOR:
+            if (node->data.for_stmt.init_value) {
+                free_ast(node->data.for_stmt.init_value);
+            }
+            if (node->data.for_stmt.end_value) {
+                free_ast(node->data.for_stmt.end_value);
+            }
+            if (node->data.for_stmt.step_value) {
+                free_ast(node->data.for_stmt.step_value);
+            }
+            if (node->data.for_stmt.body) {
+                free_ast(node->data.for_stmt.body);
+            }
             break;
 
         case NODE_BOOL:
@@ -599,6 +635,22 @@ void print_ast(ASTNode* node, int indent)
 
         case NODE_CONTINUE:
             printf("NODE CONTINUE\n");
+            break;
+
+        case NODE_FOR:
+            printf("NODE FOR\n");
+            printf("Variable: %s\n", node->data.for_stmt.var_name);
+            printf("Init value:\n");
+            print_ast(node->data.for_stmt.init_value, indent + 1);
+            printf("End value:\n");
+            print_ast(node->data.for_stmt.end_value, indent + 1);
+            printf("Step value:\n");
+            if(node->data.for_stmt.step_value)
+            {
+                print_ast(node->data.for_stmt.step_value, indent + 1);
+            }
+            printf("Body:\n");
+            print_ast(node->data.for_stmt.body, indent + 1);
             break;
 
     }
