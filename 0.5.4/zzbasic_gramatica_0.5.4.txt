@@ -1,7 +1,7 @@
 # =====================================================================
-# ZzBasic - GRAMÁTICA v0.5.3
-# Loop while; break e continue
-# Última atualização: 20260208
+# ZzBasic - GRAMÁTICA v0.5.4
+# Loop for; input com formatação; REPL multi-linha
+# Última atualização: 20260209
 # =====================================================================
 
 # =====================================================================
@@ -19,6 +19,7 @@ statement           := assignment_stmt
                     | input_stmt 
                     | if_stmt
                     | while_stmt
+                    | for_stmt
                     | break_stmt
                     | continue_stmt
                     | expression_stmt
@@ -72,7 +73,12 @@ color_stmt          := COLOR_TOKEN
 # =====================================================================
 # INPUT STATEMENT
 # =====================================================================
-input_stmt          := 'input' (STRING)? IDENTIFIER  
+input_stmt          := 'input' input_item* IDENTIFIER
+
+
+input_item          := STRING
+                    | format_directive
+                    | color_directive
 
 
 # =====================================================================
@@ -93,6 +99,15 @@ if_stmt             := 'if' logical_expr 'then' EOL
 while_stmt := 'while' '(' logical_expr ')' 'do' EOL
                  statement_list*
               'end' 'while' 
+
+
+# =====================================================================
+# FOR STATEMENT
+# =====================================================================
+for_stmt := 'for' IDENTIFIER '=' expression 'to' expression ('step' expression)? 'do' EOL
+                statement_list
+            'end' 'for'
+
 
 # =====================================================================
 # BREAK STATEMENT
@@ -358,5 +373,5 @@ Nível   Operador                Associatividade     Função do Parser
 #    - not x and y  →  (not x) and y
 #    - not (x and y) → precisa de parênteses
 
-# FIM DA GRAMÁTICA DO ZzBasic v0.5.1
+# FIM DA GRAMÁTICA DO ZzBasic v0.5.4
 # =====================================================================
