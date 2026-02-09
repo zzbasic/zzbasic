@@ -73,12 +73,7 @@ color_stmt          := COLOR_TOKEN
 # =====================================================================
 # INPUT STATEMENT
 # =====================================================================
-input_stmt          := 'input' input_item* IDENTIFIER
-
-
-input_item          := STRING
-                    | format_directive
-                    | color_directive
+input_stmt := 'input' (color_directive)? (width_spec)? (alignment)? (STRING)? (nocolor)? IDENTIFIER
 
 
 # =====================================================================

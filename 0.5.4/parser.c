@@ -678,7 +678,7 @@ static ASTNode* parse_color_stmt(Parser* parser)
 
 
 //===================================================================
-// input_stmt       := 'INPUT' (STRING)? IDENTIFIER  
+// input_stmt := 'input' (color_directive)? (width_spec)? (alignment)? (STRING)? (nocolor)? IDENTIFIER
 //===================================================================
 static ASTNode* parse_input_stmt(Parser* parser)
 {
@@ -688,6 +688,94 @@ static ASTNode* parse_input_stmt(Parser* parser)
 
     parser_advance(parser); // Consome o token input
 
+    ASTNode* color_node = NULL;
+    ASTNode* width_node = NULL;
+    ASTNode* alignment_node = NULL;
+
+    // PROCESSA COLOR
+    if (is_color_token(parser->current_token.type))
+    {
+        color_node = create_color_node(parser->current_token.type, 
+                                       parser->current_token.line,
+                                       parser->current_token.column);
+        parser_advance(parser);  // Consome o token de cor
+    }
+    
+    // PROCESSA WIDTH
+    if(parser->current_token.type == TOKEN_WIDTH)
+    {
+        parser_advance(parser);  // Consome o 'width'
+        if(parser->current_token.type != TOKEN_LPAREN)
+        {
+            parser_set_error(parser,
+                "Parser error: '(' expected after 'width'."
+                " 'width' parameter requires value in parentheses."
+                " Example: width(10)");
+            free_ast(color_node);
+            return NULL;
+        }
+        parser_advance(parser);  // Consome o '('
+
+        // Valida se o usuario passou um numero como argumento do width()
+        if(parser->current_token.type != TOKEN_NUMBER)
+        {
+            parser_set_error(parser,
+                "Parser error: number expected in width()"
+                " Example: width(10)");
+            free_ast(color_node);
+            return NULL;
+        }
+
+        int width_value  = parser->current_token.value.number;
+
+        // Valida o intervalo aceitável para width
+        if (width_value < 0 || width_value > 256) {
+            parser_set_error(parser, "Parser error: width must be between 1 and 256");
+            free_ast(color_node);
+            return NULL;
+        }
+
+        parser_advance(parser);  // Consome o numero
+        if(parser->current_token.type != TOKEN_RPAREN)
+        {
+            parser_set_error(parser,
+                "Parser error: ')' expected."
+                " 'width' parameter requires value in parentheses."
+                " Example: width(10)");
+            free_ast(color_node);
+            return NULL;
+        }           
+        
+        width_node = create_width_node(width_value,
+                                      parser->current_token.line,
+                                      parser->current_token.column);
+        parser_advance(parser);  // Consome o ')'
+    }
+
+    // PROCESSA O ALIGNMENT
+    if(parser->current_token.type == TOKEN_LEFT ||
+       parser->current_token.type == TOKEN_RIGHT ||
+       parser->current_token.type == TOKEN_CENTER)
+    {
+        TokenType token_type;
+
+         switch(parser->current_token.type)
+         {
+            case TOKEN_LEFT:
+                token_type = TOKEN_LEFT;break;
+            case TOKEN_RIGHT:
+                token_type = TOKEN_RIGHT;break;
+            case TOKEN_CENTER:
+                token_type = TOKEN_CENTER;break;
+         }
+
+        alignment_node = create_alignment_node(token_type,
+                                               parser->current_token.line,
+                                               parser->current_token.column);
+        parser_advance(parser);  // Consome o 'left'|'right'|'center'
+    }
+
+    // PROCESSA O PROMPT
     char prompt[STRING_SIZE] = {0};
 
     // Verifica se tem prompt 
@@ -699,9 +787,22 @@ static ASTNode* parse_input_stmt(Parser* parser)
         parser_advance(parser);  // Consome string
     }
 
+    // PROCESSA O NOCOLOR
+    int set_nocolor = 0;
+    if (parser->current_token.type == TOKEN_NOCOLOR)
+    {
+        set_nocolor = 1;
+        parser_advance(parser);  // Consome nocolor
+
+    }  
+
+    // PROCESSA IDENTIFIER
     if (parser->current_token.type != TOKEN_IDENTIFIER)
     {
         parser_set_error(parser, "Parser error: Expected identifier after 'input' statment");
+        if(color_node) free_ast(color_node);
+        if(width_node) free_ast(width_node);
+        if(alignment_node) free_ast(alignment_node);
         return NULL;        
     }
 
@@ -711,7 +812,11 @@ static ASTNode* parse_input_stmt(Parser* parser)
 
     parser_advance(parser);  // Consome IDENTIFIER
     
-    return create_input_node(prompt, var_name, line, column);
+    return create_input_node(color_node, width_node, alignment_node,
+                             prompt,
+                             set_nocolor,
+                             var_name,
+                             line, column);
 }
 
 //===================================================================
@@ -1681,7 +1786,15 @@ int main()
         "let x = 0\n"
         "for i = 1 to (x + 3) step (x + 1) do\n"
         "    print i nl\n"
-        "end for"
+        "end for",
+
+        "input \"Entre com um numero: \" nr",
+
+        "input blue \"Entre com um numero: \" nocolor nr",
+
+        "input blue width(10) \"Entre com um numero: \" nocolor nr",
+
+        "input blue width(10) left \"Entre com um numero: \" nocolor nr",
     };
     
     int num_testes = sizeof(testes) / sizeof(testes[0]);

@@ -153,9 +153,15 @@ typedef struct
     int value;
 } WidthNodeData;
 
+
+// input_stmt := 'input' (color_directive)? (width_spec)? (alignment)? (STRING)? IDENTIFIER
 typedef struct
 {
+    ASTNode* color; 
+    ASTNode* width; 
+    ASTNode* alignment; 
     char prompt[STRING_SIZE];// Prompt opcional (ex: "Digite: ")
+    int set_nocolor; // 1 - nocolor ativado; 0 - nocolor desativado
     char var_name[VARNAME_SIZE];// Nome da variável 
 } InputStatementNode;
 
@@ -245,7 +251,12 @@ ASTNode* create_assignment_node(const char* var_name, ASTNode* value,
 ASTNode* create_statement_list_node(int line, int column);
 void statement_list_add(ASTNode* list_node, ASTNode* stmt);
 
-ASTNode* create_input_node(const char* prompt, char* var_name, int line, int column);
+//ASTNode* create_input_node(const char* prompt, char* var_name, int line, int column);
+ASTNode* create_input_node(ASTNode* color, ASTNode* width, ASTNode* alignment,
+                          const char* prompt,
+                          int set_nocolor,
+                          char* var_name,
+                          int line, int column);
 
 // Funções para criar nó print
 ASTNode* create_print_node(int line, int column);

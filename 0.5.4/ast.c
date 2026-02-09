@@ -158,9 +158,39 @@ void statement_list_add(ASTNode* list_node, ASTNode* stmt)
     list->count++;
 }
 
-ASTNode* create_input_node(const char* prompt, char* var_name, int line, int column)
+// ASTNode* create_input_node(const char* prompt, char* var_name, int line, int column)
+// {
+//     ASTNode* node = create_node(NODE_INPUT, line, column);
+//     if(prompt)
+//     {
+//         strncpy(node->data.input_stmt.prompt, prompt, STRING_SIZE - 1);
+//         node->data.input_stmt.prompt[STRING_SIZE - 1] = '\0';
+//     }
+//     strncpy(node->data.input_stmt.var_name, var_name, VARNAME_SIZE - 1);
+//     node->data.input_stmt.var_name[VARNAME_SIZE - 1] = '\0';
+  
+//     return node;
+// }
+// typedef struct
+// {
+//     ASTNode* color; 
+//     ASTNode* width; 
+//     ASTNode* alignment; 
+//     char prompt[STRING_SIZE];// Prompt opcional (ex: "Digite: ")
+//     int set_nocolor; // 1 - nocolor ativado; 0 - nocolor desativado
+//     char var_name[VARNAME_SIZE];// Nome da variável 
+// } InputStatementNode;
+ASTNode* create_input_node(ASTNode* color, ASTNode* width, ASTNode* alignment,
+                          const char* prompt,
+                          int set_nocolor,
+                          char* var_name,
+                          int line, int column)
 {
     ASTNode* node = create_node(NODE_INPUT, line, column);
+    node->data.input_stmt.color = color;
+    node->data.input_stmt.width = width;
+    node->data.input_stmt.alignment = alignment;
+    node->data.input_stmt.set_nocolor = set_nocolor;
     if(prompt)
     {
         strncpy(node->data.input_stmt.prompt, prompt, STRING_SIZE - 1);
@@ -168,8 +198,10 @@ ASTNode* create_input_node(const char* prompt, char* var_name, int line, int col
     }
     strncpy(node->data.input_stmt.var_name, var_name, VARNAME_SIZE - 1);
     node->data.input_stmt.var_name[VARNAME_SIZE - 1] = '\0';
+  
     return node;
 }
+
 
 ASTNode* create_print_node(int line, int column)
 {
@@ -444,6 +476,21 @@ void free_ast(ASTNode* node)
             break;
         }
 
+        case NODE_INPUT:
+            if(node->data.input_stmt.color)
+            {
+                free_ast(node->data.input_stmt.color);
+            }
+            if(node->data.input_stmt.width)
+            {
+                free_ast(node->data.input_stmt.width);
+            }
+            if(node->data.input_stmt.alignment)
+            {
+                free_ast(node->data.input_stmt.alignment);
+            }
+            break;        
+
         case NODE_IF:
             free_ast(node->data.if_stmt.condition);
             free_ast(node->data.if_stmt.then_body);
@@ -482,7 +529,6 @@ void free_ast(ASTNode* node)
         case NODE_NUMBER:
         case NODE_STRING:
         case NODE_VARIABLE:
-        case NODE_INPUT:
         case NODE_COLOR:
         case NODE_BREAK:
         case NODE_CONTINUE:
@@ -550,8 +596,21 @@ void print_ast(ASTNode* node, int indent)
             break;
 
         case NODE_INPUT:
-            printf("INPUT: variable: %s; prompt: %s \n",
-                   node->data.input_stmt.var_name, node->data.input_stmt.prompt);
+            printf("INPUT:\n");
+            printf("Variable: %s\n", node->data.input_stmt.var_name);
+            printf("Prompt: %s\n", node->data.input_stmt.prompt);
+            printf("Color:\n");
+            if(node->data.input_stmt.color){
+                print_ast(node->data.input_stmt.color, indent + 1);
+            }
+            printf("Width:\n");
+            if(node->data.input_stmt.width){
+                print_ast(node->data.input_stmt.width, indent + 1);
+            }  
+            printf("Alignment:\n");
+            if(node->data.input_stmt.alignment){
+                print_ast(node->data.input_stmt.alignment, indent + 1);
+            } 
             break;
 
         case NODE_PRINT:
