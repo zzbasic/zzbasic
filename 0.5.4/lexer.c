@@ -129,7 +129,11 @@ static const char* TOKEN_STRINGS[] =
     "WHILE",            // TOKEN_WHILE
     "DO",               // TOKEN_DO
     "BREAK",            // TOKEN_BREAK
-    "CONTINUE",          // TOKEN_CONTINUE
+    "CONTINUE",         // TOKEN_CONTINUE
+
+    "FOR",              // TOKEN_FOR
+    "TO",               // TOKEN_TO
+    "STEP",             // TOKEN_STEP
 
     "NOERROR"           // TOKEN_NOERROR
 };
@@ -194,6 +198,10 @@ static Keyword keywords[] =
     {"do", TOKEN_DO},
     {"break", TOKEN_BREAK},
     {"continue", TOKEN_CONTINUE},
+
+    {"for", TOKEN_FOR},
+    {"to", TOKEN_TO},
+    {"step", TOKEN_STEP},
 
     {NULL, TOKEN_NULL}
 };
@@ -893,8 +901,8 @@ int main()
 {
     setup_utf8();
     
-    printf("ZzBasic Lexer Test v0.5.3 - loop while\n\n");
-    lexer_print_all_tokens("while do break continue\n");
+    printf("ZzBasic Lexer Test v0.5.4 - loop for\n\n");
+    lexer_print_all_tokens("for to step\n");
     //wait(); 
     
     return 0;

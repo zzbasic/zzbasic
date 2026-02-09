@@ -105,6 +105,10 @@ typedef enum {
     TOKEN_BREAK,
     TOKEN_CONTINUE,
 
+    TOKEN_FOR,         
+    TOKEN_TO,          
+    TOKEN_STEP,         
+
     TOKEN_NOERROR
 } TokenType;
 

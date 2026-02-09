@@ -42,6 +42,8 @@ static ASTNode* parse_while_stmt(Parser* parser);
 static ASTNode* parse_break_stmt(Parser* parser);
 static ASTNode* parse_continue_stmt(Parser* parser);
 
+static ASTNode* parse_for_stmt(Parser* parser);
+
 static ASTNode* parse_expr_stmt(Parser* parser);
 
 // EXPRESSÕES LÓGICAS
@@ -376,15 +378,16 @@ static ASTNode* parse_stmt_list(Parser* parser)
 }
 
 //==============================================================================
-// statement := assignment_stmt
-//           | print_stmt
-//           | color_stmt 
-//           | input_stmt 
-//           | if_stmt
-//           | while_stmt
-//           | break_stmt
-//           | continue_stmt
-//           | expression_stmt
+// statement           := assignment_stmt
+//                     | print_stmt
+//                     | color_stmt 
+//                     | input_stmt 
+//                     | if_stmt
+//                     | while_stmt
+//                     | for_stmt
+//                     | break_stmt
+//                     | continue_stmt
+//                     | expression_stmt
 //==============================================================================
 static ASTNode* parse_stmt(Parser* parser)
 {
@@ -413,6 +416,10 @@ static ASTNode* parse_stmt(Parser* parser)
     else if (parser->current_token.type == TOKEN_WHILE)
     {
         return parse_while_stmt(parser);
+    }
+    else if (parser->current_token.type == TOKEN_FOR)
+    {
+        return parse_for_stmt(parser);
     }
     else if (parser->current_token.type == TOKEN_BREAK)
     {
@@ -1129,6 +1136,124 @@ static ASTNode* parse_continue_stmt(Parser* parser)
 
 
 //===================================================================
+// for_stmt := 'for' IDENTIFIER '=' expression 'to' expression ('step' expression)? 'do' EOL
+//                 statement_list
+//             'end' 'for'
+//===================================================================
+static ASTNode* parse_for_stmt(Parser* parser)
+{
+
+    int line = parser->current_token.line;
+    int column = parser->current_token.column;
+
+    parser_advance(parser); // Consome 'for'
+
+    if (!parser_expect(parser, TOKEN_IDENTIFIER))
+    {
+        parser_set_error(parser, "Parser error: expected identifier after 'for'");
+        return NULL;
+    }
+    char var_name[VARNAME_SIZE];
+    strncpy(var_name, parser->current_token.value.varname, VARNAME_SIZE - 1);
+    var_name[VARNAME_SIZE - 1] = '\0';
+    parser_advance(parser);
+
+    if (!parser_expect(parser, TOKEN_ASSIGN))
+    {
+        parser_set_error(parser, "Parser error: expected '=' after identifier in for loop");
+        return NULL;
+    }
+    parser_advance(parser);
+
+    ASTNode* init_value = parse_expr(parser);
+    if (!init_value)
+    {
+        return NULL; 
+    }
+
+    if (!parser_expect(parser, TOKEN_TO))
+    {
+        parser_set_error(parser, "Parser error: expected 'to' after initial value in for loop");
+        free_ast(init_value);
+        return NULL;
+    }
+    parser_advance(parser);
+
+    ASTNode* end_value = parse_expr(parser);
+    if (!end_value)
+    {
+        free_ast(init_value);
+        return NULL; 
+    }
+
+    ASTNode* step_value = NULL;
+    if (parser_expect(parser, TOKEN_STEP))
+    {
+        parser_advance(parser);
+        step_value = parse_expr(parser);
+        if (!step_value)
+        {
+            free_ast(init_value);
+            free_ast(end_value);
+            return NULL; 
+        }
+    }
+
+    if (!parser_expect(parser, TOKEN_DO))
+    {
+        parser_set_error(parser, "Parser error: expected 'do' after for loop conditions");
+        free_ast(init_value);
+        free_ast(end_value);
+        if (step_value) free_ast(step_value);
+        return NULL;
+    }
+    parser_advance(parser);
+
+    if (!parser_expect(parser, TOKEN_EOL))
+    {
+        parser_set_error(parser, "Parser error: expected EOL after 'do' in for loop");
+        free_ast(init_value);
+        free_ast(end_value);
+        if (step_value) free_ast(step_value);
+        return NULL;
+    }
+    parser_advance(parser);
+
+    ASTNode* body = parse_stmt_list(parser);
+    if (!body)
+    {
+        free_ast(init_value);
+        free_ast(end_value);
+        if (step_value) free_ast(step_value);
+        return NULL; 
+    }
+
+    if (!parser_expect(parser, TOKEN_END)) {
+        parser_set_error(parser, "Parser error: expected 'end' to close for loop");
+        free_ast(init_value);
+        free_ast(end_value);
+        if (step_value) free_ast(step_value);
+        free_ast(body);
+        return NULL;
+    }
+    parser_advance(parser);
+
+    if (!parser_expect(parser, TOKEN_FOR))
+    {
+        parser_set_error(parser, "Parser error: expected 'for' after 'end' to close for loop");
+        free_ast(init_value);
+        free_ast(end_value);
+        if (step_value) free_ast(step_value);
+        free_ast(body);
+        return NULL;
+    }
+    parser_advance(parser);
+
+    return create_for_node(var_name, init_value, end_value, step_value, body, line, column);
+}
+
+
+//===================================================================
 // expression_stmt := logical_expr
 //===================================================================
 static ASTNode* parse_expr_stmt(Parser* parser)
@@ -1531,23 +1656,11 @@ ASTNode* parse_single_stmt(Lexer* lexer)
             parser_advance(&parser);
         }
     }
-    
-    
-    // Check if everything was parsed
-    // if (parser.current_token.type != TOKEN_EOF)
-    // {
-    //     printf("Parser warning: remaining tokens not parsed\n");
-        
-    //     printf("  Current token type: %d, value: '%s'\n", 
-    //                              parser.current_token.type, 
-    //                              parser.current_token.value.varname);
-    //     // But still returns the result
-    // }
         
     return result;
 }
 
-#ifdef TESTPARSER
+#ifdef TEST
 #include "color.h"
 #include "utils.h"
 
@@ -1555,60 +1668,20 @@ int main()
 {
     setup_utf8();
     
-    printf("%s=== TESTE PARSER v0.5.3 loop while ===%s\n\n", 
+    printf("%s=== TESTE PARSER v0.5.4 loop for ===%s\n\n", 
            COLOR_HEADER, COLOR_RESET);
     
     char* testes[] =
     {
 
-        "let x = 0\n"
-        "while (x < 5) do\n"
-        "    print x nl\n"
-        "    let x = x + 1\n"
-        "end while",
+        "for i = 1 to 10 do\n"
+        "    print i nl\n"
+        "end for",
 
         "let x = 0\n"
-        "while (x < 10) do\n"
-        "    if (x == 5) then\n"
-        "        break\n"
-        "    end if\n"
-        "    print x nl\n"
-        "    let x = x + 1\n"
-        "end while\n"
-
-        "print \"Saiu do loop\" nl",
-
-        "let x = 0\n"
-        "while (x < 5) do\n"
-        "    let x = x + 1\n"
-        "    if (x == 3) then\n"
-        "        continue\n"
-        "    end if\n"
-        "    print x nl\n"
-        "end while",
-
-        "let i = 0\n"
-        "while (i < 3) do\n"
-        "    let j = 0\n"
-        "    while (j < 3) do\n"
-        "        print i " " j nl\n"
-        "        let j = j + 1\n"
-        "    end while\n"
-        "    let i = i + 1\n"
-        "end while",
-
-        "let x = 0\n"
-        "while (x < 10) do\n"
-        "    let x = x + 1\n"
-        "    if (x == 3) then\n"
-        "        continue\n"
-        "    end if\n"
-        "    if (x == 7) then\n"
-        "        break\n"
-        "    end if\n"
-        "    print x nl\n"
-        "end while"
-
+        "for i = 1 to (x + 3) step (x + 1) do\n"
+        "    print i nl\n"
+        "end for"
     };
     
     int num_testes = sizeof(testes) / sizeof(testes[0]);

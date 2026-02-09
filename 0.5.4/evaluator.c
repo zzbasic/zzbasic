@@ -53,6 +53,7 @@ static int execute_if_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx);
 
 static int execute_while_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx);
 
+static int execute_for_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx);
 
 // FUNÇÕES PÚBLICAS
 // int evaluate_program(ASTNode* node, SymbolTable* symbols);
@@ -602,6 +603,9 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
         case NODE_CONTINUE:
             ctx->should_continue = 1;
             return 1;
+
+        case NODE_FOR:
+            return execute_for_stmt_with_ctx(node, ctx);
             
         default:
             printf("Evaluator error: unsupported statement type: %d\n", node->type);
@@ -826,6 +830,93 @@ static int execute_while_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
     
     return 1;
 }
+
+static int execute_for_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
+{
+    if (!node || node->type != NODE_FOR || !ctx)
+    {
+        printf("Evaluator error: invalid for statement or context\n");
+        return 0;
+    }
+
+    ForStatementData* for_stmt = &node->data.for_stmt;
+    
+    // Avalia o valor inicial
+    EvaluatorResult init_result = evaluate_expr(for_stmt->init_value, ctx->symbols, CTX_NUMBER);
+    if (init_result.type == RESULT_ERROR)
+    {
+        printf("%s\n", init_result.error_message);
+        return 0;
+    }
+    double init_value = init_result.value.number;
+
+    // Avalia o valor final
+    EvaluatorResult end_result = evaluate_expr(for_stmt->end_value, ctx->symbols, CTX_NUMBER);
+    if (end_result.type == RESULT_ERROR)
+    {
+        printf("%s\n", end_result.error_message);
+        return 0;
+    }
+    double end_value = end_result.value.number;
+
+    // Avalia o step (padrão é 1)
+    double step_value = 1.0;
+    if (for_stmt->step_value)
+    {
+        EvaluatorResult step_result = evaluate_expr(for_stmt->step_value, ctx->symbols, CTX_NUMBER);
+        if (step_result.type == RESULT_ERROR)
+        {
+            printf("%s\n", step_result.error_message);
+            return 0;
+        }
+        step_value = step_result.value.number;
+        
+        // Verifica se step é zero (erro)
+        if (fabs(step_value) < EPSILON)
+        {
+            printf("Evaluator error: step value cannot be zero in for loop\n");
+            return 0;
+        }
+    }
+
+    // Executa o loop
+    // Determina a direção do loop (crescente ou decrescente)
+    int ascending = (step_value > 0);
+    
+    for (double i = init_value; 
+         (ascending && i <= end_value + EPSILON) || (!ascending && i >= end_value - EPSILON);
+         i += step_value)
+    {
+        if (!symbol_table_set_number(ctx->symbols, for_stmt->var_name, i))
+        {
+            printf("Evaluator error: failed to set loop variable '%s'\n", for_stmt->var_name);
+            return 0;
+        }
+
+        // Executa o corpo do loop
+        int success = execute_stmt_list_with_ctx(for_stmt->body, ctx);
+        if (!success) {
+            return 0;  
+        }
+
+        // Verifica se deve sair do loop (break)
+        if (ctx->should_break)
+        {
+            ctx->should_break = 0;  
+            break;
+        }
+
+        // Verifica se deve pular para a próxima iteração
+        if (ctx->should_continue)
+        {
+            ctx->should_continue = 0;
+            continue;
+        }
+    }
+
+    return 1;  
+}
+
 
 // ===================================================
 // EVALUATE PROGRAM 
