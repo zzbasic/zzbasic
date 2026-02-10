@@ -22,52 +22,50 @@ static EvaluatorResult create_success_result_string(const char* value, int line,
 static EvaluatorResult create_error_result(const char* message, int line, int column);
 static EvaluatorResult create_error_result_fmt(int line, int column, 
                                               const char* format, ...);
-
+// CORES
 static void reset_current_color(void);
 static void apply_color(const char* ansi_color);
 static void detect_color_support(void);
 
+// WIDTH E ALIGNMENT
 static int count_utf8_chars(const char* str);
 static AlignmentType token_to_alignment(TokenType token_type);
 static void reset_format(ExecutionContext* ctx);
 static void update_format_from_node(ASTNode* node, ExecutionContext* ctx);
 static void apply_format(const char* str, OutputFormat* format);
-void evaluator_reset_format(ExecutionContext* ctx);
 
-ExecutionContext* execution_ctx_create(SymbolTable* symbols);
-void execution_ctx_destroy(ExecutionContext* ctx);
-
+// FUNÇÕES PARA INPUT
 static int is_numeric_string(const char* str);
 static char* read_user_input(const char* prompt);
 
 static int evaluate_input_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx);
-
-static int execute_stmt_list_with_ctx(ASTNode* node, ExecutionContext* ctx);
-
-static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx);
-
 static int evaluate_print_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx);
 static int evaluate_print_stmt_with_format(ASTNode* node, ExecutionContext* ctx);
 
+static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx);
+static int execute_stmt_list_with_ctx(ASTNode* node, ExecutionContext* ctx);
 static int execute_if_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx);
-
 static int execute_while_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx);
-
 static int execute_for_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx);
 
 // FUNÇÕES PÚBLICAS
+
 // int evaluate_program(ASTNode* node, SymbolTable* symbols);
 // EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext ctx);
+
 // EvaluatorResult evaluate(ASTNode* node);// old function (for compatibility)
+
+// width e alignment
+//ExecutionContext* execution_ctx_create(SymbolTable* symbols);
+//void execution_ctx_destroy(ExecutionContext* ctx);
+//void evaluator_reset_format(ExecutionContext* ctx);
+
+// Funções de gerenciamento de cores
 // void evaluator_color_reset(ExecutionContext* ctx);
 // void evaluator_color_set(ExecutionContext* ctx, const char* ansi_color);
 // void evaluator_color_apply_current(ExecutionContext* ctx);
 //===================================================================
 
-
-// ============================================
-// HELPER FUNCTIONS (static)
-// ============================================
 
 static EvaluatorResult create_success_result_bool(int value, int line, int column)
 {
@@ -286,33 +284,6 @@ static void apply_format(const char* str, OutputFormat* format)
     }
 }
 
-// Reseta formatação (pública)
-void evaluator_reset_format(ExecutionContext* ctx)
-{
-    reset_format(ctx);
-}
-
-// Cria contexto de execução
-ExecutionContext* execution_ctx_create(SymbolTable* symbols)
-{
-    ExecutionContext* ctx = A89ALLOC(sizeof(ExecutionContext));
-    ctx->symbols = symbols;
-    ctx->current_color = "";
-    ctx->color_enabled = 1;
-    ctx->should_break = 0;      
-    ctx->should_continue = 0;  
-    reset_format(ctx);    
-    return ctx;
-}
-
-// Destrói contexto de execução
-void execution_ctx_destroy(ExecutionContext* ctx)
-{
-    if (ctx)
-    {
-        a89free(ctx);
-    }
-}
 
 
 // =================================================
@@ -351,271 +322,227 @@ static char* read_user_input(const char* prompt)
     return buffer;
 }
 
+
 // ===================================================
 // EVALUATE INPUT STATEMENT WITH CONTEXT
 // ===================================================
+// static int evaluate_input_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
+// {
+//     if (!node || node->type != NODE_INPUT || !ctx)
+//     {
+//         printf("Evaluator error: expected input statement node and context\n");
+//         return 0;
+//     }
+    
+//     const char* prompt = node->data.input_stmt.prompt;
+//     const char* var_name = node->data.input_stmt.var_name;
+    
+//     // Lê entrada do usuário
+//     char* input = read_user_input(prompt);
+//     if (!input)
+//     {
+//         printf("Evaluator error: reading input\n");
+//         return 0;
+//     }
+
+//     if(!strcmp(input, "true") || !strcmp(input, "false") )
+//     {
+//         if(strcmp(input, "true") == 0) {
+//             if (!symbol_table_set_bool(ctx->symbols, var_name, 1)) {
+//                 printf("Evaluator error: assigning boolean to '%s'\n", var_name);
+//                 return 0;
+//             }
+//         }
+//         else if(strcmp(input, "false") == 0) {
+//             if (!symbol_table_set_bool(ctx->symbols, var_name, 0)) {
+//                 printf("Evaluator error: assigning boolean to '%s'\n", var_name);
+//                 return 0;
+//             }
+//         }
+//     }    
+//     else if (is_numeric_string(input))
+//     {
+//         double value = atof(input);
+//         if (!symbol_table_set_number(ctx->symbols, var_name, value))
+//         {
+//             printf("Evaluator error: assigning number to '%s'\n", var_name);
+//             return 0;
+//         }
+//     }
+//     else
+//     {
+//         if (!symbol_table_set_string(ctx->symbols, var_name, input))
+//         {
+//             printf("Evaluator error: assigning string to '%s'\n", var_name);
+//             return 0;
+//         }
+//     }
+    
+//     return 1;
+// }
+
+/********************************************************************
+Lógica de Execução do INPUT
+
+Fase 1: Aplicar Formatação (cor, width, alignment)
+    1. Se color != NULL → aplicar cor
+    2. Se width != NULL → armazenar width no contexto
+    3. Se alignment != NULL → armazenar alignment no contexto
+    4. Se set_nocolor == 1 → resetar cor
+
+Fase 2: Imprimir Prompt com Formatação
+    1. Se prompt não está vazio → imprimir com formatação
+        - Usar apply_format() do PRINT
+        - Respeitar width e alignment do contexto
+    2. Sem quebra de linha (porque vai ler entrada)
+
+Fase 3: Ler Entrada do Usuário
+    1. fgets() para ler do stdin
+    2. Remover newline
+
+Fase 4: Armazenar na Variável
+    1. Auto-detectar tipo:
+        - "true"/"false" → boolean
+        - Número → double
+         - Resto → string
+    2. Armazenar em symbol_table
+********************************************************************/
 static int evaluate_input_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
 {
     if (!node || node->type != NODE_INPUT || !ctx)
     {
-        printf("Evaluator error: expected input statement node and context\n");
+        printf("Evaluator error: expected input statement node\n");
         return 0;
     }
     
-    const char* prompt = node->data.input_stmt.prompt;
-    const char* var_name = node->data.input_stmt.var_name;
+    InputStatementNode* input_stmt = &node->data.input_stmt;
     
-    // Lê entrada do usuário
-    char* input = read_user_input(prompt);
-    if (!input)
+    // ===================================================
+    // FASE 1: Aplicar Formatação
+    // ===================================================
+    
+    // 1.1 Aplicar cor (se existe)
+    if (input_stmt->color != NULL)
     {
-        printf("Evaluator error: reading input\n");
+        evaluator_color_set(ctx, input_stmt->color->data.color.ansi_color);
+    }
+    
+    // 1.2 Atualizar width (se existe)
+    if (input_stmt->width != NULL)
+    {
+        update_format_from_node(input_stmt->width, ctx);
+    }
+    
+    // 1.3 Atualizar alignment (se existe)
+    if (input_stmt->alignment != NULL)
+    {
+        update_format_from_node(input_stmt->alignment, ctx);
+    }
+    
+    // ===================================================
+    // FASE 2: Imprimir Prompt com Formatação
+    // ===================================================
+    
+    if (input_stmt->prompt[0] != '\0')
+    {
+        // Tem prompt → imprimir com formatação
+        
+        char buffer[BUFFER_SIZE];
+        strncpy(buffer, input_stmt->prompt, BUFFER_SIZE - 1);
+        buffer[BUFFER_SIZE - 1] = '\0';
+        
+        // Aplica formatação se estiver ativa
+        if (ctx->format.has_format && ctx->format.width > 0)
+        {
+            apply_format(buffer, &ctx->format);
+            reset_format(ctx);
+        }
+        else
+        {
+            printf("%s", buffer);
+        }
+    }
+    
+    // Sem quebra de linha (vai ler entrada)
+    fflush(stdout);
+    
+    // ===================================================
+    // FASE 3: Ler Entrada do Usuário
+    // ===================================================
+    
+    static char input_buffer[BUFFER_SIZE];
+    
+    if (fgets(input_buffer, sizeof(input_buffer), stdin) == NULL)
+    {
+        printf("Evaluator error: failed to read input\n");
         return 0;
     }
+    
+    // Remove newline
+    input_buffer[strcspn(input_buffer, "\n")] = '\0';
+    
+    // ===================================================
+    // FASE 4: Armazenar na Variável (auto-detecta tipo)
+    // ===================================================
+    
+    const char* var_name = input_stmt->var_name;
+    
+    // Auto-detecta tipo
+    if (strcmp(input_buffer, "true") == 0 || strcmp(input_buffer, "false") == 0)
+    {
+        // Boolean
+        int bool_value = (strcmp(input_buffer, "true") == 0) ? 1 : 0;
+        if (!symbol_table_set_bool(ctx->symbols, var_name, bool_value))
+        {
+            printf("Evaluator error: failed to set boolean variable '%s'\n", var_name);
+            return 0;
+        }
+    }
+    else if (is_numeric_string(input_buffer))
+    {
+        // convert string para double
+        // is_numeric_string() já verificou se a string representa um double
+        errno = 0;
+        double value = strtod(input_buffer, NULL);
 
-    if(!strcmp(input, "true") || !strcmp(input, "false") )
-    {
-        if(strcmp(input, "true") == 0) {
-            if (!symbol_table_set_bool(ctx->symbols, var_name, 1)) {
-                printf("Evaluator error: assigning boolean to '%s'\n", var_name);
-                return 0;
-            }
+        if (errno == ERANGE)
+        {
+            printf("Evaluator error: overflow in '%s'\n", input_buffer);
+            return 0;
         }
-        else if(strcmp(input, "false") == 0) {
-            if (!symbol_table_set_bool(ctx->symbols, var_name, 0)) {
-                printf("Evaluator error: assigning boolean to '%s'\n", var_name);
-                return 0;
-            }
-        }
-    }    
-    else if (is_numeric_string(input))
-    {
-        double value = atof(input);
+
         if (!symbol_table_set_number(ctx->symbols, var_name, value))
         {
-            printf("Evaluator error: assigning number to '%s'\n", var_name);
+            printf("Evaluator error: failed to set number variable '%s'\n", var_name);
             return 0;
         }
     }
     else
     {
-        if (!symbol_table_set_string(ctx->symbols, var_name, input))
+        // String
+        if (!symbol_table_set_string(ctx->symbols, var_name, input_buffer))
         {
-            printf("Evaluator error: assigning string to '%s'\n", var_name);
+            printf("Evaluator error: failed to set string variable '%s'\n", var_name);
             return 0;
         }
     }
+    
+    // ===================================================
+    // FASE 5: Reset de Formatação e Cor
+    // ===================================================
+    
+    if (input_stmt->set_nocolor == 1)
+    {
+        evaluator_color_reset(ctx);
+    }
+    
+    reset_format(ctx);
     
     return 1;
 }
 
 // ============================================
-// EXECUTE STATEMENT LIST WITH CONTEXT
-// ============================================
-static int execute_stmt_list_with_ctx(ASTNode* node, ExecutionContext* ctx)
-{
-    if (!node || !ctx || node->type != NODE_STATEMENT_LIST)
-    {
-        printf("Evaluator error: expected statement list node and context\n");
-        return 0;
-    }
-    
-    StatementListData* list = &node->data.stmt_list;
-    int all_success = 1;
-    
-    // Executa cada statement em sequência
-    for (int i = 0; i < list->count; i++)
-    {
-        ASTNode* stmt = list->statements[i];
-        int success = execute_stmt_with_ctx(stmt, ctx);
-        
-        if (!success)
-        {
-            all_success = 0;
-        }
-        
-        // Se deve sair do loop (break) ou pular (continue), para a execução
-        if (ctx->should_break || ctx->should_continue)
-        {
-            break;
-        }
-    }
-    
-    return all_success;
-}
-
-// Função de execução com contexto 
-static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
-{
-    if (!node || !ctx) return 0;
-    
-    switch (node->type) {
-        case NODE_ASSIGNMENT: {
-            const char* var_name = node->data.assignment.var_name;
-            ASTNode* value_node = node->data.assignment.value;
-            
-            EvaluatorResult value_result = evaluate_expr(
-                value_node, ctx->symbols, CTX_ANY);
-            
-            if (value_result.type == RESULT_ERROR) {
-                printf("%s\n", value_result.error_message);
-                return 0;
-            }
-            
-            // Store based on type
-            if (value_result.type == RESULT_STRING) {
-                if (!symbol_table_set_string(ctx->symbols, var_name, value_result.value.string)) {
-                    printf("Evaluator error: assigning string to '%s'\n", var_name);
-                    return 0;
-                }
-            }
-            else if (value_result.type == RESULT_NUMBER) {
-                if (!symbol_table_set_number(ctx->symbols, var_name, value_result.value.number)) {
-                    printf("Evaluator error: assigning number to '%s'\n", var_name);
-                    return 0;
-                }
-            }
-            else if (value_result.type == RESULT_BOOL) {
-                if (!symbol_table_set_bool(ctx->symbols, var_name, value_result.value.boolean)) {
-                    printf("Evaluator error: assigning boolean to '%s'\n", var_name);
-                    return 0;
-                }
-            }
-            return 1;
-        }
-            
-        case NODE_BOOL:
-        case NODE_NUMBER:
-        case NODE_BINARY_OP:
-        case NODE_UNARY_OP:
-        case NODE_VARIABLE:
-        {
-            // Evaluate for display (any type)
-            EvaluatorResult result = evaluate_expr(node, ctx->symbols, CTX_ANY);
-            if (result.type == RESULT_ERROR)
-            {
-                printf("%s\n", result.error_message);
-                return 0;
-            }
-            else
-            {
-                switch(result.type)
-                {
-                    case RESULT_STRING:
-                        printf("\"%s\"\n", result.value.string);
-                        break;
-                    case RESULT_NUMBER:
-                        printf("%g\n", result.value.number);
-                        break;
-                    case RESULT_BOOL:
-                    {
-                        if(result.value.boolean == 1){
-                            printf("true\n");
-                        }
-                        else{
-                            printf("false\n");
-                        }
-                        break;
-                    }
-                }
-                return 1;
-            }
-        }
-            
-        case NODE_STRING:
-        {
-            // Standalone string
-            printf("\"%s\"\n", node->data.string.value);
-            return 1;
-        }
-
-        case NODE_PRINT:
-            return evaluate_print_stmt_with_ctx(node, ctx);
-
-        case NODE_COLOR:
-            // Comando nocolor sozinho (ex: "nocolor" como statement)
-            // Apenas reseta a cor
-            if (node->data.color.color_token_id == 0) {  // CLR_NOCOLOR
-                evaluator_color_reset(ctx);
-                return 1;
-            }
-            // Outras cores sozinhas não fazem sentido como statements
-            printf("%s[%d:%d] Evaluator warning: color command without print has no effect%s\n",
-                   COLOR_WARNING, node->line, node->column, COLOR_RESET);
-            return 1;
-
-        case NODE_STATEMENT_LIST:
-            return execute_stmt_list_with_ctx(node, ctx);
-
-        case NODE_INPUT:
-            return evaluate_input_stmt_with_ctx(node, ctx);
-
-        case NODE_COMPARISON_OP:
-        case NODE_LOGICAL_OP:
-        case NODE_NOT_LOGICAL_OP:
-        {
-            // Evaluate logical/comparison expression
-            EvaluatorResult result = evaluate_expr(node, ctx->symbols, CTX_ANY);
-            
-            if (result.type == RESULT_ERROR)
-            {
-                printf("%s\n", result.error_message);
-                return 0;
-            }
-            else
-            {
-                // Print the result
-                switch(result.type)
-                {
-                    case RESULT_BOOL:
-                    {
-                        if(result.value.boolean == 1){
-                            printf("true\n");
-                        }
-                        else{
-                            printf("false\n");
-                        }
-                        break;
-                    }
-                    case RESULT_NUMBER:
-                        printf("%g\n", result.value.number);
-                        break;
-                    case RESULT_STRING:
-                        printf("\"%s\"\n", result.value.string);
-                        break;
-                    default:
-                        break;
-                }
-                return 1;
-            }
-        }
-
-        case NODE_IF:
-            return execute_if_stmt_with_ctx(node, ctx);
-        
-        case NODE_WHILE:
-            return execute_while_stmt_with_ctx(node, ctx);
-        
-        case NODE_BREAK:
-            ctx->should_break = 1;
-            return 1;
-        
-        case NODE_CONTINUE:
-            ctx->should_continue = 1;
-            return 1;
-
-        case NODE_FOR:
-            return execute_for_stmt_with_ctx(node, ctx);
-            
-        default:
-            printf("Evaluator error: unsupported statement type: %d\n", node->type);
-            return 0;
-    }
-}
-
-
-// ============================================
-// EXECUTE PRINT STATEMENT
+// EVALUATE PRINT STATEMENT
 // ============================================
 
 // Função pública para avaliar print com contexto
@@ -744,6 +671,209 @@ static int evaluate_print_stmt_with_format(ASTNode* node, ExecutionContext* ctx)
     }
     
     return printed_something ? 1 : 0;
+}
+
+// Função de execução com contexto 
+static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
+{
+    if (!node || !ctx) return 0;
+    
+    switch (node->type) {
+        case NODE_ASSIGNMENT:
+        {
+            const char* var_name = node->data.assignment.var_name;
+            ASTNode* value_node = node->data.assignment.value;
+            
+            EvaluatorResult value_result = evaluate_expr(
+                value_node, ctx->symbols, CTX_ANY);
+            
+            if (value_result.type == RESULT_ERROR) {
+                printf("%s\n", value_result.error_message);
+                return 0;
+            }
+            
+            // Store based on type
+            if (value_result.type == RESULT_STRING) {
+                if (!symbol_table_set_string(ctx->symbols, var_name, value_result.value.string)) {
+                    printf("Evaluator error: assigning string to '%s'\n", var_name);
+                    return 0;
+                }
+            }
+            else if (value_result.type == RESULT_NUMBER) {
+                if (!symbol_table_set_number(ctx->symbols, var_name, value_result.value.number)) {
+                    printf("Evaluator error: assigning number to '%s'\n", var_name);
+                    return 0;
+                }
+            }
+            else if (value_result.type == RESULT_BOOL) {
+                if (!symbol_table_set_bool(ctx->symbols, var_name, value_result.value.boolean)) {
+                    printf("Evaluator error: assigning boolean to '%s'\n", var_name);
+                    return 0;
+                }
+            }
+            return 1;
+        }
+            
+        case NODE_BOOL:
+        case NODE_NUMBER:
+        case NODE_BINARY_OP:
+        case NODE_UNARY_OP:
+        case NODE_VARIABLE:
+        {
+            // Evaluate for display (any type)
+            EvaluatorResult result = evaluate_expr(node, ctx->symbols, CTX_ANY);
+            if (result.type == RESULT_ERROR)
+            {
+                printf("%s\n", result.error_message);
+                return 0;
+            }
+            else
+            {
+                switch(result.type)
+                {
+                    case RESULT_STRING:
+                        printf("\"%s\"\n", result.value.string);
+                        break;
+                    case RESULT_NUMBER:
+                        printf("%g\n", result.value.number);
+                        break;
+                    case RESULT_BOOL:
+                    {
+                        if(result.value.boolean == 1){
+                            printf("true\n");
+                        }
+                        else{
+                            printf("false\n");
+                        }
+                        break;
+                    }
+                }
+                return 1;
+            }
+        }
+            
+        case NODE_STRING:
+        {
+            // Standalone string
+            printf("\"%s\"\n", node->data.string.value);
+            return 1;
+        }
+
+        case NODE_PRINT:
+            return evaluate_print_stmt_with_ctx(node, ctx);
+
+        case NODE_COLOR:
+            // Comando nocolor sozinho (ex: "nocolor" como statement)
+            // Apenas reseta a cor
+            if (node->data.color.color_token_id == 0) // CLR_NOCOLOR
+            {  
+                evaluator_color_reset(ctx);
+                return 1;
+            }
+            // Outras cores sozinhas não fazem sentido como statements
+            printf("%s[%d:%d] Evaluator warning: color command without print has no effect%s\n",
+                   COLOR_WARNING, node->line, node->column, COLOR_RESET);
+            return 1;
+
+        case NODE_STATEMENT_LIST:
+            return execute_stmt_list_with_ctx(node, ctx);
+
+        case NODE_INPUT:
+            return evaluate_input_stmt_with_ctx(node, ctx);
+
+        case NODE_COMPARISON_OP:
+        case NODE_LOGICAL_OP:
+        case NODE_NOT_LOGICAL_OP:
+        {
+            // Evaluate logical/comparison expression
+            EvaluatorResult result = evaluate_expr(node, ctx->symbols, CTX_ANY);
+            
+            if (result.type == RESULT_ERROR)
+            {
+                printf("%s\n", result.error_message);
+                return 0;
+            }
+            else
+            {
+                // Print the result
+                switch(result.type)
+                {
+                    case RESULT_BOOL:
+                    {
+                        if(result.value.boolean == 1){
+                            printf("true\n");
+                        }
+                        else{
+                            printf("false\n");
+                        }
+                        break;
+                    }
+                    case RESULT_NUMBER:
+                        printf("%g\n", result.value.number);
+                        break;
+                    case RESULT_STRING:
+                        printf("\"%s\"\n", result.value.string);
+                        break;
+                    default:
+                        break;
+                }
+                return 1;
+            }
+        }
+
+        case NODE_IF:
+            return execute_if_stmt_with_ctx(node, ctx);
+        
+        case NODE_WHILE:
+            return execute_while_stmt_with_ctx(node, ctx);
+        
+        case NODE_BREAK:
+            ctx->should_break = 1;
+            return 1;
+        
+        case NODE_CONTINUE:
+            ctx->should_continue = 1;
+            return 1;
+
+        case NODE_FOR:
+            return execute_for_stmt_with_ctx(node, ctx);
+            
+        default:
+            printf("Evaluator error: unsupported statement type: %d\n", node->type);
+            return 0;
+    }
+}
+
+static int execute_stmt_list_with_ctx(ASTNode* node, ExecutionContext* ctx)
+{
+    if (!node || !ctx || node->type != NODE_STATEMENT_LIST)
+    {
+        printf("Evaluator error: expected statement list node and context\n");
+        return 0;
+    }
+    
+    StatementListData* list = &node->data.stmt_list;
+    int all_success = 1;
+    
+    // Executa cada statement em sequência
+    for (int i = 0; i < list->count; i++)
+    {
+        ASTNode* stmt = list->statements[i];
+        int success = execute_stmt_with_ctx(stmt, ctx);
+        
+        if (!success)
+        {
+            all_success = 0;
+        }
+        
+        // Se deve sair do loop (break) ou pular (continue), para a execução
+        if (ctx->should_break || ctx->should_continue)
+        {
+            break;
+        }
+    }
+    
+    return all_success;
 }
 
 static int execute_if_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
@@ -1355,8 +1485,33 @@ EvaluatorResult evaluate(ASTNode* node)
     return result;
 }
 
+// Cria contexto de execução
+ExecutionContext* execution_ctx_create(SymbolTable* symbols)
+{
+    ExecutionContext* ctx = A89ALLOC(sizeof(ExecutionContext));
+    ctx->symbols = symbols;
+    ctx->current_color = "";
+    ctx->color_enabled = 1;
+    ctx->should_break = 0;      
+    ctx->should_continue = 0;  
+    reset_format(ctx);    
+    return ctx;
+}
 
-// evaluator.c - ADICIONAR estas implementações
+// Destrói contexto de execução
+void execution_ctx_destroy(ExecutionContext* ctx)
+{
+    if (ctx)
+    {
+        a89free(ctx);
+    }
+}
+
+// Reseta formatação (pública)
+void evaluator_reset_format(ExecutionContext* ctx)
+{
+    reset_format(ctx);
+}
 
 // Funções de gerenciamento de cores com contexto
 void evaluator_color_reset(ExecutionContext* ctx)
@@ -1373,7 +1528,8 @@ void evaluator_color_reset(ExecutionContext* ctx)
 
 void evaluator_color_set(ExecutionContext* ctx, const char* ansi_color)
 {
-    if (!ctx) {
+    if (!ctx)
+    {
         apply_color(ansi_color);
         return;
     }
