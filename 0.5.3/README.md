@@ -397,7 +397,7 @@ while (j < 10) do
     print j nl
     let j = j + 1
 end while
-
+```
 
 ---
 
@@ -415,7 +415,7 @@ O REPL do ZzBasic oferece comandos especiais para ajudar no desenvolvimento e de
 | `tokens "código"` | Mostra os tokens gerados pelo lexer |
 | `ast "código"` | Mostra a Árvore de Sintaxe Abstrata (AST) |
 | `symbols` | Mostra a tabela de símbolos |
-```
+
 
 ---
 
