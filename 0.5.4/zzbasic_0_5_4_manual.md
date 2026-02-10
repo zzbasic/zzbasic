@@ -576,7 +576,7 @@ end for
 
 ## Capítulo 7: REPL Avançado (v0.5.4)
 
-O REPL (Read-Eval-Print Loop) agora suporta modo multi-linha para escrever e debugar blocos de código.
+O REPL (Read-Eval-Print Loop) agora suporta modo multi-linha para escrever e debugar blocos de código de até 100 linhas.
 
 ### Comandos do REPL
 
