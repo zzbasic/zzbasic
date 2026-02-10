@@ -673,6 +673,4 @@ Este projeto é licenciado sob a Licença MIT. Veja o arquivo LICENSE para mais 
 
 ---
 
-**Desenvolvido com ❤️ por arataca89**
-
 **Contato:** arataca89@gmail.com
