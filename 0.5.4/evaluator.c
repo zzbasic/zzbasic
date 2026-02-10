@@ -322,65 +322,6 @@ static char* read_user_input(const char* prompt)
     return buffer;
 }
 
-
-// ===================================================
-// EVALUATE INPUT STATEMENT WITH CONTEXT
-// ===================================================
-// static int evaluate_input_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
-// {
-//     if (!node || node->type != NODE_INPUT || !ctx)
-//     {
-//         printf("Evaluator error: expected input statement node and context\n");
-//         return 0;
-//     }
-    
-//     const char* prompt = node->data.input_stmt.prompt;
-//     const char* var_name = node->data.input_stmt.var_name;
-    
-//     // Lê entrada do usuário
-//     char* input = read_user_input(prompt);
-//     if (!input)
-//     {
-//         printf("Evaluator error: reading input\n");
-//         return 0;
-//     }
-
-//     if(!strcmp(input, "true") || !strcmp(input, "false") )
-//     {
-//         if(strcmp(input, "true") == 0) {
-//             if (!symbol_table_set_bool(ctx->symbols, var_name, 1)) {
-//                 printf("Evaluator error: assigning boolean to '%s'\n", var_name);
-//                 return 0;
-//             }
-//         }
-//         else if(strcmp(input, "false") == 0) {
-//             if (!symbol_table_set_bool(ctx->symbols, var_name, 0)) {
-//                 printf("Evaluator error: assigning boolean to '%s'\n", var_name);
-//                 return 0;
-//             }
-//         }
-//     }    
-//     else if (is_numeric_string(input))
-//     {
-//         double value = atof(input);
-//         if (!symbol_table_set_number(ctx->symbols, var_name, value))
-//         {
-//             printf("Evaluator error: assigning number to '%s'\n", var_name);
-//             return 0;
-//         }
-//     }
-//     else
-//     {
-//         if (!symbol_table_set_string(ctx->symbols, var_name, input))
-//         {
-//             printf("Evaluator error: assigning string to '%s'\n", var_name);
-//             return 0;
-//         }
-//     }
-    
-//     return 1;
-// }
-
 /********************************************************************
 Lógica de Execução do INPUT
 

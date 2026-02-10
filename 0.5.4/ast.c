@@ -158,28 +158,6 @@ void statement_list_add(ASTNode* list_node, ASTNode* stmt)
     list->count++;
 }
 
-// ASTNode* create_input_node(const char* prompt, char* var_name, int line, int column)
-// {
-//     ASTNode* node = create_node(NODE_INPUT, line, column);
-//     if(prompt)
-//     {
-//         strncpy(node->data.input_stmt.prompt, prompt, STRING_SIZE - 1);
-//         node->data.input_stmt.prompt[STRING_SIZE - 1] = '\0';
-//     }
-//     strncpy(node->data.input_stmt.var_name, var_name, VARNAME_SIZE - 1);
-//     node->data.input_stmt.var_name[VARNAME_SIZE - 1] = '\0';
-  
-//     return node;
-// }
-// typedef struct
-// {
-//     ASTNode* color; 
-//     ASTNode* width; 
-//     ASTNode* alignment; 
-//     char prompt[STRING_SIZE];// Prompt opcional (ex: "Digite: ")
-//     int set_nocolor; // 1 - nocolor ativado; 0 - nocolor desativado
-//     char var_name[VARNAME_SIZE];// Nome da variável 
-// } InputStatementNode;
 ASTNode* create_input_node(ASTNode* color, ASTNode* width, ASTNode* alignment,
                           const char* prompt,
                           int set_nocolor,

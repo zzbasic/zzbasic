@@ -13,7 +13,7 @@
 // Tipos de alinhamento
 // =================================================
 typedef enum {
-    ALIGN_LEFT = 0,
+    ALIGN_LEFT,
     ALIGN_RIGHT,
     ALIGN_CENTER
 } AlignmentType;

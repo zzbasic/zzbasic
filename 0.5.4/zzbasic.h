@@ -6,9 +6,15 @@
 #include <stdio.h>
 
 #include "symbol_table.h"
+#include "zzdefs.h"
+#include "ast.h"
 
-#define ZZ_VERSION "0.5.3"
-#define ZZ_PROMPT ">> "
+typedef struct {
+    char lines[MAX_PROGRAM_LINES][PROGRAM_LINE_SIZE];
+    int line_count;
+    int in_program_mode;
+    ASTNode* ast;
+} ReplProgram;
 
 const char* get_os_name(void);
 int is_empty_line(const char *line);
@@ -19,6 +25,10 @@ int has_zz_extension(const char* filename);
 void list_variables(SymbolTable* symbols);
 void show_tokens(const char* code);
 void show_ast(const char* code);
+
+// Helper functions for REPL multi-line
+ASTNode* compile_program(ReplProgram* program);
+void parse_range(const char* arg, int max_lines, int* start, int* end);
 
 void print_banner(void);
 
