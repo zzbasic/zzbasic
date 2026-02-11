@@ -34,7 +34,8 @@ typedef enum
     NODE_WHILE,
     NODE_BREAK,
     NODE_CONTINUE,
-    NODE_FOR
+    NODE_FOR,
+    NODE_IMPORT
 
 } NodeType;
 
@@ -197,6 +198,15 @@ typedef struct
     ASTNode* body;        
 } ForStatementData;
 
+typedef struct
+{
+    char module_name[VARNAME_SIZE]; // Nome do módulo (ex: "math")
+    char** imported_names;          // Nomes importados (ex: ["sqrt", "abs"])
+    int imported_count;             // Quantidade de nomes
+    int import_all;                 // 1 = import math; 0 = from math import ...
+} ImportStatementData;
+
+
 typedef struct ASTNode
 {
     NodeType type;
@@ -225,6 +235,7 @@ typedef struct ASTNode
         BreakStatementData      break_stmt;
         ContinueStatementData   continue_stmt; 
         ForStatementData        for_stmt; 
+        ImportStatementData     import_stmt;
 
     } data;
 
@@ -292,6 +303,12 @@ ASTNode* create_for_node(char var_name[],
                          ASTNode* step_value, 
                          ASTNode* body,
                          int line, int column);
+
+ASTNode* create_import_node(const char* module_name,
+                            char** imported_names,
+                            int imported_count,
+                            int import_all,
+                            int line, int column);
 
 
 void print_node_add_item(ASTNode* print_node, ASTNode* expr_node);

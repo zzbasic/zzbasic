@@ -11,17 +11,25 @@
 
 #define EPSILON 1e-12
 
+//===================================================================
+// VARIAVEIS GLOBAIS
+//===================================================================
+
 // Cor atual sendo aplicada (estado global para sessão)
 static const char* current_color_global = "";
 static int colors_enabled_global = 1;
 
 
+//===================================================================
+// PROTOTIPOS DAS FUNCOES
+//===================================================================
 static EvaluatorResult create_success_result_bool(int value, int line, int column);
 static EvaluatorResult create_success_result_number(double value, int line, int column);
 static EvaluatorResult create_success_result_string(const char* value, int line, int column);
 static EvaluatorResult create_error_result(const char* message, int line, int column);
 static EvaluatorResult create_error_result_fmt(int line, int column, 
                                               const char* format, ...);
+
 // CORES
 static void reset_current_color(void);
 static void apply_color(const char* ansi_color);
@@ -67,6 +75,24 @@ static int execute_for_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx);
 //===================================================================
 
 
+//===================================================================
+// FUNCOES PARA GERENCIAMENTO DE MODULOS
+//===================================================================
+static ModuleManager* module_manager_create(void);
+static void module_manager_destroy(ModuleManager* manager);
+static int module_manager_resize(ModuleManager* manager);
+static int module_manager_load(ModuleManager* manager, const char* module_name);
+static SymbolTable* module_manager_get_symbols(ModuleManager* manager, 
+                                        const char* module_name);
+
+
+//###################################################################
+// IMPLEMNTACAO DAS FUNCOES
+//###################################################################
+
+//===================================================================
+// FUNCOES PARA CRIACAO DE NODES
+//===================================================================
 static EvaluatorResult create_success_result_bool(int value, int line, int column)
 {
     EvaluatorResult result;
@@ -128,7 +154,7 @@ static EvaluatorResult create_error_result_fmt(int line, int column,
 
 
 // =================================================
-// CORES
+// FUNCOES PARA GERENCIMANTO DE CORES
 // =================================================
 
 // Reseta a cor atual
@@ -173,7 +199,7 @@ static void detect_color_support(void)
 
 
 // =================================================
-// WIDTH E ALIGNMENT
+// FUNCOES PARA GERENCIAMENTO DE WIDTH E ALIGNMENT
 // =================================================
 
 // Função auxiliar para contar caracteres UTF-8
@@ -283,7 +309,6 @@ static void apply_format(const char* str, OutputFormat* format)
         }
     }
 }
-
 
 
 // =================================================
@@ -482,9 +507,10 @@ static int evaluate_input_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
     return 1;
 }
 
-// ============================================
+
+// ==================================================================
 // EVALUATE PRINT STATEMENT
-// ============================================
+// ==================================================================
 
 // Função pública para avaliar print com contexto
 static int evaluate_print_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
@@ -614,7 +640,10 @@ static int evaluate_print_stmt_with_format(ASTNode* node, ExecutionContext* ctx)
     return printed_something ? 1 : 0;
 }
 
-// Função de execução com contexto 
+// ==================================================================
+// FUNCOES PARA EXECUCAO (COM CONTEXTO)
+// ==================================================================
+
 static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
 {
     if (!node || !ctx) return 0;
@@ -778,6 +807,43 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
 
         case NODE_FOR:
             return execute_for_stmt_with_ctx(node, ctx);
+
+        case NODE_IMPORT:
+        {
+            ImportStatementData* import_data = &node->data.import_stmt;
+            
+            if (import_data->import_all)
+            {
+                // import math
+                if (!module_manager_load(ctx->modules, import_data->module_name))
+                {
+                    printf("%sEvaluator error: failed to load module '%s'%s\n",
+                           COLOR_ERROR, import_data->module_name, COLOR_RESET);
+                    return 0;
+                }
+                printf("%sModule '%s' loaded successfully%s\n",
+                       COLOR_SUCCESS, import_data->module_name, COLOR_RESET);
+            }
+            else
+            {
+                // from math import sqrt, pow, abs
+                if (!module_manager_load(ctx->modules, import_data->module_name))
+                {
+                    printf("%sEvaluator error: failed to load module '%s'%s\n",
+                           COLOR_ERROR, import_data->module_name, COLOR_RESET);
+                    return 0;
+                }
+                
+                // TODO: Importar funções específicas
+                // Por enquanto, apenas carrega o módulo inteiro
+                printf("%sModule '%s' loaded with selected functions."
+                       "TODO: Importar funções específicas %s\n",
+                       COLOR_SUCCESS, import_data->module_name, COLOR_RESET);
+            }
+            
+            return 1;
+        }
+
             
         default:
             printf("Evaluator error: unsupported statement type: %d\n", node->type);
@@ -989,10 +1055,9 @@ static int execute_for_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
 }
 
 
-// ===================================================
-// EVALUATE PROGRAM 
-// Função principal para avaliar um programa completo
-// ===================================================
+// ==================================================================
+// EVALUATE PROGRAM - FUNÇÃO PRINCIPAL PARA AVALIAR UM PROGRAMA COMPLETO
+// ==================================================================
 int evaluate_program(ASTNode* node, SymbolTable* symbols)
 {
     if (!node || !symbols) return 0;
@@ -1015,9 +1080,10 @@ int evaluate_program(ASTNode* node, SymbolTable* symbols)
     return result;
 }
 
-// ============================================
-// EVALUATE EXPRESSIONS (with context)
-// ============================================
+
+// ==================================================================
+// EVALUATE EXPRESSIONS (COM CONTEXTO)
+// ==================================================================
 EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext ctx)
 {
     if (node == NULL)
@@ -1411,8 +1477,9 @@ EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext c
     }
 }
 
-
-// Old function (for compatibility)
+//===================================================================
+// OLD FUNCTION (FOR COMPATIBILITY)
+//===================================================================
 EvaluatorResult evaluate(ASTNode* node)
 {
     SymbolTable* symbols = symbol_table_create();
@@ -1426,7 +1493,148 @@ EvaluatorResult evaluate(ASTNode* node)
     return result;
 }
 
-// Cria contexto de execução
+//===================================================================
+// FUNCOES PARA GERENCIAMENTO DE MODULOS
+//===================================================================
+static ModuleManager* module_manager_create(void)
+{
+    ModuleManager* manager = A89ALLOC(sizeof(ModuleManager));
+    
+    // Alocar espaço inicial para 8 módulos
+    manager->modules = A89ALLOC(sizeof(LoadedModule) * 8);
+    
+    manager->module_count = 0;
+    manager->module_capacity = 8;
+    
+    // Inicializar array
+    memset(manager->modules, 0, sizeof(LoadedModule) * 8);
+    
+    return manager;
+}
+
+static void module_manager_destroy(ModuleManager* manager)
+{
+    if (!manager) return;
+    
+    // Destruir todos os módulos carregados
+    for (int i = 0; i < manager->module_count; i++)
+    {
+        if (manager->modules[i].symbols)
+        {
+            symbol_table_destroy(manager->modules[i].symbols);
+        }
+    }
+    
+    // Liberar array de módulos
+    if (manager->modules)
+    {
+        a89free(manager->modules);
+    }
+    
+    // Liberar manager
+    a89free(manager);
+}
+
+static int module_manager_resize(ModuleManager* manager)
+{
+    if (!manager) return 0;
+    
+    // Calcula nova capacidade (1.5x) usando bit shift (>>)
+    // Exemplo:
+    // 8            = 1000
+    // 8 >> 1       = 0100 (4)
+    // 8 + (8 >> 1) = 12
+    int new_capacity = manager->module_capacity + (manager->module_capacity >> 1);
+
+    // CASO ESPECIAL: quando module_capacity = 1, 1.5× falha (dá 1) causando loop infinito
+    // Garantimos pelo menos +1 elemento de crescimento
+    if (new_capacity <= manager->module_capacity)
+    {
+        new_capacity = manager->module_capacity + 1;
+    }
+    
+    // Alocar novo array
+    LoadedModule* new_modules = A89ALLOC(sizeof(LoadedModule) * new_capacity);
+    
+    // Copiar dados existentes
+    memcpy(new_modules, manager->modules, sizeof(LoadedModule) * manager->module_count);
+    
+    // Zerar a nova memória
+    memset(&new_modules[manager->module_count], 0,
+           sizeof(LoadedModule) * (new_capacity - manager->module_count));
+    
+    // Liberar array antigo
+    a89free(manager->modules);
+    
+    // Atualizar manager
+    manager->modules = new_modules;
+    manager->module_capacity = new_capacity;
+    
+    return 1;
+}
+
+
+static int module_manager_load(ModuleManager* manager, const char* module_name)
+{
+    if (!manager || !module_name) return 0;
+    
+    // Verificar se módulo já está carregado
+    for (int i = 0; i < manager->module_count; i++)
+    {
+        if (strcmp(manager->modules[i].name, module_name) == 0)
+        {
+            return 1;  // Já carregado
+        }
+    }
+    
+    // Verificar se precisa redimensionar
+    if (manager->module_count >= manager->module_capacity)
+    {
+        if (!module_manager_resize(manager))
+        {
+            printf("%sEvaluator Error: Failed to load module '%s' (resize failed)%s\n",
+                   COLOR_ERROR, module_name, COLOR_RESET);
+            return 0;
+        }
+    }
+    
+    // Adicionar novo módulo
+    // Pega o ENDEREÇO da próxima posição vazia no array
+    LoadedModule* module = &manager->modules[manager->module_count];
+
+    strncpy(module->name, module_name, VARNAME_SIZE - 1);
+    module->name[VARNAME_SIZE - 1] = '\0';
+    
+    // Criar tabela de símbolos para o módulo
+    module->symbols = symbol_table_create();
+    manager->module_count++;
+    return 1;
+}
+
+static SymbolTable* module_manager_get_symbols(ModuleManager* manager, 
+                                               const char* module_name)
+{
+    if (!manager || !module_name) return NULL;
+    
+    for (int i = 0; i < manager->module_count; i++)
+    {
+        if (strcmp(manager->modules[i].name, module_name) == 0)
+        {
+            return manager->modules[i].symbols;
+        }
+    }
+    
+    return NULL;
+}
+
+
+//###################################################################
+// FUNCOES PUBLICAS
+//###################################################################
+
+//===================================================================
+// FUNCOES PARA GERENCIAR CONTEXTO
+//===================================================================
 ExecutionContext* execution_ctx_create(SymbolTable* symbols)
 {
     ExecutionContext* ctx = A89ALLOC(sizeof(ExecutionContext));
@@ -1434,27 +1642,34 @@ ExecutionContext* execution_ctx_create(SymbolTable* symbols)
     ctx->current_color = "";
     ctx->color_enabled = 1;
     ctx->should_break = 0;      
-    ctx->should_continue = 0;  
+    ctx->should_continue = 0;
+    ctx->modules = module_manager_create();   
     reset_format(ctx);    
     return ctx;
 }
 
-// Destrói contexto de execução
 void execution_ctx_destroy(ExecutionContext* ctx)
 {
-    if (ctx)
+    if (!ctx) return;
+    
+    if (ctx->modules)
     {
-        a89free(ctx);
+        module_manager_destroy(ctx->modules); 
     }
+    
+    a89free(ctx);
 }
 
-// Reseta formatação (pública)
 void evaluator_reset_format(ExecutionContext* ctx)
 {
     reset_format(ctx);
 }
 
-// Funções de gerenciamento de cores com contexto
+
+//###################################################################
+// FUNÇÕES DE GERENCIAMENTO DE CORES COM CONTEXTO
+//###################################################################
+
 void evaluator_color_reset(ExecutionContext* ctx)
 {
     if (ctx) {

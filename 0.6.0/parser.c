@@ -44,6 +44,8 @@ static ASTNode* parse_continue_stmt(Parser* parser);
 
 static ASTNode* parse_for_stmt(Parser* parser);
 
+static ASTNode* parse_import_stmt(Parser* parser);
+
 static ASTNode* parse_expr_stmt(Parser* parser);
 
 // EXPRESSÕES LÓGICAS
@@ -381,6 +383,7 @@ static ASTNode* parse_stmt_list(Parser* parser)
 // statement           := assignment_stmt
 //                     | print_stmt
 //                     | color_stmt 
+//                     | import_stmt
 //                     | input_stmt 
 //                     | if_stmt
 //                     | while_stmt
@@ -428,6 +431,14 @@ static ASTNode* parse_stmt(Parser* parser)
     else if (parser->current_token.type == TOKEN_CONTINUE)
     {
         return parse_continue_stmt(parser);
+    }
+    else if (parser->current_token.type == TOKEN_IMPORT)
+    {
+        return parse_import_stmt(parser);
+    }
+    else if (parser->current_token.type == TOKEN_FROM)
+    {
+        return parse_import_stmt(parser);
     }
     else
     {
@@ -1357,6 +1368,72 @@ static ASTNode* parse_for_stmt(Parser* parser)
     return create_for_node(var_name, init_value, end_value, step_value, body, line, column);
 }
 
+//===================================================================
+// import_stmt := 'import' IDENTIFIER
+//             | 'from' IDENTIFIER 'import' identifier_list
+//
+// identifier_list := IDENTIFIER (',' IDENTIFIER)*
+//===================================================================
+static ASTNode* parse_import_stmt(Parser* parser)
+{
+    // import math
+    // from math import sqrt, abs
+    
+    parser_advance(parser);  // Consume IMPORT ou FROM
+    
+    if (parser->current_token.type != TOKEN_IDENTIFIER)
+    {
+        parser->has_error = 1;
+        snprintf(parser->error_message, BUFFER_SIZE,
+                "Parser error: expected module name after 'import' or 'from'");
+        return NULL;
+    }
+    
+    char module_name[VARNAME_SIZE];
+
+    strcpy(module_name, parser->current_token.value.varname);
+
+    parser_advance(parser);  // Consume module name
+    
+    // Verificar se é "import math" ou "from math import ..."
+    int import_all = 1;
+    char** imported_names = NULL;
+    int imported_count = 0;
+    
+    // Alocar array para nomes importados
+    imported_names = (char**)A89ALLOC(sizeof(char*) * 100);  // Max 100 funções
+
+    if (parser->current_token.type == TOKEN_IMPORT)
+    {
+        // from math import sqrt, abs
+        import_all = 0;
+        parser_advance(parser);  // Consume IMPORT
+
+        while (parser->current_token.type == TOKEN_IDENTIFIER)
+        {
+            imported_names[imported_count] = (char*)A89ALLOC(VARNAME_SIZE);
+
+            strncpy(imported_names[imported_count], parser->current_token.value.varname, 
+                    VARNAME_SIZE - 1);
+            imported_names[imported_count][VARNAME_SIZE - 1] = '\0';
+
+            imported_count++;
+            parser_advance(parser);
+            
+            if (parser->current_token.type == TOKEN_COMMA)
+            {
+                parser_advance(parser);  // Consume COMMA
+            }
+            else
+            {
+                break;
+            }
+        }
+    }
+    
+    return create_import_node(module_name, imported_names, imported_count, import_all, 
+                             parser->current_token.line, parser->current_token.column);
+}
 
 //===================================================================
 // expression_stmt := logical_expr
@@ -1773,28 +1850,14 @@ int main()
 {
     setup_utf8();
     
-    printf("%s=== TESTE PARSER v0.5.4 loop for ===%s\n\n", 
+    printf("%s=== TESTE PARSER v0.6.0 ===%s\n\n", 
            COLOR_HEADER, COLOR_RESET);
     
     char* testes[] =
     {
+        "import math\n",
 
-        "for i = 1 to 10 do\n"
-        "    print i nl\n"
-        "end for",
-
-        "let x = 0\n"
-        "for i = 1 to (x + 3) step (x + 1) do\n"
-        "    print i nl\n"
-        "end for",
-
-        "input \"Entre com um numero: \" nr",
-
-        "input blue \"Entre com um numero: \" nocolor nr",
-
-        "input blue width(10) \"Entre com um numero: \" nocolor nr",
-
-        "input blue width(10) left \"Entre com um numero: \" nocolor nr",
+        "from math import sqrt, pow, abs\n"
     };
     
     int num_testes = sizeof(testes) / sizeof(testes[0]);

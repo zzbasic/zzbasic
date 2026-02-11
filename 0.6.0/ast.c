@@ -388,6 +388,27 @@ ASTNode* create_for_node(char var_name[],
     return node;
 }
 
+ASTNode* create_import_node(const char* module_name,
+                            char** imported_names,
+                            int imported_count,
+                            int import_all,
+                            int line, int column)
+{
+    ASTNode* node = create_node(NODE_IMPORT, line, column);
+    node->line = line;
+    node->column = column;
+    
+    strncpy(node->data.import_stmt.module_name, module_name, VARNAME_SIZE - 1);
+    node->data.import_stmt.module_name[VARNAME_SIZE - 1] = '\0';
+    
+    node->data.import_stmt.imported_names = imported_names;
+    node->data.import_stmt.imported_count = imported_count;
+    node->data.import_stmt.import_all = import_all;
+    
+    return node;
+}
+
+
 //===================================================================
 // MEMORY DEALLOCATION
 //===================================================================
@@ -500,6 +521,20 @@ void free_ast(ASTNode* node)
             }
             if (node->data.for_stmt.body) {
                 free_ast(node->data.for_stmt.body);
+            }
+            break;
+
+        case NODE_IMPORT:
+            if (node->data.import_stmt.imported_names)
+            {
+                for (int i = 0; i < node->data.import_stmt.imported_count; i++)
+                {
+                    if (node->data.import_stmt.imported_names[i])
+                    {
+                        a89free(node->data.import_stmt.imported_names[i]);
+                    }
+                }
+                a89free(node->data.import_stmt.imported_names);
             }
             break;
 
@@ -690,82 +725,23 @@ void print_ast(ASTNode* node, int indent)
             print_ast(node->data.for_stmt.body, indent + 1);
             break;
 
+        case NODE_IMPORT:
+            if(node->data.import_stmt.import_all)
+            {
+                printf("IMPORT %s\n", node->data.import_stmt.module_name);
+            }
+            else
+            {
+                printf("FROM %s IMPORT: ", node->data.import_stmt.module_name);
+                for (int i = 0; i < node->data.import_stmt.imported_count; i++)
+                {
+                    printf("%s, ", node->data.import_stmt.imported_names[i]);
+                }
+                printf("\n");
+            }
+            break;
+
+
     }
 }
-
-
-#ifdef TESTAST
-#include "utils.h"
-#include "color.h"
-
-int main(void)
-{
-    setup_utf8();
-    printf("ZzBasic AST Test v0.5.3 - loop while, break, continue\n\n");
-    
-    // ========================================================
-    // TESTE 1: WHILE simples com número
-    // ========================================================
-    printf("=== TESTE 1: WHILE simples (numero) ===\n");
-    ASTNode* condition1 = create_number_node(10, 1, 1);
-    ASTNode* body1 = create_statement_list_node(1, 1);
-    ASTNode* while_node1 = create_while_node(condition1, body1, 1, 1);
-    print_ast(while_node1, 0);
-    printf("\n");
-    free_ast(while_node1);
-    wait();
-    
-    // ========================================================
-    // TESTE 2: WHILE com booleano
-    // ========================================================
-    printf("=== TESTE 2: WHILE com booleano (true) ===\n");
-    ASTNode* condition2 = create_bool_node(1, 2, 1);
-    ASTNode* body2 = create_statement_list_node(2, 1);
-    ASTNode* while_node2 = create_while_node(condition2, body2, 2, 1);
-    print_ast(while_node2, 0);
-    printf("\n");
-    free_ast(while_node2);
-    wait();
-
-    // ========================================================
-    // TESTE 3: WHILE com comparação
-    // ========================================================
-    printf("=== TESTE 3: WHILE com comparacao (x < 10) ===\n");
-    ASTNode* var_x = create_variable_node("x", 3, 1);
-    ASTNode* num_10 = create_number_node(10, 3, 5);
-    ASTNode* condition3 = create_comparison_op_node(OP_LESS, var_x, num_10, 3, 3);
-    ASTNode* body3 = create_statement_list_node(3, 1);
-    ASTNode* while_node3 = create_while_node(condition3, body3, 3, 1);
-    print_ast(while_node3, 0);
-    printf("\n");
-    free_ast(while_node3);
-    wait();
-
-    // ========================================================
-    // TESTE 4: BREAK
-    // ========================================================
-    printf("=== TESTE 4: BREAK ===\n");
-    ASTNode* break_node = create_break_node(4, 5);
-    print_ast(break_node, 0);
-    printf("\n");
-    free_ast(break_node);
-    wait();
-
-    // ========================================================
-    // TESTE 5: CONTINUE
-    // ========================================================
-    printf("=== TESTE 5: CONTINUE ===\n");
-    ASTNode* continue_node = create_continue_node(5, 5);
-    print_ast(continue_node, 0);
-    printf("\n");
-    free_ast(continue_node);
-    wait();
-       
-    printf("Teste concluído.\n");
-    a89check_leaks();
-    return 0;
-}
-
-#endif
 // Fim de ast.c
-

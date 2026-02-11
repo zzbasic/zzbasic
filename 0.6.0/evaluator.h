@@ -12,7 +12,8 @@
 // =================================================
 // Tipos de alinhamento
 // =================================================
-typedef enum {
+typedef enum
+{
     ALIGN_LEFT,
     ALIGN_RIGHT,
     ALIGN_CENTER
@@ -21,7 +22,8 @@ typedef enum {
 // =================================================
 // Estrutura para formato de saída
 // =================================================
-typedef struct {
+typedef struct
+{
     int width;           // Largura do campo (0 = sem formatação)
     AlignmentType align; // Tipo de alinhamento
     int has_format;      // 1 = formato ativo, 0 = formato padrão
@@ -39,6 +41,39 @@ typedef enum
     CTX_STRING    // Espera string (concatenação futura: "Olá " + nome)
 } EvalContext;
 
+// =================================================
+// Estrutura para gerenciar módulos carregados
+// =================================================
+typedef struct
+{
+    char name[VARNAME_SIZE];           // Nome do módulo (ex: "math")
+    SymbolTable* symbols;              // Símbolos do módulo
+    // Futuro: funções, constantes, etc.
+} LoadedModule;
+
+typedef struct {
+    LoadedModule* modules;          // Alocação dinamica.
+    int module_count;                  // Número de módulos carregados
+    int module_capacity;               // Inicia com 8, cresce 1.5x
+} ModuleManager;
+
+// =================================================
+// Contexto de execução - print e while usam
+// =================================================
+typedef struct
+{
+    SymbolTable* symbols;        // Tabela de símbolos
+    const char* current_color;   // Cor atual aplicada
+    int color_enabled;           // Se cores estão habilitadas
+    OutputFormat format;         // Formatação (width e alignment)
+    int should_break;      
+    int should_continue; 
+    ModuleManager* modules;  
+} ExecutionContext;
+
+// =================================================
+// Estrutura para gerenciar resultados
+// =================================================
 typedef enum
 {
     RESULT_ERROR,
@@ -46,18 +81,6 @@ typedef enum
     RESULT_NUMBER,
     RESULT_STRING
 } ResultType;
-
-// =================================================
-// Contexto de execução - print e while usam
-// =================================================
-typedef struct {
-    SymbolTable* symbols;        // Tabela de símbolos
-    const char* current_color;   // Cor atual aplicada
-    int color_enabled;           // Se cores estão habilitadas
-    OutputFormat format;         // Formatação (width e alignment)
-    int should_break;      
-    int should_continue;   
-} ExecutionContext;
 
 typedef struct
 {

@@ -1,0 +1,33 @@
+Relatório de contagem de linhas de código
+Diretório: C:\Users\arataca89\Documents\zzbasic\src\0.6.0\src
+Data: 2026-02-10 18:06:27
+==================================================
+
+a89alloc.c: 168
+a89alloc.h: 9
+ast.c: 596
+ast.h: 233
+color.h: 54
+color_constants.h: 30
+color_mapping.c: 48
+color_mapping.h: 8
+evaluator.c: 1073
+evaluator.h: 60
+help.c: 114
+help.h: 4
+lexer.c: 699
+lexer.h: 108
+main.c: 45
+parser.c: 1308
+parser.h: 21
+symbol_table.c: 273
+symbol_table.h: 16
+utils.c: 17
+utils.h: 5
+zzbasic.c: 651
+zzbasic.h: 25
+zzdefs.h: 12
+
+==================================================
+Total de arquivos: 24
+Total de linhas de código: 5577
