@@ -35,7 +35,9 @@ typedef enum
     NODE_BREAK,
     NODE_CONTINUE,
     NODE_FOR,
-    NODE_IMPORT
+    NODE_IMPORT,
+    NODE_LOAD,
+    NODE_SAVE
 
 } NodeType;
 
@@ -206,6 +208,17 @@ typedef struct
     int import_all;                 // 1 = import math; 0 = from math import ...
 } ImportStatementData;
 
+typedef struct
+{
+    char filename[BUFFER_SIZE];  // Nome do arquivo; PATH
+} LoadStatementData;
+
+typedef struct
+{
+    ASTNode* expression;         // Expressão que retorna text
+    char filename[BUFFER_SIZE];  // Nome do arquivo
+} SaveStatementData;
+
 
 typedef struct ASTNode
 {
@@ -236,6 +249,8 @@ typedef struct ASTNode
         ContinueStatementData   continue_stmt; 
         ForStatementData        for_stmt; 
         ImportStatementData     import_stmt;
+        LoadStatementData       load_stmt;   
+        SaveStatementData       save_stmt; 
 
     } data;
 
@@ -309,6 +324,10 @@ ASTNode* create_import_node(const char* module_name,
                             int imported_count,
                             int import_all,
                             int line, int column);
+
+ASTNode* create_load_node(const char* filename, int line, int column);
+
+ASTNode* create_save_node(ASTNode* expression, const char* filename, int line, int column);
 
 
 void print_node_add_item(ASTNode* print_node, ASTNode* expr_node);

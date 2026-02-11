@@ -112,7 +112,9 @@ typedef enum {
     TOKEN_IMPORT,       
     TOKEN_FROM,         
     TOKEN_AS,
-    TOKEN_COMMA,            
+    TOKEN_COMMA,  
+    TOKEN_LOAD,          
+    TOKEN_SAVE,          
 
     TOKEN_NOERROR
 } TokenType;
@@ -132,7 +134,7 @@ typedef struct
         char varname[VARNAME_SIZE]; // TOKEN_IDENTIFIER
     } value;
     
-    char text[BUFFER_SIZE];       
+    char token_text[BUFFER_SIZE];   // texto explicativo do token      
     
     int line;                       // Número da linha
     int column;                     // Coluna

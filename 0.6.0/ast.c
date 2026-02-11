@@ -408,9 +408,34 @@ ASTNode* create_import_node(const char* module_name,
     return node;
 }
 
+ASTNode* create_load_node(const char* filename, int line, int column)
+{
+    ASTNode* node = create_node(NODE_LOAD, line, column);
+    node->line = line;
+    node->column = column;
+    
+    strncpy(node->data.load_stmt->filename, filename, BUFFER_SIZE - 1);
+    node->data.load_stmt->filename[BUFFER_SIZE - 1] = '\0';
+    
+    return node;
+}
+
+ASTNode* create_save_node(ASTNode* expression, const char* filename, int line, int column)
+{
+    ASTNode* node = create_node(NODE_SAVE, line, column);
+    node->line = line;
+    node->column = column;
+    
+    node->data.save_stmt->expression = expression;
+    strncpy(node->data.save_stmt->filename, filename, BUFFER_SIZE - 1);
+    node->data.save_stmt->filename[BUFFER_SIZE - 1] = '\0';
+    
+    return node;
+}
+
 
 //===================================================================
-// MEMORY DEALLOCATION
+// LIBERACAO DA MEMORIA
 //===================================================================
 void free_ast(ASTNode* node)
 {
@@ -535,6 +560,16 @@ void free_ast(ASTNode* node)
                     }
                 }
                 a89free(node->data.import_stmt.imported_names);
+            }
+            break;
+
+        case NODE_LOAD:
+            break;
+        
+        case NODE_SAVE:
+            if (node->data.save_stmt->expression)
+            {
+                    free_ast(node->data.save_stmt->expression);
             }
             break;
 
@@ -740,6 +775,16 @@ void print_ast(ASTNode* node, int indent)
                 printf("\n");
             }
             break;
+
+    case NODE_LOAD:
+        printf("LOAD \"%s\"\n", node->data.load_stmt->filename);
+        break;
+        
+    case NODE_SAVE:
+        printf("SAVE to \"%s\"\n", node->data.save_stmt->filename);
+        printf("Expression:\n");
+        print_ast(node->data.save_stmt->expression, indent + 1);
+        break;
 
 
     }

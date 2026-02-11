@@ -18,7 +18,7 @@ static Token lexer_make_token(Lexer* lexer,
                               TokenType type,
                               double number_value,
                               char operator_char,
-                              const char* text,
+                              const char* token_text,
                               int line,
                               int column);
 
@@ -139,6 +139,8 @@ static const char* TOKEN_STRINGS[] =
     "FROM",             // TOKEN_FROM
     "AS",               // TOKEN_AS
     "COMMA",            // TOKEN_COMMA
+    "LOAD",             // TOKEN_LOAD          
+    "SAVE"              // TOKEN_SAVE   
 
     "NOERROR"           // TOKEN_NOERROR
 };
@@ -211,6 +213,9 @@ static Keyword keywords[] =
     {"import", TOKEN_IMPORT},
     {"from", TOKEN_FROM},
     {"as", TOKEN_AS},
+
+    {"load", TOKEN_LOAD},          
+    {"save", TOKEN_SAVE},
 
     {NULL, TOKEN_NULL}
 };
@@ -366,8 +371,8 @@ static Token lexer_report_error(Lexer* lexer,
     memset(&token, 0, sizeof(token));  
 
     token.type = TOKEN_ERROR;
-    strncpy(token.text, error_text, TOKENTEXT_SIZE - 1);
-    token.text[TOKENTEXT_SIZE - 1] = '\0';
+    strncpy(token.token_text, error_text, TOKENTEXT_SIZE - 1);
+    token.token_text[TOKENTEXT_SIZE - 1] = '\0';
     token.line = line;
     token.column = column;
 
@@ -476,8 +481,8 @@ static Token lexer_read_number(Lexer* lexer)
 
     token.type = TOKEN_NUMBER;
     token.value.number = valor;
-    strncpy(token.text, buffer, TOKENTEXT_SIZE - 1);
-    token.text[TOKENTEXT_SIZE - 1] = '\0';
+    strncpy(token.token_text, buffer, TOKENTEXT_SIZE - 1);
+    token.token_text[TOKENTEXT_SIZE - 1] = '\0';
     token.line = nr_line;
     token.column = nr_column;
 
@@ -531,7 +536,7 @@ static Token lexer_read_identifier(Lexer* lexer)
     if (token_type != TOKEN_NULL)
     {
         token.type = token_type;
-        strcpy(token.text, buffer);
+        strcpy(token.token_text, buffer);
         strcpy(token.value.string, buffer);
     }
     //================ SE CHEGOU AQUI NÃO É PALAVRA-CHAVE ==========================
@@ -583,9 +588,9 @@ static Token lexer_read_string(Lexer* lexer) {
 
     token.type = TOKEN_STRING;
 
-    strcpy(token.text, "\""); // For debug, keep quotes in text
-    strcat(token.text, buffer);
-    strcat(token.text, "\"");
+    strcpy(token.token_text, "\""); // For debug, keep quotes in token_text
+    strcat(token.token_text, buffer);
+    strcat(token.token_text, "\"");
     
     // Store content without quotes in string_value field
     strcpy(token.value.string, buffer);
@@ -614,11 +619,6 @@ Token lexer_get_next_token(Lexer* lexer)
     // Verifica o tamanho da linha
     if (lexer->line_length >= 80)
     {
-
-        // DEBUG mais detalhado
-        printf("ERROR WOULD TRIGGER: Line %d has %d chars\n", 
-               lexer->line, lexer->line_length);
-
         return lexer_report_error(lexer,
                                   lexer->line,
                                   1,
@@ -688,7 +688,7 @@ Token lexer_get_next_token(Lexer* lexer)
         case '+':
             lexer_advance(lexer);
             token.type = TOKEN_PLUS;
-            strcpy(token.text, "+");
+            strcpy(token.token_text, "+");
             token.line = line;
             token.column = column;
             return token;
@@ -696,7 +696,7 @@ Token lexer_get_next_token(Lexer* lexer)
         case '-':
             lexer_advance(lexer);
             token.type = TOKEN_MINUS;
-            strcpy(token.text, "-");
+            strcpy(token.token_text, "-");
             token.line = line;
             token.column = column;
             return token;
@@ -704,7 +704,7 @@ Token lexer_get_next_token(Lexer* lexer)
         case '*':
             lexer_advance(lexer);
             token.type = TOKEN_STAR;
-            strcpy(token.text, "*");
+            strcpy(token.token_text, "*");
             token.line = line;
             token.column = column;
             return token;
@@ -713,7 +713,7 @@ Token lexer_get_next_token(Lexer* lexer)
         case '/':
             lexer_advance(lexer);
             token.type = TOKEN_SLASH;
-            strcpy(token.text, "/");
+            strcpy(token.token_text, "/");
             token.line = line;
             token.column = column;
             return token;
@@ -721,7 +721,7 @@ Token lexer_get_next_token(Lexer* lexer)
         case '(':
             lexer_advance(lexer);
             token.type = TOKEN_LPAREN;
-            strcpy(token.text, "(");
+            strcpy(token.token_text, "(");
             token.line = line;
             token.column = column;
             return token;
@@ -729,7 +729,7 @@ Token lexer_get_next_token(Lexer* lexer)
         case ')':
             lexer_advance(lexer);
             token.type = TOKEN_RPAREN;
-            strcpy(token.text, ")");
+            strcpy(token.token_text, ")");
             token.line = line;
             token.column = column;
             return token;
@@ -739,7 +739,7 @@ Token lexer_get_next_token(Lexer* lexer)
             if(lexer_peek_next(lexer) == '=')
             {
                 token.type = TOKEN_EQUAL;
-                strcpy(token.text, "==");
+                strcpy(token.token_text, "==");
                 token.line = line;
                 token.column = column;
                 lexer_advance(lexer); // Primeiro '='
@@ -747,7 +747,7 @@ Token lexer_get_next_token(Lexer* lexer)
                 return token;
             }
             token.type = TOKEN_ASSIGN;
-            strcpy(token.text, "=");
+            strcpy(token.token_text, "=");
             token.line = line;
             token.column = column;
             lexer_advance(lexer);
@@ -759,7 +759,7 @@ Token lexer_get_next_token(Lexer* lexer)
             if(lexer_peek_next(lexer) == '=')
             {
                 token.type = TOKEN_NOT_EQUAL;
-                strcpy(token.text, "!=");
+                strcpy(token.token_text, "!=");
                 token.line = line;
                 token.column = column;
                 lexer_advance(lexer); 
@@ -767,7 +767,7 @@ Token lexer_get_next_token(Lexer* lexer)
                 return token;
             } 
             token.type = TOKEN_NOT;
-            strcpy(token.text, "!");
+            strcpy(token.token_text, "!");
             token.line = line;
             token.column = column;
             lexer_advance(lexer);
@@ -779,7 +779,7 @@ Token lexer_get_next_token(Lexer* lexer)
             if(lexer_peek_next(lexer) == '=')
             {
                 token.type = TOKEN_LESS_EQUAL;
-                strcpy(token.text, "<=");
+                strcpy(token.token_text, "<=");
                 token.line = line;
                 token.column = column;
                 lexer_advance(lexer); 
@@ -787,7 +787,7 @@ Token lexer_get_next_token(Lexer* lexer)
                 return token;
             } 
             token.type = TOKEN_LESS;
-            strcpy(token.text, "<");
+            strcpy(token.token_text, "<");
             token.line = line;
             token.column = column;
             lexer_advance(lexer);
@@ -799,7 +799,7 @@ Token lexer_get_next_token(Lexer* lexer)
             if(lexer_peek_next(lexer) == '=')
             {
                 token.type = TOKEN_GREATER_EQUAL;
-                strcpy(token.text, ">=");
+                strcpy(token.token_text, ">=");
                 token.line = line;
                 token.column = column;
                 lexer_advance(lexer); 
@@ -807,7 +807,7 @@ Token lexer_get_next_token(Lexer* lexer)
                 return token;
             } 
             token.type = TOKEN_GREATER;
-            strcpy(token.text, ">");
+            strcpy(token.token_text, ">");
             token.line = line;
             token.column = column;
             lexer_advance(lexer);
@@ -817,7 +817,7 @@ Token lexer_get_next_token(Lexer* lexer)
         case '\n':
             lexer_advance(lexer);
             token.type = TOKEN_EOL;
-            strcpy(token.text, "EOL");
+            strcpy(token.token_text, "EOL");
             token.line = line;
             token.column = column;
             return token; 
@@ -825,7 +825,7 @@ Token lexer_get_next_token(Lexer* lexer)
         case ':':
             lexer_advance(lexer);
             token.type = TOKEN_COLON;
-            strcpy(token.text, ":");
+            strcpy(token.token_text, ":");
             token.line = line;
             token.column = column;
             return token;
@@ -833,7 +833,7 @@ Token lexer_get_next_token(Lexer* lexer)
         case ';':
             lexer_advance(lexer);
             token.type = TOKEN_SEMICOLON;
-            strcpy(token.text, ";");
+            strcpy(token.token_text, ";");
             token.line = line;
             token.column = column;
             return token;
@@ -841,7 +841,7 @@ Token lexer_get_next_token(Lexer* lexer)
         case '?':
             lexer_advance(lexer);
             token.type = TOKEN_QUESTION;
-            strcpy(token.text, "?");
+            strcpy(token.token_text, "?");
             token.line = line;
             token.column = column;
             return token;
@@ -849,7 +849,7 @@ Token lexer_get_next_token(Lexer* lexer)
         case ',':
             lexer_advance(lexer);
             token.type = TOKEN_COMMA;
-            strcpy(token.text, ",");
+            strcpy(token.token_text, ",");
             token.line = line;
             token.column = column;
             return token;
@@ -875,9 +875,9 @@ void lexer_print_token(Token token)
     if (token.type == TOKEN_NUMBER)
     {
         printf(": %g", token.value.number);
-        if (token.text[0] != '\0')
+        if (token.token_text[0] != '\0')
         {
-            printf(" (text: %s)", token.text);
+            printf(" (token_text: %s)", token.token_text);
         }
     }
     else if (token.type == TOKEN_STRING)
@@ -890,12 +890,12 @@ void lexer_print_token(Token token)
     }
     else if (token.type == TOKEN_ERROR)
     {
-        printf("%s\n%s\n%s", COLOR_ERROR, token.text, COLOR_RESET);
+        printf("%s\n%s\n%s", COLOR_ERROR, token.token_text, COLOR_RESET);
     }
     // keywords, se não estiverem nos else if acima, caem aqui
-    else if (token.text[0] != '\0')
+    else if (token.token_text[0] != '\0')
     {
-        printf(": %s", token.text);
+        printf(": %s", token.token_text);
     }
 }
 
@@ -938,11 +938,10 @@ int main()
     
     printf("ZzBasic Lexer Test v0.6.0 \n\n");
 
-    lexer_print_all_tokens("let resultado = (valor1 * fator) + (valor2 * ajuste) - offset_final # 79 chars");
-    wait(); 
+    lexer_print_all_tokens("let programa = load(\"calculadora.zz\")\n");
+    wait();
 
-    lexer_print_all_tokens("let resultado = (valor1 * fator) + (valor2 * ajuste) - offset_final_total # 81 chars");
-    wait(); 
+    lexer_print_all_tokens("save(programa, \"backup.zz\")\n");
 
     return 0;
 }
