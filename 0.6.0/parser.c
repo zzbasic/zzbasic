@@ -46,6 +46,9 @@ static ASTNode* parse_for_stmt(Parser* parser);
 
 static ASTNode* parse_import_stmt(Parser* parser);
 
+static ASTNode* parse_load_stmt(Parser* parser);
+static ASTNode* parse_save_stmt(Parser* parser);
+
 static ASTNode* parse_expr_stmt(Parser* parser);
 
 // EXPRESSÕES LÓGICAS
@@ -225,7 +228,7 @@ static void report_print_keyword_error(Parser* parser, Token token) {
         // Erro genérico para outros tokens inesperados
         snprintf(error_msg, sizeof(error_msg),
             "Parser error [%d:%d]: Unexpected '%s' in print statement",
-            token.line, token.column, token.text[0] ? token.text : "token");
+            token.line, token.column, token.token_text[0] ? token.token_text : "token");
     }
     
     parser_set_error(parser, error_msg);
@@ -246,18 +249,18 @@ static void report_unexpected_token_error(Parser* parser, const char* context)
     {
         snprintf(error_msg, sizeof(error_msg),
             "Parser error: Operator    '%s ' cannot appear at this position in %s",
-            token.text, context);
+            token.token_text, context);
     }
     else if (token.type == TOKEN_ERROR)
     {
         // Já tem mensagem de erro do lexer
-        strncpy(error_msg, token.text, sizeof(error_msg) - 1);
+        strncpy(error_msg, token.token_text, sizeof(error_msg) - 1);
     }
     else
     {
         snprintf(error_msg, sizeof(error_msg),
             "Parser error: Unexpected  '%s ' in %s (expected number, string, identifier or '(  ')",
-            token.text, context);
+            token.token_text, context);
     }
     
     parser_set_error(parser, error_msg);
@@ -674,7 +677,7 @@ static ASTNode* parse_color_stmt(Parser* parser)
         char error_msg[BUFFER_SIZE];
         snprintf(error_msg, sizeof(error_msg),
             "Parser error [%d:%d]: Color '%s' cannot be used as standalone statement",
-            token.line, token.column, token.text);
+            token.line, token.column, token.token_text);
         parser_set_error(parser, error_msg);
         return NULL;
     }
@@ -1258,7 +1261,6 @@ static ASTNode* parse_continue_stmt(Parser* parser)
 //===================================================================
 static ASTNode* parse_for_stmt(Parser* parser)
 {
-
     int line = parser->current_token.line;
     int column = parser->current_token.column;
 
@@ -1373,11 +1375,14 @@ static ASTNode* parse_for_stmt(Parser* parser)
 //             | 'from' IDENTIFIER 'import' identifier_list
 //
 // identifier_list := IDENTIFIER (',' IDENTIFIER)*
+//
+// import math
+// from math import sqrt, abs
 //===================================================================
 static ASTNode* parse_import_stmt(Parser* parser)
 {
-    // import math
-    // from math import sqrt, abs
+    int line = parser->current_token.line;
+    int column = parser->current_token.column;
     
     parser_advance(parser);  // Consume IMPORT ou FROM
     
@@ -1432,8 +1437,128 @@ static ASTNode* parse_import_stmt(Parser* parser)
     }
     
     return create_import_node(module_name, imported_names, imported_count, import_all, 
-                             parser->current_token.line, parser->current_token.column);
+                             line, column);
 }
+
+
+//===================================================================
+// load_stmt := 'load' '(' STRING ')'
+//
+// load("arquivo.txt")
+//===================================================================
+static ASTNode* parse_load_stmt(Parser* parser)
+{
+    int line = parser->current_token.line;
+    int column = parser->current_token.column;
+
+    parser_advance(parser);  // Consume LOAD
+    
+    if (parser->current_token.type != TOKEN_LPAREN)
+    {
+        parser->has_error = 1;
+        snprintf(parser->error_message, BUFFER_SIZE,
+                "Parser error: expected '(' after 'load'");
+        return NULL;
+    }
+    parser_advance(parser);  // Consume (
+    
+    if (parser->current_token.type != TOKEN_STRING)
+    {
+        parser->has_error = 1;
+        snprintf(parser->error_message, BUFFER_SIZE,
+                "Parser error: expected filename string in load()");
+        return NULL;
+    }
+    
+    char filename[BUFFER_SIZE];
+    strncpy(filename, parser->current_token.value.string, BUFFER_SIZE - 1);
+    filename[BUFFER_SIZE - 1] = '\0';
+    int line = parser->current_token.line;
+    int column = parser->current_token.column;
+    parser_advance(parser);  // Consume STRING
+    
+    if (parser->current_token.type != TOKEN_RPAREN)
+    {
+        parser->has_error = 1;
+        snprintf(parser->error_message, BUFFER_SIZE,
+                "Parser error: expected ')' after filename in load()");
+        return NULL;
+    }
+    parser_advance(parser);  // Consume )
+    
+    return create_load_node(filename, line, column);
+}
+
+//===================================================================
+// save_stmt := 'save' '(' expression ',' STRING ')'
+//
+// save(expressao, "arquivo.txt")
+//===================================================================
+static ASTNode* parse_save_stmt(Parser* parser)
+{
+    int line = parser->current_token.line;
+    int column = parser->current_token.column;
+
+    parser_advance(parser);  // Consume SAVE
+    
+    if (parser->current_token.type != TOKEN_LPAREN)
+    {
+        parser->has_error = 1;
+        snprintf(parser->error_message, BUFFER_SIZE,
+                "Parser error: expected '(' after 'save'");
+        return NULL;
+    }
+    parser_advance(parser);  // Consume (
+    
+    // Parse expressão
+    ASTNode* expression = parse_logical_expr(parser);
+    if (!expression)
+    {
+        parser->has_error = 1;
+        snprintf(parser->error_message, BUFFER_SIZE,
+                "Parser error: expected expression in save()");
+        return NULL;
+    }
+    
+    if (parser->current_token.type != TOKEN_COMMA)
+    {
+        parser->has_error = 1;
+        snprintf(parser->error_message, BUFFER_SIZE,
+                "Parser error: expected ',' in save()");
+        free_ast(expression);
+        return NULL;
+    }
+    parser_advance(parser);  // Consume ,
+    
+    if (parser->current_token.type != TOKEN_STRING)
+    {
+        parser->has_error = 1;
+        snprintf(parser->error_message, BUFFER_SIZE,
+                "Parser error: expected filename string in save()");
+        free_ast(expression);
+        return NULL;
+    }
+    
+    char filename[BUFFER_SIZE];
+    strncpy(filename, parser->current_token.value.string, BUFFER_SIZE - 1);
+    filename[BUFFER_SIZE - 1] = '\0';
+    int line = parser->current_token.line;
+    int column = parser->current_token.column;
+    parser_advance(parser);  // Consume STRING
+    
+    if (parser->current_token.type != TOKEN_RPAREN)
+    {
+        parser->has_error = 1;
+        snprintf(parser->error_message, BUFFER_SIZE,
+                "Parser error: expected ')' after filename in save()");
+        free_ast(expression);
+        return NULL;
+    }
+    parser_advance(parser);  // Consume )
+    
+    return create_save_node(expression, filename, line, column);
+}
+
 
 //===================================================================
 // expression_stmt := logical_expr
@@ -1855,9 +1980,9 @@ int main()
     
     char* testes[] =
     {
-        "import math\n",
+        "let programa = load(\"calculadora.zz\"",
 
-        "from math import sqrt, pow, abs\n"
+        "save(programa, \"backup.zz\")\n"
     };
     
     int num_testes = sizeof(testes) / sizeof(testes[0]);

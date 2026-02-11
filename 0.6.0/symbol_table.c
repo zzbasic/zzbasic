@@ -13,7 +13,8 @@ typedef enum
 {
     SYM_NUMBER,
     SYM_STRING,
-    SYM_BOOL
+    SYM_BOOL,
+    SYM_TEXT
 } SymbolType;
 
 typedef struct Symbol
@@ -25,6 +26,7 @@ typedef struct Symbol
         int bool_value;
         double num_value;
         char str_value[STRING_SIZE];
+        char* text_value;
     } value;
     struct Symbol* next;
 } Symbol;
@@ -74,6 +76,13 @@ void symbol_table_destroy(SymbolTable* table)
     while (current)
     {
         Symbol* next = current->next;
+
+        // Libera text se existir
+        if (current->type == SYM_TEXT && current->value.text_value)
+        {
+            a89free(current->value.text_value);
+        }
+
         a89free(current);
         current = next;
     }
@@ -129,6 +138,25 @@ int symbol_table_set_bool(SymbolTable* table, const char* name, int value)
     return 1;   
 }
 
+int symbol_table_get_bool(SymbolTable* table, const char* name, int* out_value)
+{
+    if (!table || !name || !out_value) return 0;
+    
+    Symbol* symbol = find_symbol(table, name);
+    if (!symbol)
+    {
+        return 0;  // Variable doesn't exist
+    }
+    
+    if (symbol->type != SYM_BOOL)
+    {
+        return 0;  // It's not a boolean
+    }
+    
+    *out_value = symbol->value.bool_value;
+    return 1;    
+}
+
 int symbol_table_set_number(SymbolTable* table, const char* name, double value)
 {
     if (!table || !name || !is_valid_name(name)) return 0;
@@ -161,6 +189,25 @@ int symbol_table_set_number(SymbolTable* table, const char* name, double value)
         symbol->value.num_value = value;
     }
     
+    return 1;
+}
+
+int symbol_table_get_number(SymbolTable* table, const char* name, double* out_value)
+{
+    if (!table || !name || !out_value) return 0;
+    
+    Symbol* symbol = find_symbol(table, name);
+    if (!symbol)
+    {
+        return 0;  // Variable doesn't exist
+    }
+    
+    if (symbol->type != SYM_NUMBER)
+    {
+        return 0;  // It's not a number
+    }
+    
+    *out_value = symbol->value.num_value;
     return 1;
 }
 
@@ -201,45 +248,6 @@ int symbol_table_set_string(SymbolTable* table, const char* name, const char* va
     return 1;
 }
 
-int symbol_table_get_bool(SymbolTable* table, const char* name, int* out_value)
-{
-    if (!table || !name || !out_value) return 0;
-    
-    Symbol* symbol = find_symbol(table, name);
-    if (!symbol)
-    {
-        return 0;  // Variable doesn't exist
-    }
-    
-    if (symbol->type != SYM_BOOL)
-    {
-        return 0;  // It's not a boolean
-    }
-    
-    *out_value = symbol->value.bool_value;
-    return 1;    
-}
-
-
-int symbol_table_get_number(SymbolTable* table, const char* name, double* out_value)
-{
-    if (!table || !name || !out_value) return 0;
-    
-    Symbol* symbol = find_symbol(table, name);
-    if (!symbol)
-    {
-        return 0;  // Variable doesn't exist
-    }
-    
-    if (symbol->type != SYM_NUMBER)
-    {
-        return 0;  // It's not a number
-    }
-    
-    *out_value = symbol->value.num_value;
-    return 1;
-}
-
 int symbol_table_get_string(SymbolTable* table, const char* name, char* out_value, size_t max_len)
 {
     if (!table || !name || !out_value || max_len == 0) return 0;
@@ -259,6 +267,71 @@ int symbol_table_get_string(SymbolTable* table, const char* name, char* out_valu
     out_value[max_len - 1] = '\0';
     return 1;
 }
+
+int symbol_table_set_text(SymbolTable* table, const char* name, const char* value)
+{
+    if (!table || !name || !is_valid_name(name)) return 0;
+    
+    Symbol* symbol = find_symbol(table, name);
+    
+    if (symbol)
+    {
+        // Libera texto antigo se existir
+        if (symbol->type == SYM_TEXT && symbol->value.text_value)
+        {
+            a89free(symbol->value.text_value);
+        }
+        
+        // Aloca novo texto
+        if (value)
+        {
+            symbol->value.text_value = A89ALLOC(strlen(value) + 1);
+            strcpy(symbol->value.text_value, value);
+        }
+        else
+        {
+            symbol->value.text_value = NULL;
+        }
+        
+        symbol->type = SYM_TEXT;
+        return 1;
+    }
+    
+    // Criar novo símbolo
+    symbol = A89ALLOC(sizeof(Symbol));
+    strncpy(symbol->name, name, VARNAME_SIZE - 1);
+    symbol->name[VARNAME_SIZE - 1] = '\0';
+    symbol->type = SYM_TEXT;
+    
+    if (value)
+    {
+        symbol->value.text_value = A89ALLOC(strlen(value) + 1);
+        strcpy(symbol->value.text_value, value);
+    }
+    else
+    {
+        symbol->value.text_value = NULL;
+    }
+    
+    symbol->next = table->head;
+    table->head = symbol_table_create();
+    table->count++;
+    
+    return 1;
+}
+
+int symbol_table_get_text(SymbolTable* table, const char* name, char** out_value)
+{
+    if (!table || !name || !out_value) return 0;
+    
+    Symbol* symbol = find_symbol(table, name);
+    if (!symbol || symbol->type != SYM_TEXT) return 0;
+    
+    *out_value = symbol->value.text_value;
+    return 1;
+}
+
+
 
 int symbol_table_exists(SymbolTable* table, const char* name)
 {
