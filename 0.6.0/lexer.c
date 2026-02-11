@@ -135,6 +135,11 @@ static const char* TOKEN_STRINGS[] =
     "TO",               // TOKEN_TO
     "STEP",             // TOKEN_STEP
 
+    "IMPORT",           // TOKEN_IMPORT
+    "FROM",             // TOKEN_FROM
+    "AS",               // TOKEN_AS
+    "COMMA",            // TOKEN_COMMA
+
     "NOERROR"           // TOKEN_NOERROR
 };
 
@@ -203,6 +208,10 @@ static Keyword keywords[] =
     {"to", TOKEN_TO},
     {"step", TOKEN_STEP},
 
+    {"import", TOKEN_IMPORT},
+    {"from", TOKEN_FROM},
+    {"as", TOKEN_AS},
+
     {NULL, TOKEN_NULL}
 };
 
@@ -261,12 +270,14 @@ static void lexer_advance(Lexer* lexer)
     {        
         lexer->line++;
         lexer->column = 1;
+        lexer->line_length = 0;
     }
     else
     {
         if ((uc & 0b11000000) != 0b10000000)
         {
             lexer->column++;        
+            lexer->line_length++;
         }
     }
 
@@ -595,10 +606,26 @@ void lexer_init(Lexer* lexer,
     lexer->line = 1;
     lexer->column = 1;
     lexer->current_char = source[0];
+    lexer->line_length = 0;
 }
 
 Token lexer_get_next_token(Lexer* lexer)
 {
+    // Verifica o tamanho da linha
+    if (lexer->line_length >= 80)
+    {
+
+        // DEBUG mais detalhado
+        printf("ERROR WOULD TRIGGER: Line %d has %d chars\n", 
+               lexer->line, lexer->line_length);
+
+        return lexer_report_error(lexer,
+                                  lexer->line,
+                                  1,
+                                  "Line %d exceeds 80 character limit",
+                                  lexer->line);
+    }
+
     while (1)  
     {
         lexer_skip_whitespace(lexer);
@@ -818,6 +845,14 @@ Token lexer_get_next_token(Lexer* lexer)
             token.line = line;
             token.column = column;
             return token;
+
+        case ',':
+            lexer_advance(lexer);
+            token.type = TOKEN_COMMA;
+            strcpy(token.text, ",");
+            token.line = line;
+            token.column = column;
+            return token;
             
         default:
         {
@@ -901,12 +936,17 @@ int main()
 {
     setup_utf8();
     
-    printf("ZzBasic Lexer Test v0.5.4 - loop for\n\n");
-    lexer_print_all_tokens("for to step\n");
-    //wait(); 
-    
+    printf("ZzBasic Lexer Test v0.6.0 \n\n");
+
+    lexer_print_all_tokens("let resultado = (valor1 * fator) + (valor2 * ajuste) - offset_final # 79 chars");
+    wait(); 
+
+    lexer_print_all_tokens("let resultado = (valor1 * fator) + (valor2 * ajuste) - offset_final_total # 81 chars");
+    wait(); 
+
     return 0;
 }
 #endif
 
 // Fim de lexer.c
+

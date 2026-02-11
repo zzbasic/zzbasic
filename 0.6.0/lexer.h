@@ -107,7 +107,12 @@ typedef enum {
 
     TOKEN_FOR,         
     TOKEN_TO,          
-    TOKEN_STEP,         
+    TOKEN_STEP, 
+
+    TOKEN_IMPORT,       
+    TOKEN_FROM,         
+    TOKEN_AS,
+    TOKEN_COMMA,            
 
     TOKEN_NOERROR
 } TokenType;
@@ -144,6 +149,7 @@ typedef struct
     int line;                   // Linha atual
     int column;                 // Coluna atual
     char current_char;          // NOVO: caractere atual (para conveniência)
+    int line_length;            // Tamanho da linha(maximo 80 caracteres)  
 } Lexer;
 
 // ============================================
