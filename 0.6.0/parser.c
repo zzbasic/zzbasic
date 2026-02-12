@@ -1861,7 +1861,7 @@ static ASTNode* parse_atom(Parser* parser)
             return create_string_node(token.value.string,token.line, token.column);
             
         case TOKEN_IDENTIFIER:
-            //parser_advance(parser);
+            parser_advance(parser);
             return create_variable_node(token.value.varname, token.line, token.column);
 
         case TOKEN_LOAD:
@@ -1898,16 +1898,6 @@ static ASTNode* parse_atom(Parser* parser)
 //================================
 ASTNode* parse(Lexer* lexer)
 {
-    // DEBUG ======================================
-    static int depth = 0;
-    depth++;
-    
-    if (depth > 1000) {
-        printf("ERRO: Parser entrou em loop infinito!\n");
-        exit(1);
-    }
-    //==============================================
-
     Parser parser;
     parser_init(&parser, lexer);
     
@@ -1916,12 +1906,6 @@ ASTNode* parse(Lexer* lexer)
     }
     
     ASTNode* result = parse_program(&parser);
-
-    // 🔥 DEBUG: Mostra QUEM está chamando parse()
-    static int parse_count = 0;
-    parse_count++;
-    printf("🔵 PARSE #%d: AST criada em %p\n", parse_count, result);
-    //===========================================================
     
     if (parser.has_error)
     {

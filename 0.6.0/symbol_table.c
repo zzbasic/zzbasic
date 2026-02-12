@@ -80,7 +80,8 @@ void symbol_table_destroy(SymbolTable* table)
         // Libera text se existir
         if (current->type == SYM_TEXT && current->value.text_value)
         {
-            a89free(current->value.text_value);
+            //a89free(current->value.text_value);
+            text_free(current->value.text_value);
         }
 
         a89free(current);

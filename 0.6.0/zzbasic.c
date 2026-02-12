@@ -544,238 +544,162 @@ static void execute_code(const char* line, SymbolTable* symbols)
     free_ast(ast);
 }
 
-// void run_repl(void)
-// {
-//     char line[BUFFER_SIZE];
-//     SymbolTable* symbols = symbol_table_create();
-//     ReplProgram program = {0};
-    
-//     while (1)
-//     {
-//         // Determine prompt based on mode
-//         if (program.in_program_mode)
-//         {
-//             printf("%02d: ", program.line_count + 1);
-//         }
-//         else
-//         {
-//             printf(ZZ_PROMPT);
-//         }
-        
-//         fflush(stdout);
-        
-//         // Read a line from user
-//         if (fgets(line, sizeof(line), stdin) == NULL)
-//         {
-//             printf("\n");
-//             break;
-//         }
-        
-//         // Remove trailing newline
-//         line[strcspn(line, "\n")] = '\0';
-        
-//         // If in program mode
-//         if (program.in_program_mode)
-//         {
-//             if (program_mode_input(&program, line))
-//             {
-//                 // Saiu do modo program
-//             }
-//             continue;
-//         }
-        
-//         // Normal mode: process commands
-        
-//         if (strcmp(line, "exit") == 0 || strcmp(line, "quit") == 0)
-//             break;
-        
-//         if (strcmp(line, "help") == 0 || strcmp(line, "?") == 0)
-//         {
-//             display_help();
-//             continue;
-//         }
-
-//         if (strcmp(line, "vars") == 0)
-//         {
-//             list_variables(symbols);
-//             continue;
-//         }
-
-//         if (strcmp(line, "reset") == 0)
-//         {
-//             printf("Resetting all variables...\n");
-//             symbol_table_destroy(symbols);
-//             symbols = symbol_table_create();  
-//             printf("All variables cleared.\n");
-//             continue;
-//         }
-
-//         if (strcmp(line, "clear") == 0)
-//         {
-//             #ifdef _WIN32
-//                 system("cls");
-//             #else
-//                 system("clear");
-//             #endif
-//             printf("ZzBasic \nv%s on %s\n", ZZ_VERSION, get_os_name());
-//             continue;
-//         }
-
-//         if (strcmp(line, "program") == 0)
-//         {
-//             program_command(&program);
-//             continue;
-//         }
-
-//         if (strcmp(line, "run") == 0)
-//         {
-//             run_command(&program, symbols);
-//             continue;
-//         }
-
-//         if (strcmp(line, "purge") == 0)
-//         {
-//             purge_command(&program, &symbols);
-//             continue;
-//         }
-
-//         if (strcmp(line, "list") == 0)
-//         {
-//             list_command(&program);
-//             continue;
-//         }
-
-//         // >> list 2-5
-//         // line + 5 aponta para o inicio do argumento, o char 2
-//         if (strncmp(line, "list ", 5) == 0)
-//         {
-//             list_range_command(&program, line + 5);
-//             continue;
-//         }
-
-//         if (strncmp(line, "edit ", 5) == 0)
-//         {
-//             edit_command(&program, line + 5);
-//             continue;
-//         }
-
-//         if (strncmp(line, "delete ", 7) == 0)
-//         {
-//             delete_command(&program, line + 7);
-//             continue;
-//         }
-
-//         if (strncmp(line, "tokens ", 7) == 0)
-//         {
-//             tokens_command(&program, line + 7);
-//             continue;
-//         }
-
-//         if (strncmp(line, "ast ", 4) == 0)
-//         {
-//             ast_command(&program, line + 4);
-//             continue;
-//         }
-
-//         if (strncmp(line, "symbols", 7) == 0)
-//         {
-//             symbols_command(&program, symbols, line + 7);
-//             continue;
-//         }
-
-//         if (strncmp(line, "vars ", 5) == 0)
-//         {
-//             vars_command(&program, symbols, line + 5);
-//             continue;
-//         }
-
-//         // Execute as code
-//         execute_code(line, symbols);
-//     }
-    
-//     // Cleanup
-//     if (program.ast)
-//     {
-//         free_ast(program.ast);
-//     }
-//     symbol_table_destroy(symbols);
-// }
 void run_repl(void)
 {
-    SymbolTable* symbols = symbol_table_create();
     char line[BUFFER_SIZE];
-    
-    printf("REPL MÍNIMO - Apenas expressões simples\n");
+    SymbolTable* symbols = symbol_table_create();
+    ReplProgram program = {0};
     
     while (1)
     {
-        printf("> ");
+        // Determine prompt based on mode
+        if (program.in_program_mode)
+        {
+            printf("%02d: ", program.line_count + 1);
+        }
+        else
+        {
+            printf(ZZ_PROMPT);
+        }
+        
         fflush(stdout);
         
-        if (fgets(line, sizeof(line), stdin) == NULL) break;
+        // Read a line from user
+        if (fgets(line, sizeof(line), stdin) == NULL)
+        {
+            printf("\n");
+            break;
+        }
+        
+        // Remove trailing newline
         line[strcspn(line, "\n")] = '\0';
         
-        if (strcmp(line, "exit") == 0) break;
-        if (line[0] == '\0') continue;
-        
-        // ✅ APENAS EXECUTA EXPRESSÕES SIMPLES
-        Lexer lexer;
-        lexer_init(&lexer, line);
-        
-        ASTNode* ast = parse(&lexer);
-        if (ast) {
-            evaluate_program(ast, symbols);
-            free_ast(ast);  // ✅ LIBERA IMEDIATAMENTE
+        // If in program mode
+        if (program.in_program_mode)
+        {
+            if (program_mode_input(&program, line))
+            {
+                // Saiu do modo program
+            }
+            continue;
         }
+        
+        // Normal mode: process commands
+        
+        if (strcmp(line, "exit") == 0 || strcmp(line, "quit") == 0)
+            break;
+        
+        if (strcmp(line, "help") == 0 || strcmp(line, "?") == 0)
+        {
+            display_help();
+            continue;
+        }
+
+        if (strcmp(line, "vars") == 0)
+        {
+            list_variables(symbols);
+            continue;
+        }
+
+        if (strcmp(line, "reset") == 0)
+        {
+            printf("Resetting all variables...\n");
+            symbol_table_destroy(symbols);
+            symbols = symbol_table_create();  
+            printf("All variables cleared.\n");
+            continue;
+        }
+
+        if (strcmp(line, "clear") == 0)
+        {
+            #ifdef _WIN32
+                system("cls");
+            #else
+                system("clear");
+            #endif
+            printf("ZzBasic \nv%s on %s\n", ZZ_VERSION, get_os_name());
+            continue;
+        }
+
+        if (strcmp(line, "program") == 0)
+        {
+            program_command(&program);
+            continue;
+        }
+
+        if (strcmp(line, "run") == 0)
+        {
+            run_command(&program, symbols);
+            continue;
+        }
+
+        if (strcmp(line, "purge") == 0)
+        {
+            purge_command(&program, &symbols);
+            continue;
+        }
+
+        if (strcmp(line, "list") == 0)
+        {
+            list_command(&program);
+            continue;
+        }
+
+        // >> list 2-5
+        // line + 5 aponta para o inicio do argumento, o char 2
+        if (strncmp(line, "list ", 5) == 0)
+        {
+            list_range_command(&program, line + 5);
+            continue;
+        }
+
+        if (strncmp(line, "edit ", 5) == 0)
+        {
+            edit_command(&program, line + 5);
+            continue;
+        }
+
+        if (strncmp(line, "delete ", 7) == 0)
+        {
+            delete_command(&program, line + 7);
+            continue;
+        }
+
+        if (strncmp(line, "tokens ", 7) == 0)
+        {
+            tokens_command(&program, line + 7);
+            continue;
+        }
+
+        if (strncmp(line, "ast ", 4) == 0)
+        {
+            ast_command(&program, line + 4);
+            continue;
+        }
+
+        if (strncmp(line, "symbols", 7) == 0)
+        {
+            symbols_command(&program, symbols, line + 7);
+            continue;
+        }
+
+        if (strncmp(line, "vars ", 5) == 0)
+        {
+            vars_command(&program, symbols, line + 5);
+            continue;
+        }
+
+        // Execute as code
+        execute_code(line, symbols);
     }
     
-    symbol_table_destroy(symbols);
-    printf("REPL encerrado\n");
-}
-
-
-//=========== DEBUG ==============================
-void debug_file(const char* filename) {
-    size_t input_size;
-    char* code = read_file(filename, &input_size);
-    
-    printf("=== DEBUG FILE ===\n");
-    printf("Tamanho: %zu bytes\n", input_size);
-    printf("Conteúdo (com códigos):\n");
-    for (size_t i = 0; i < input_size; i++) {
-        if (code[i] == '\n') printf("\\n");
-        else if (code[i] == '\r') printf("\\r");
-        else if (code[i] == '\t') printf("\\t");
-        else if (code[i] == '\0') printf("\\0");
-        else printf("%c", code[i]);
-    }
-    printf("\n=== END DEBUG ===\n\n");
-    
-    // Testa o lexer
-    Lexer lexer;
-    lexer_init(&lexer, code);
-    
-    printf("Tokens:\n");
-    int count = 0;
-    Token token;
-    do
+    // Cleanup
+    if (program.ast)
     {
-        token = lexer_get_next_token(&lexer);
-        printf("%3d: [%s] ", ++count, token_type_to_string(token.type));
-        if (token.type == TOKEN_NUMBER) 
-            printf("(%.2f)", token.value.number);
-        else if (token.type == TOKEN_STRING) 
-            printf("(%s)", token.value.string);  // Para strings
-        else if (token.type == TOKEN_IDENTIFIER) 
-            printf("(%s)", token.value.varname);  // Para identificadores
-        else if (token.token_text[0]) 
-            printf("(%s)", token.token_text);
-        printf("\n");
-    } while (token.type != TOKEN_EOF && token.type != TOKEN_ERROR);
-    
-    a89free(code);
+        free_ast(program.ast);
+    }
+    symbol_table_destroy(symbols);
 }
-//================================================
 
 
 void run_file(const char* filename)
@@ -783,8 +707,6 @@ void run_file(const char* filename)
     size_t input_size;
     char* code = read_file(filename, &input_size);
 
-
-    // ✅ TRATA ERRO DE LEITURA!
     if (!code) {
         printf("%sError: could not read file '%s'%s\n", 
                COLOR_ERROR, filename, COLOR_RESET);
@@ -800,11 +722,10 @@ void run_file(const char* filename)
 
         ASTNode* ast = parse(&lexer);// Agora parse retorna statement list
         if (ast == NULL) {
-            printf("%sParsing error%s\n", COLOR_ERROR, COLOR_RESET);
+            printf("%sParsing error: ast == NULL%s\n", COLOR_ERROR, COLOR_RESET);
             symbol_table_destroy(symbols);
             a89free(code);
-            //exit(EXIT_FAILURE);
-            return NULL;
+            exit(EXIT_FAILURE);
         }
 
         evaluate_program(ast, symbols);

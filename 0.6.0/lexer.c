@@ -588,7 +588,7 @@ static Token lexer_read_string(Lexer* lexer) {
 
     token.type = TOKEN_STRING;
 
-    strcpy(token.token_text, "\""); // For debug, keep quotes in token_text
+    strcpy(token.token_text, "\""); // Mantenha as aspas em token_text
     strcat(token.token_text, buffer);
     strcat(token.token_text, "\"");
     

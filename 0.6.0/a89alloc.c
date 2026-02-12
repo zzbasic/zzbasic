@@ -22,22 +22,6 @@ static int total_allocations = 0;
 
 void* a89alloc(size_t size, const char* file, int line)
 {
-
-    if (total_allocations > MAX_ALLOCATIONS - 100) {
-        fprintf(stderr, 
-                "[DEBUG] Alocação #%d em %s:%d\n",
-                total_allocations + 1, file, line);
-    }
-
-    // AVISA SE ESTIVER PERTO DO LIMITE
-    if (total_allocations > MAX_ALLOCATIONS * 0.8)
-    {
-        fprintf(stderr,
-                "AVISO: %.0f%% do limite de alocações atingido (%d/%d)\n",
-                (double)total_allocations / MAX_ALLOCATIONS * 100,
-                total_allocations, MAX_ALLOCATIONS);
-    }
-
     // Validação 1: Verificar limite de alocações
     if (total_allocations >= MAX_ALLOCATIONS)
     {
@@ -46,9 +30,7 @@ void* a89alloc(size_t size, const char* file, int line)
                 "ERRO FATAL: Limite máximo de alocações (%d) atingido!\n"
                 "Para aumentar o limite, edite MAX_ALLOCATIONS em a89alloc.h\n",
                 MAX_ALLOCATIONS);
-        //exit(EXIT_FAILURE);
-         total_allocations++;
-
+        exit(EXIT_FAILURE);
     }
     
     // Validação 2: Verificar tamanho válido
@@ -101,6 +83,12 @@ void* a89alloc(size_t size, const char* file, int line)
                 "Possíveis causas: memória insuficiente ou fragmentação.\n");
         exit(EXIT_FAILURE);
     }
+
+    // DEBUG =========================================
+    // printf("a89alloc SAIDA\n");
+    // printf("alocada memoria para arquivo %s na linha %d\n", file, line);
+    // wait();
+    //================================================
     
     return ptr;
 }
@@ -121,6 +109,11 @@ realloc() falha             Retorna NULL                Registro inalterado
 
 void* a89realloc(void* ptr, size_t new_size, const char* file, int line)
 {
+    #ifdef DEBUG
+    static conta_realloc = 1;
+    printf("a89reallolc chamada %d vezesz\n", conta_realloc++);
+    #endif
+
     // Caso 1: realloc(NULL, size) = malloc(size)
     if (ptr == NULL)
     {
@@ -208,18 +201,18 @@ void* a89realloc(void* ptr, size_t new_size, const char* file, int line)
     strncpy(allocations[index].file, file, 255);
     allocations[index].file[255] = '\0';
     allocations[index].line = line;
-    
-    // Log informativo (DEBUG)
-    /*
-    printf("REALOCACAO: %zu -> %zu bytes em %s:%d (ptr: %p -> %p)\n", 
-           old_size, new_size, file, line, ptr, new_ptr);
-    */
-    
     return new_ptr;
 }
 
-
 void a89free(void* ptr) {
+
+    #ifdef DEBUG
+    static conta_free = 1;
+    printf("a89free chamada %d vezesz\n", conta_free++);
+    #endif
+
+    //wait();
+    //================================================
     // Validação: ponteiro NULL é válido (comportamento padrão do free)
     if (ptr == NULL) {
         return;
@@ -235,6 +228,13 @@ void a89free(void* ptr) {
             // Otimização: substituir por último elemento (O(1) vs O(n))
             allocations[i] = allocations[total_allocations - 1];
             total_allocations--;
+
+            // DEBUG =========================================
+            // printf("a89free SAIDA DO FOR\n");
+            // printf("Liberada a memoria alocada no arquivo %s, linha %d\n", allocations[i].file, allocations[i].line);
+            // wait();
+            //================================================
+
             
             return;
         }
@@ -250,6 +250,11 @@ void a89free(void* ptr) {
     // Decisão: liberar mesmo assim para evitar vazamentos
     free(ptr);
     ptr = NULL;
+
+    // DEBUG =========================================
+    // printf("a89free SAIDA - FIM DA FUNCAO\n");
+    // wait();
+    //================================================
 }
 
 

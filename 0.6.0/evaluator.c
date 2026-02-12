@@ -96,38 +96,6 @@ static SymbolTable* module_manager_get_symbols(ModuleManager* manager,
 // IMPLEMNTACAO DAS FUNCOES
 //###################################################################
 
-
-// ===================================================================
-// DEBUG: CONTADOR DE NÓS POR TIPO
-// ===================================================================
-// void debug_alloc_counter(ASTNode* node, const char* operation)
-// {
-//     static int total_nodes = 0;
-//     static int nodes_by_type[100] = {0};
-    
-//     if (!node) return;
-    
-//     total_nodes++;
-//     if (node->type < 100) {
-//         nodes_by_type[node->type]++;
-//     }
-    
-//     printf("DEBUG [%s]: Nó tipo %d criado. Total: %d\n", 
-//            operation, node->type, total_nodes);
-    
-//     // Mostra os top 5 tipos a cada 100 nós
-//     if (total_nodes % 100 == 0) {
-//         printf("\n=== TOP 5 TIPOS DE NÓ ALOCADOS ===\n");
-//         for (int i = 0; i < 100; i++) {
-//             if (nodes_by_type[i] > 0) {
-//                 printf("  Tipo %d: %d nós\n", i, nodes_by_type[i]);
-//             }
-//         }
-//         printf("================================\n\n");
-//     }
-// }
-
-
 //===================================================================
 // FUNCOES PARA CRIACAO DE NODES
 //===================================================================
@@ -742,6 +710,8 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
             }
             else if (value_result.type == RESULT_TEXT)
             {  
+                //Text* text_copy = text_create_from_string(text_get(value_result.value.text));
+                //if (!symbol_table_set_text(ctx->symbols, var_name, text_copy))
                 if (!symbol_table_set_text(ctx->symbols, var_name, value_result.value.text))
                 {
                     printf("Evaluator error: assigning Text to '%s'\n", var_name);
@@ -1605,7 +1575,8 @@ EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext c
                                              node->line, node->column);
         }
 
-        case NODE_LOAD:  
+        case NODE_LOAD: 
+            printf("NODE LOAD\n");
             return execute_load_node(node, symbols);
             
         default:
