@@ -14,7 +14,8 @@ typedef enum
     SYM_NUMBER,
     SYM_STRING,
     SYM_BOOL,
-    SYM_TEXT
+    SYM_TEXT,
+    SYM_ARRAY
 } SymbolType;
 
 typedef struct Symbol
@@ -23,10 +24,11 @@ typedef struct Symbol
     SymbolType type;
     union
     {
-        int bool_value;
-        double num_value;
-        char str_value[STRING_SIZE];
-        Text* text_value;
+        int         bool_value;
+        double      num_value;
+        char        str_value[STRING_SIZE];
+        Text*       text_value;
+        Array*      array_value;
     } value;
     struct Symbol* next;
 } Symbol;
@@ -82,6 +84,11 @@ void symbol_table_destroy(SymbolTable* table)
         {
             //a89free(current->value.text_value);
             text_free(current->value.text_value);
+        }
+
+        if (current->type == SYM_ARRAY && current->value.array_value)
+        {
+            array_free(current->value.array_value);
         }
 
         a89free(current);
@@ -309,11 +316,51 @@ int symbol_table_get_text(SymbolTable* table, const char* name, Text** out_text)
     Symbol* symbol = find_symbol(table, name);
     if (!symbol || symbol->type != SYM_TEXT) return 0;
     
-    *out_text = symbol->value.text_value;  // ← copia o ponteiro Text*
+    *out_text = (Text*)symbol->value.text_value;  // ← copia o ponteiro Text*
     return 1;
 }
 
+int symbol_table_set_array(SymbolTable* table, const char* name, Array* array)
+{
+    if (!table || !name || !array) return 0;
+    
+    Symbol* symbol = find_symbol(table, name);
+    if (!symbol)
+    {
+        symbol = A89ALLOC(sizeof(Symbol));
+        if (!symbol) return 0;
+        
+        strncpy(symbol->name, name, BUFFER_SIZE - 1);
+        symbol->name[BUFFER_SIZE - 1] = '\0';
+        symbol->type = SYM_ARRAY;
+        symbol->next = table->head;
+        table->head = symbol;
+        table->count++;
+    }
+    else
+    {
+        // Libera array anterior se existir
+        if (symbol->type == SYM_ARRAY && symbol->value.array_value)
+        {
+            array_free(symbol->value.array_value);
+        }
+        symbol->type = SYM_ARRAY;
+    }
+    
+    symbol->value.array_value = array;
+    return 1;
+}
 
+int symbol_table_get_array(SymbolTable* table, const char* name, Array** array)
+{
+    if (!table || !name || !array) return 0;
+    
+    Symbol* symbol = find_symbol(table, name);
+    if (!symbol || symbol->type != SYM_ARRAY) return 0;
+    
+    *array = symbol->value.array_value;
+    return 1;
+}
 
 int symbol_table_exists(SymbolTable* table, const char* name)
 {

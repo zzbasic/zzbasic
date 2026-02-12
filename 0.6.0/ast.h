@@ -37,7 +37,9 @@ typedef enum
     NODE_FOR,
     NODE_IMPORT,
     NODE_LOAD,
-    NODE_SAVE
+    NODE_SAVE,
+    NODE_FUNCTION_CALL,
+    NODE_ARRAY
 
 } NodeType;
 
@@ -219,6 +221,13 @@ typedef struct
     char filename[BUFFER_SIZE];  // Nome do arquivo
 } SaveStatementData;
 
+// Dados para NODE_FUNCTION_CALL
+typedef struct FunctionCallData
+{
+    char function_name[BUFFER_SIZE];  
+    ASTNode** arguments;               
+    int arg_count;                     
+} FunctionCallData;
 
 typedef struct ASTNode
 {
@@ -250,7 +259,8 @@ typedef struct ASTNode
         ForStatementData        for_stmt; 
         ImportStatementData     import_stmt;
         LoadExprData            load_expr;   
-        SaveStatementData       save_stmt; 
+        SaveStatementData       save_stmt;
+        FunctionCallData        function_call;
 
     } data;
 
@@ -328,6 +338,11 @@ ASTNode* create_import_node(const char* module_name,
 ASTNode* create_load_node(const char* filename, int line, int column);
 
 ASTNode* create_save_node(ASTNode* expression, const char* filename, int line, int column);
+
+ASTNode* create_function_call_node(const char* function_name, int line, int column);
+void function_call_add_argument(ASTNode* node, ASTNode* argument);
+
+ASTNode* create_array_node(int line, int column);
 
 
 void print_node_add_item(ASTNode* print_node, ASTNode* expr_node);

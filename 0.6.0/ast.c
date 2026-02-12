@@ -429,6 +429,41 @@ ASTNode* create_save_node(ASTNode* expression, const char* filename, int line, i
     return node;
 }
 
+ASTNode* create_function_call_node(const char* function_name, int line, int column)
+{
+    ASTNode* node = create_node(NODE_FUNCTION_CALL, line, column);
+    
+    strncpy(node->data.function_call.function_name, function_name, BUFFER_SIZE - 1);
+    node->data.function_call.function_name[BUFFER_SIZE - 1] = '\0';
+    node->data.function_call.arguments = NULL;
+    node->data.function_call.arg_count = 0;
+    
+    return node;
+}
+
+void function_call_add_argument(ASTNode* node, ASTNode* argument)
+{
+    if (!node || node->type != NODE_FUNCTION_CALL || !argument) return;
+    
+    FunctionCallData* function = &node->data.function_call;
+    
+    // Realoca array de argumentos
+    ASTNode** new_args = A89REALLOC(function->arguments, 
+                                   (function->arg_count + 1) * sizeof(ASTNode*));
+    if (!new_args) return;
+    
+    function->arguments = new_args;
+    function->arguments[function->arg_count] = argument;
+    function->arg_count++;
+}
+
+ASTNode* create_array_node(int line, int column)
+{
+    ASTNode* node = create_node(NODE_ARRAY, line, column);
+    return node;
+}
+
+
 
 //===================================================================
 // LIBERACAO DA MEMORIA
@@ -567,6 +602,27 @@ void free_ast(ASTNode* node)
             {
                 free_ast(node->data.save_stmt.expression);
             }
+            break;
+
+        case NODE_FUNCTION_CALL:
+        {
+            // Libera cada argumento
+            for (int i = 0; i < node->data.function_call.arg_count; i++)
+            {
+                free_ast(node->data.function_call.arguments[i]);
+            }
+            
+            // Libera array de argumentos
+            if (node->data.function_call.arguments != NULL)
+            {
+                a89free(node->data.function_call.arguments);
+            }
+            break;
+        }
+
+        case NODE_ARRAY:
+            // Array é gerenciado pela symbol table
+            // Aqui não precisa fazer nada
             break;
 
         case NODE_BOOL:
@@ -772,15 +828,36 @@ void print_ast(ASTNode* node, int indent)
             }
             break;
 
-    case NODE_LOAD:
-        printf("LOAD \"%s\"\n", node->data.load_expr.filename);
-        break;
-        
-    case NODE_SAVE:
-        printf("SAVE to \"%s\"\n", node->data.save_stmt.filename);
-        printf("Expression:\n");
-        print_ast(node->data.save_stmt.expression, indent + 1);
-        break;
+        case NODE_LOAD:
+            printf("LOAD \"%s\"\n", node->data.load_expr.filename);
+            break;
+            
+        case NODE_SAVE:
+            printf("SAVE to \"%s\"\n", node->data.save_stmt.filename);
+            printf("Expression:\n");
+            print_ast(node->data.save_stmt.expression, indent + 1);
+            break;
+
+        case NODE_FUNCTION_CALL:
+        {
+            printf("FUNCTION_CALL: %s(", node->data.function_call.function_name);
+            for (int i = 0; i < node->data.function_call.arg_count; i++)
+            {
+                if (i > 0) printf(", ");
+                printf("arg%d", i);
+            }
+            printf(")\n");
+            for (int i = 0; i < node->data.function_call.arg_count; i++)
+            {
+                print_ast(node->data.function_call.arguments[i], indent + 1);
+            }
+            break;
+        }
+
+        case NODE_ARRAY:
+            printf("ARRAY\n");
+            break;
+
     }
 }
 // Fim de ast.c

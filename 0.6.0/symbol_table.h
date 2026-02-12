@@ -6,6 +6,7 @@
 #include <stdlib.h>  // Para size_t
 
 #include "zztext.h"
+#include "zzarray.h"
 
 // Tipo opaco (encapsulamento)
 typedef struct SymbolTable SymbolTable;
@@ -29,6 +30,10 @@ int symbol_table_get_string(SymbolTable* table, const char* name, char* out_valu
 // Operações com text (strings dinâmicas)
 int symbol_table_set_text(SymbolTable* table, const char* name, Text* text);
 int symbol_table_get_text(SymbolTable* table, const char* name, Text** out_text);
+
+int symbol_table_set_array(SymbolTable* table, const char* name, Array* array);
+int symbol_table_get_array(SymbolTable* table, const char* name, Array** array);
+
 
 // Consultas
 int symbol_table_exists(SymbolTable* table, const char* name);  // 1=existe, 0=não existe

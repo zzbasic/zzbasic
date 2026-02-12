@@ -27,6 +27,7 @@ static EvaluatorResult create_success_result_bool(int value, int line, int colum
 static EvaluatorResult create_success_result_number(double value, int line, int column);
 static EvaluatorResult create_success_result_string(const char* value, int line, int column);
 static EvaluatorResult create_success_result_text(Text* text, int line, int column);
+static EvaluatorResult create_success_result_array(Array* arr, int line, int column);
 
 static EvaluatorResult create_error_result(const char* message, int line, int column);
 static EvaluatorResult create_error_result_fmt(int line, int column, 
@@ -139,6 +140,16 @@ static EvaluatorResult create_success_result_text(Text* text, int line, int colu
     memset(&result, 0, sizeof(EvaluatorResult));
     result.type = RESULT_TEXT;
     result.value.text = text;
+    result.line = line;
+    result.column = column;
+    return result;
+}
+
+static EvaluatorResult create_success_result_array(Array* array, int line, int column)
+{
+    EvaluatorResult result;
+    result.type = RESULT_ARRAY;
+    result.value.array = array;
     result.line = line;
     result.column = column;
     return result;
@@ -1275,7 +1286,27 @@ EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext c
                          var_name);
                 }
                 return create_success_result_bool(bool_value, node->line, node->column);
-            }      
+            }
+
+            // Try as text
+            Text* text_value;
+            if (symbol_table_get_text(symbols, var_name, &text_value))
+            {
+                if (ctx == CTX_NUMBER)
+                {
+                    return create_error_result_fmt(node->line, node->column,
+                         "Evaluator error: variable '%s' is Text, cannot be used as number", 
+                         var_name);
+                }
+                if (ctx == CTX_BOOL)
+                {
+                    return create_error_result_fmt(node->line, node->column,
+                         "Evaluator error: variable '%s' is Text, cannot be used as boolean", 
+                         var_name);
+                }
+                // Text é aceitável em CTX_ANY e CTX_STRING
+                return create_success_result_text(text_value, node->line, node->column);
+            }  
             
             // Should not reach here
             return create_error_result_fmt(node->line, node->column,
@@ -1576,8 +1607,99 @@ EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext c
         }
 
         case NODE_LOAD: 
-            printf("NODE LOAD\n");
             return execute_load_node(node, symbols);
+
+        case NODE_FUNCTION_CALL:
+        {
+            // Avalia a chamada de função
+            const char* func_name = node->data.function_call.function_name;
+            
+            // ============================================
+            // FUNÇÃO: text(string)
+            // ============================================
+            if (strcmp(func_name, "text") == 0)
+            {
+                if (node->data.function_call.arg_count != 1)
+                {
+                    return create_error_result_fmt(node->line, node->column,
+                        "Evaluator error: text() expects 1 argument, got %d",
+                        node->data.function_call.arg_count);
+                }
+                
+                // Avalia o argumento como string
+                EvaluatorResult arg_result = evaluate_expr(
+                    node->data.function_call.arguments[0], symbols, CTX_STRING);
+                
+                if (arg_result.type == RESULT_ERROR) return arg_result;
+                
+                if (arg_result.type != RESULT_STRING)
+                {
+                    return create_error_result_fmt(node->line, node->column,
+                        "Evaluator error: text() expects string argument");
+                }
+                
+                // Cria Text a partir da string
+                Text* txt = text_create_from_string(arg_result.value.string);
+                if (!txt)
+                {
+                    return create_error_result_fmt(node->line, node->column,
+                        "Evaluator error: could not create text object");
+                }
+                
+                return create_success_result_text(txt, node->line, node->column);
+            }
+
+
+            // ============================================
+            // FUNÇÃO: array(size)
+            // ============================================
+            if (strcmp(func_name, "array") == 0)
+            {
+                if (node->data.function_call.arg_count != 1)
+                {
+                    return create_error_result_fmt(node->line, node->column,
+                        "Evaluator error: array() expects 1 argument, got %d",
+                        node->data.function_call.arg_count);
+                }
+                
+                // Avalia o argumento como número
+                EvaluatorResult arg_result = evaluate_expr(
+                    node->data.function_call.arguments[0], symbols, CTX_NUMBER);
+                
+                if (arg_result.type == RESULT_ERROR) return arg_result;
+                
+                if (arg_result.type != RESULT_NUMBER)
+                {
+                    return create_error_result_fmt(node->line, node->column,
+                        "Evaluator error: array() expects number argument");
+                }
+                
+                // Cria array
+                Array* array = array_create();
+                if (!array)
+                {
+                    return create_error_result_fmt(node->line, node->column,
+                        "Evaluator error: could not create array");
+                }
+                
+                return create_success_result_array(array, node->line, node->column);
+            }
+
+
+            
+            // ============================================
+            // FUNÇÃO: upper(string) - EXEMPLO FUTURO
+            // ============================================
+            // if (strcmp(func_name, "upper") == 0)
+            // {
+            //     // Implementar quando precisar
+            // }
+            
+            // Função desconhecida
+            return create_error_result_fmt(node->line, node->column,
+                "Evaluator error: unknown function '%s'", func_name);
+        }
+
             
         default:
             return create_error_result_fmt(node->line, node->column,

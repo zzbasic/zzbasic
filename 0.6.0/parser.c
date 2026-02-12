@@ -49,6 +49,8 @@ static ASTNode* parse_import_stmt(Parser* parser);
 static ASTNode* parse_load_expr(Parser* parser);
 static ASTNode* parse_save_stmt(Parser* parser);
 
+static ASTNode* parse_function_call(Parser* parser, const char* function_name);
+
 static ASTNode* parse_expr_stmt(Parser* parser);
 
 // EXPRESSÕES LÓGICAS
@@ -1522,8 +1524,6 @@ static ASTNode* parse_save_stmt(Parser* parser)
                 "Parser error: expected expression in save()");
         return NULL;
     }
-    
-    parser_advance(parser); // Consome expression
 
     if (parser->current_token.type != TOKEN_COMMA)
     {
@@ -1560,6 +1560,57 @@ static ASTNode* parse_save_stmt(Parser* parser)
     parser_advance(parser);  // Consume )
     
     return create_save_node(expr, filename, line, column);
+}
+
+static ASTNode* parse_function_call(Parser* parser, const char* function_name)
+{
+    int line = parser->current_token.line;
+    int col = parser->current_token.column;
+    
+    ASTNode* function_node = create_function_call_node(function_name, line, col);
+    
+    parser_advance(parser);  // Consume '('
+    
+    // Parse argumentos
+    if (parser->current_token.type != TOKEN_RPAREN)
+    {
+        while (1)
+        {
+            ASTNode* arg = parse_logical_expr(parser);
+            if (parser->has_error)
+            {
+                free_ast(function_node);
+                return NULL;
+            }
+            
+            function_call_add_argument(function_node, arg);
+            
+            if (parser->current_token.type == TOKEN_RPAREN)
+                break;
+            
+            if (parser->current_token.type != TOKEN_COMMA)
+            {
+                parser->has_error = 1;
+                snprintf(parser->error_message, BUFFER_SIZE,
+                        "Parser error: expected ',' or ')' in function call");
+                free_ast(function_node);
+                return NULL;
+            }
+            
+            parser_advance(parser);  // Consume ','
+        }
+    }
+    
+    if (!parser_expect(parser, TOKEN_RPAREN))
+    {
+        free_ast(function_node);
+        parser_set_error(parser, "Parser error: expected ')' in function call");
+        return NULL;
+    }
+    
+    parser_advance(parser);  // Consume ')'
+    
+    return function_node;
 }
 
 
@@ -1861,8 +1912,23 @@ static ASTNode* parse_atom(Parser* parser)
             return create_string_node(token.value.string,token.line, token.column);
             
         case TOKEN_IDENTIFIER:
+        {
+            char name[BUFFER_SIZE];
+            strncpy(name, token.value.varname, BUFFER_SIZE - 1);
+            name[BUFFER_SIZE - 1] = '\0';
+            int line = token.line;
+            int col = token.column;
             parser_advance(parser);
-            return create_variable_node(token.value.varname, token.line, token.column);
+            
+            // Verifica se é uma chamada de função
+            if (parser->current_token.type == TOKEN_LPAREN)
+            {
+                return parse_function_call(parser, name);
+            }
+            
+            // Senão, é uma variável
+            return create_variable_node(name, line, col);
+        }
 
         case TOKEN_LOAD:
             parser_advance(parser);

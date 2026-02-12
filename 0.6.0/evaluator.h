@@ -81,17 +81,19 @@ typedef enum
     RESULT_BOOL,
     RESULT_NUMBER,
     RESULT_STRING,
-    RESULT_TEXT
+    RESULT_TEXT,
+    RESULT_ARRAY
 } ResultType;
 
 typedef struct
 {
     ResultType type;
     union {
-        int boolean;
-        double number;
-        char string[STRING_SIZE];
-        Text* text;
+        int     boolean;
+        double  number;
+        char    string[STRING_SIZE];
+        Text*   text;
+        Array*  array;
     } value;
     char error_message[BUFFER_SIZE];
     int line;   
