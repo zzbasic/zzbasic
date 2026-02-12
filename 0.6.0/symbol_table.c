@@ -26,7 +26,7 @@ typedef struct Symbol
         int bool_value;
         double num_value;
         char str_value[STRING_SIZE];
-        char* text_value;
+        Text* text_value;
     } value;
     struct Symbol* next;
 } Symbol;
@@ -268,7 +268,7 @@ int symbol_table_get_string(SymbolTable* table, const char* name, char* out_valu
     return 1;
 }
 
-int symbol_table_set_text(SymbolTable* table, const char* name, const char* value)
+int symbol_table_set_text(SymbolTable* table, const char* name, Text* text)
 {
     if (!table || !name || !is_valid_name(name)) return 0;
     
@@ -279,21 +279,11 @@ int symbol_table_set_text(SymbolTable* table, const char* name, const char* valu
         // Libera texto antigo se existir
         if (symbol->type == SYM_TEXT && symbol->value.text_value)
         {
-            a89free(symbol->value.text_value);
-        }
-        
-        // Aloca novo texto
-        if (value)
-        {
-            symbol->value.text_value = A89ALLOC(strlen(value) + 1);
-            strcpy(symbol->value.text_value, value);
-        }
-        else
-        {
-            symbol->value.text_value = NULL;
+            text_free(symbol->value.text_value);  // ← usa text_free()!
         }
         
         symbol->type = SYM_TEXT;
+        symbol->value.text_value = text;  // ← só copia o ponteiro!
         return 1;
     }
     
@@ -302,32 +292,23 @@ int symbol_table_set_text(SymbolTable* table, const char* name, const char* valu
     strncpy(symbol->name, name, VARNAME_SIZE - 1);
     symbol->name[VARNAME_SIZE - 1] = '\0';
     symbol->type = SYM_TEXT;
-    
-    if (value)
-    {
-        symbol->value.text_value = A89ALLOC(strlen(value) + 1);
-        strcpy(symbol->value.text_value, value);
-    }
-    else
-    {
-        symbol->value.text_value = NULL;
-    }
+    symbol->value.text_value = text;  // ← só copia o ponteiro!
     
     symbol->next = table->head;
-    table->head = symbol_table_create();
+    table->head = symbol;
     table->count++;
     
     return 1;
 }
 
-int symbol_table_get_text(SymbolTable* table, const char* name, char** out_value)
+int symbol_table_get_text(SymbolTable* table, const char* name, Text** out_text)
 {
-    if (!table || !name || !out_value) return 0;
+    if (!table || !name || !out_text) return 0;
     
     Symbol* symbol = find_symbol(table, name);
     if (!symbol || symbol->type != SYM_TEXT) return 0;
     
-    *out_value = symbol->value.text_value;
+    *out_text = symbol->value.text_value;  // ← copia o ponteiro Text*
     return 1;
 }
 

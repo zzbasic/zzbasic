@@ -7,6 +7,7 @@
 #include "ast.h"
 #include "symbol_table.h"
 #include "color_mapping.h"
+#include "zztext.h"
 
 
 // =================================================
@@ -79,7 +80,8 @@ typedef enum
     RESULT_ERROR,
     RESULT_BOOL,
     RESULT_NUMBER,
-    RESULT_STRING
+    RESULT_STRING,
+    RESULT_TEXT
 } ResultType;
 
 typedef struct
@@ -89,6 +91,7 @@ typedef struct
         int boolean;
         double number;
         char string[STRING_SIZE];
+        Text* text;
     } value;
     char error_message[BUFFER_SIZE];
     int line;   
@@ -149,6 +152,8 @@ void evaluator_reset_format(ExecutionContext* ctx);// Formatação
 void evaluator_color_reset(ExecutionContext* ctx);
 void evaluator_color_set(ExecutionContext* ctx, const char* ansi_color);
 void evaluator_color_apply_current(ExecutionContext* ctx);
+
+void debug_alloc_counter(ASTNode* node, const char* operation);
 
 #endif
 // Fim de evaluator.h

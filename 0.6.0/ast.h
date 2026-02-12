@@ -211,7 +211,7 @@ typedef struct
 typedef struct
 {
     char filename[BUFFER_SIZE];  // Nome do arquivo; PATH
-} LoadStatementData;
+} LoadExprData;
 
 typedef struct
 {
@@ -249,7 +249,7 @@ typedef struct ASTNode
         ContinueStatementData   continue_stmt; 
         ForStatementData        for_stmt; 
         ImportStatementData     import_stmt;
-        LoadStatementData       load_stmt;   
+        LoadExprData            load_expr;   
         SaveStatementData       save_stmt; 
 
     } data;

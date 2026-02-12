@@ -46,7 +46,7 @@ static ASTNode* parse_for_stmt(Parser* parser);
 
 static ASTNode* parse_import_stmt(Parser* parser);
 
-static ASTNode* parse_load_stmt(Parser* parser);
+static ASTNode* parse_load_expr(Parser* parser);
 static ASTNode* parse_save_stmt(Parser* parser);
 
 static ASTNode* parse_expr_stmt(Parser* parser);
@@ -393,6 +393,7 @@ static ASTNode* parse_stmt_list(Parser* parser)
 //                     | for_stmt
 //                     | break_stmt
 //                     | continue_stmt
+//                     | save_stmt
 //                     | expression_stmt
 //==============================================================================
 static ASTNode* parse_stmt(Parser* parser)
@@ -442,6 +443,10 @@ static ASTNode* parse_stmt(Parser* parser)
     else if (parser->current_token.type == TOKEN_FROM)
     {
         return parse_import_stmt(parser);
+    }
+    else if (parser->current_token.type == TOKEN_SAVE)
+    {
+        return parse_save_stmt(parser);
     }
     else
     {
@@ -1442,17 +1447,17 @@ static ASTNode* parse_import_stmt(Parser* parser)
 
 
 //===================================================================
-// load_stmt := 'load' '(' STRING ')'
+// load_expr := 'load' '(' STRING ')'
 //
-// load("arquivo.txt")
+// let texto = load("arquivo.txt")
 //===================================================================
-static ASTNode* parse_load_stmt(Parser* parser)
+static ASTNode* parse_load_expr(Parser* parser)
 {
+    // Ao chegar aqui 'load' já foi consumido
+
     int line = parser->current_token.line;
     int column = parser->current_token.column;
 
-    parser_advance(parser);  // Consume LOAD
-    
     if (parser->current_token.type != TOKEN_LPAREN)
     {
         parser->has_error = 1;
@@ -1473,8 +1478,6 @@ static ASTNode* parse_load_stmt(Parser* parser)
     char filename[BUFFER_SIZE];
     strncpy(filename, parser->current_token.value.string, BUFFER_SIZE - 1);
     filename[BUFFER_SIZE - 1] = '\0';
-    int line = parser->current_token.line;
-    int column = parser->current_token.column;
     parser_advance(parser);  // Consume STRING
     
     if (parser->current_token.type != TOKEN_RPAREN)
@@ -1496,11 +1499,11 @@ static ASTNode* parse_load_stmt(Parser* parser)
 //===================================================================
 static ASTNode* parse_save_stmt(Parser* parser)
 {
+    parser_advance(parser);  // Consume 'save'
+
     int line = parser->current_token.line;
     int column = parser->current_token.column;
 
-    parser_advance(parser);  // Consume SAVE
-    
     if (parser->current_token.type != TOKEN_LPAREN)
     {
         parser->has_error = 1;
@@ -1510,9 +1513,9 @@ static ASTNode* parse_save_stmt(Parser* parser)
     }
     parser_advance(parser);  // Consume (
     
-    // Parse expressão
-    ASTNode* expression = parse_logical_expr(parser);
-    if (!expression)
+    // Parseia a expressão do Text
+    ASTNode* expr = parse_expr_stmt(parser); 
+    if (!expr)
     {
         parser->has_error = 1;
         snprintf(parser->error_message, BUFFER_SIZE,
@@ -1520,30 +1523,30 @@ static ASTNode* parse_save_stmt(Parser* parser)
         return NULL;
     }
     
+    parser_advance(parser); // Consome expression
+
     if (parser->current_token.type != TOKEN_COMMA)
     {
         parser->has_error = 1;
         snprintf(parser->error_message, BUFFER_SIZE,
                 "Parser error: expected ',' in save()");
-        free_ast(expression);
+        free_ast(expr);
         return NULL;
     }
-    parser_advance(parser);  // Consume ,
+    parser_advance(parser);  // Consome ,
     
     if (parser->current_token.type != TOKEN_STRING)
     {
         parser->has_error = 1;
         snprintf(parser->error_message, BUFFER_SIZE,
                 "Parser error: expected filename string in save()");
-        free_ast(expression);
+        free_ast(expr);
         return NULL;
     }
     
     char filename[BUFFER_SIZE];
     strncpy(filename, parser->current_token.value.string, BUFFER_SIZE - 1);
     filename[BUFFER_SIZE - 1] = '\0';
-    int line = parser->current_token.line;
-    int column = parser->current_token.column;
     parser_advance(parser);  // Consume STRING
     
     if (parser->current_token.type != TOKEN_RPAREN)
@@ -1551,12 +1554,12 @@ static ASTNode* parse_save_stmt(Parser* parser)
         parser->has_error = 1;
         snprintf(parser->error_message, BUFFER_SIZE,
                 "Parser error: expected ')' after filename in save()");
-        free_ast(expression);
+        free_ast(expr);
         return NULL;
     }
     parser_advance(parser);  // Consume )
     
-    return create_save_node(expression, filename, line, column);
+    return create_save_node(expr, filename, line, column);
 }
 
 
@@ -1826,12 +1829,14 @@ static ASTNode* parse_factor(Parser* parser)
 }
 
 //===================================================================
-// atom := NUMBER 
-//      | STRING 
-//      | 'true' 
-//      | 'false' 
-//      | IDENTIFIER 
-//      | '(' logical_expr ')'
+// atom                := NUMBER 
+//                     | STRING 
+//                     | TEXT
+//                     | 'true' 
+//                     | 'false' 
+//                     | IDENTIFIER 
+//                     | load_expr
+//                     | '(' logical_expr ')'
 //===================================================================
 static ASTNode* parse_atom(Parser* parser)
 {
@@ -1856,8 +1861,12 @@ static ASTNode* parse_atom(Parser* parser)
             return create_string_node(token.value.string,token.line, token.column);
             
         case TOKEN_IDENTIFIER:
-            parser_advance(parser);
+            //parser_advance(parser);
             return create_variable_node(token.value.varname, token.line, token.column);
+
+        case TOKEN_LOAD:
+            parser_advance(parser);
+            return  parse_load_expr(parser);
             
         case TOKEN_LPAREN:
         {
@@ -1889,6 +1898,16 @@ static ASTNode* parse_atom(Parser* parser)
 //================================
 ASTNode* parse(Lexer* lexer)
 {
+    // DEBUG ======================================
+    static int depth = 0;
+    depth++;
+    
+    if (depth > 1000) {
+        printf("ERRO: Parser entrou em loop infinito!\n");
+        exit(1);
+    }
+    //==============================================
+
     Parser parser;
     parser_init(&parser, lexer);
     
@@ -1897,6 +1916,12 @@ ASTNode* parse(Lexer* lexer)
     }
     
     ASTNode* result = parse_program(&parser);
+
+    // 🔥 DEBUG: Mostra QUEM está chamando parse()
+    static int parse_count = 0;
+    parse_count++;
+    printf("🔵 PARSE #%d: AST criada em %p\n", parse_count, result);
+    //===========================================================
     
     if (parser.has_error)
     {
@@ -1923,7 +1948,7 @@ ASTNode* parse(Lexer* lexer)
         printf("%sParser error: incomplete expression.%s\n", COLOR_ERROR, COLOR_RESET);
         return NULL;
     }
-    
+
     return result;
 }
 
@@ -1967,7 +1992,7 @@ ASTNode* parse_single_stmt(Lexer* lexer)
     return result;
 }
 
-#ifdef TEST
+#ifdef TESTPARSER
 #include "color.h"
 #include "utils.h"
 
@@ -1980,7 +2005,7 @@ int main()
     
     char* testes[] =
     {
-        "let programa = load(\"calculadora.zz\"",
+        "let programa = load(\"calculadora.zz\")",
 
         "save(programa, \"backup.zz\")\n"
     };

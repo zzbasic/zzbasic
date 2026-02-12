@@ -22,6 +22,7 @@ statement           := assignment_stmt
                     | for_stmt
                     | break_stmt
                     | continue_stmt
+                    | save_stmt
                     | expression_stmt
 
 
@@ -125,6 +126,22 @@ continue_stmt := 'continue' EOL
 
 
 # =====================================================================
+# SAVE STATEMENT 
+# =====================================================================
+# Salva objeto Text em arquivo
+# Primeiro argumento: expressão que retorna um objeto Text
+# Segundo argumento: caminho do arquivo
+#
+# Exemplos:
+#   save(programa, "backup.zz")
+#   save(dados, "saida.txt")
+#
+# =====================================================================
+
+save_stmt := 'save' '(' expression ',' STRING ')'
+
+
+# =====================================================================
 # EXPRESSIONS (Hierarquia completa)
 # =====================================================================
 
@@ -161,10 +178,27 @@ factor              := ('+' | '-')? atom
 # Nível 8: Átomos (mais alta precedência)
 atom                := NUMBER 
                     | STRING 
+                    | TEXT
                     | 'true' 
                     | 'false' 
                     | IDENTIFIER 
+                    | load_expr
                     | '(' logical_expr ')'
+
+
+# =====================================================================
+# LOAD EXPR 
+# =====================================================================
+# Carrega arquivo inteiro para um objeto Text (heap)
+# Retorna um objeto Text que pode ser armazenado numa variável
+#
+# Exemplos:
+#   let programa = load("calculadora.zz")
+#   let dados    = load("entrada.txt")
+#   let config   = load("config.ini")
+# =====================================================================
+
+load_expr := 'load' '(' STRING ')'
 
 
 # =====================================================================

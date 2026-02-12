@@ -413,10 +413,8 @@ ASTNode* create_load_node(const char* filename, int line, int column)
     ASTNode* node = create_node(NODE_LOAD, line, column);
     node->line = line;
     node->column = column;
-    
-    strncpy(node->data.load_stmt->filename, filename, BUFFER_SIZE - 1);
-    node->data.load_stmt->filename[BUFFER_SIZE - 1] = '\0';
-    
+    strncpy(node->data.load_expr.filename, filename, BUFFER_SIZE - 1);
+    node->data.load_expr.filename[BUFFER_SIZE - 1] = '\0';
     return node;
 }
 
@@ -425,11 +423,9 @@ ASTNode* create_save_node(ASTNode* expression, const char* filename, int line, i
     ASTNode* node = create_node(NODE_SAVE, line, column);
     node->line = line;
     node->column = column;
-    
-    node->data.save_stmt->expression = expression;
-    strncpy(node->data.save_stmt->filename, filename, BUFFER_SIZE - 1);
-    node->data.save_stmt->filename[BUFFER_SIZE - 1] = '\0';
-    
+    node->data.save_stmt.expression = expression;
+    strncpy(node->data.save_stmt.filename, filename, BUFFER_SIZE - 1);
+    node->data.save_stmt.filename[BUFFER_SIZE - 1] = '\0';
     return node;
 }
 
@@ -440,7 +436,7 @@ ASTNode* create_save_node(ASTNode* expression, const char* filename, int line, i
 void free_ast(ASTNode* node)
 {
     if (!node) return;
-    
+     
     switch (node->type) {
         case NODE_BINARY_OP:
             free_ast(node->data.binaryop.left);
@@ -565,11 +561,11 @@ void free_ast(ASTNode* node)
 
         case NODE_LOAD:
             break;
-        
+                
         case NODE_SAVE:
-            if (node->data.save_stmt->expression)
+            if (node->data.save_stmt.expression)
             {
-                    free_ast(node->data.save_stmt->expression);
+                free_ast(node->data.save_stmt.expression);
             }
             break;
 
@@ -777,16 +773,14 @@ void print_ast(ASTNode* node, int indent)
             break;
 
     case NODE_LOAD:
-        printf("LOAD \"%s\"\n", node->data.load_stmt->filename);
+        printf("LOAD \"%s\"\n", node->data.load_expr.filename);
         break;
         
     case NODE_SAVE:
-        printf("SAVE to \"%s\"\n", node->data.save_stmt->filename);
+        printf("SAVE to \"%s\"\n", node->data.save_stmt.filename);
         printf("Expression:\n");
-        print_ast(node->data.save_stmt->expression, indent + 1);
+        print_ast(node->data.save_stmt.expression, indent + 1);
         break;
-
-
     }
 }
 // Fim de ast.c

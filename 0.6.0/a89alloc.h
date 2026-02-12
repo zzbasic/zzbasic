@@ -5,6 +5,8 @@
 
 #include <stddef.h>
 
+#define MAX_ALLOCATIONS 1000  // Configurável conforme necessidades
+
 /********************************************************************
 Função principal de alocação com rastreamento
 Parâmetros:
@@ -26,6 +28,14 @@ Captura automaticamente __FILE__ e __LINE__
 
 
 /********************************************************************
+Realocação com rastreamento
+********************************************************************/
+void* a89realloc(void* ptr, size_t new_size, const char* file, int line);
+
+
+#define A89REALLOC(ptr, size) a89realloc(ptr, size, __FILE__, __LINE__)
+
+/********************************************************************
 Função para liberação de memória com rastreamento
 Parâmetro:
 	ptr - ponteiro a ser liberado
@@ -43,5 +53,8 @@ Função para gerar relatório de alocações ativas
 Útil para depuração 
 ********************************************************************/
 void a89report_alloc(void);
+
+// Exibe quantas alocações NÃO foram liberadas
+void a89alloc_shutdown(void);
 
 #endif // A89ALLOC_H

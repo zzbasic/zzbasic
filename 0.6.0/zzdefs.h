@@ -14,8 +14,12 @@
 #define STRING_SIZE 		128
 #define PROGRAM_LINE_SIZE	80
 
-// REPL Multi-line Program Storage
+// REPL Multi-line 
 #define MAX_PROGRAM_LINES	50
+
+// TIPO TEXT
+#define TEXT_INITIAL_CAPACITY 	64 	// Tamanho inicial (64 bytes)
+#define TEXT_GROWTH_FACTOR 		1.5 // Fator de crescimento (1.5x)
 
 #endif
 // Fim de zzdefs.h

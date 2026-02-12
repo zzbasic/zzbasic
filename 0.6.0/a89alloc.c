@@ -1,4 +1,4 @@
-// a89alloc
+// a89alloc.c
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -6,17 +6,15 @@
 #include <limits.h>  // UINT_MAX
 #include "a89alloc.h"
 
-#define MAX_ALLOCATIONS 1000  // Configurável conforme necessidades
-
 typedef struct {
     void* ptr;          // Ponteiro para a memória alocada
     size_t size;        // Tamanho do bloco alocado em bytes
     char file[256];     // Nome do arquivo onde ocorreu a alocação
     int line;           // Número da linha da alocação
-} allocation_info;
+} AllocationInfo;
 
 // Array principal de controle
-static allocation_info allocations[MAX_ALLOCATIONS];
+static AllocationInfo allocations[MAX_ALLOCATIONS];
 
 // Contador de alocações ativas
 static int total_allocations = 0;
@@ -24,15 +22,33 @@ static int total_allocations = 0;
 
 void* a89alloc(size_t size, const char* file, int line)
 {
+
+    if (total_allocations > MAX_ALLOCATIONS - 100) {
+        fprintf(stderr, 
+                "[DEBUG] Alocação #%d em %s:%d\n",
+                total_allocations + 1, file, line);
+    }
+
+    // AVISA SE ESTIVER PERTO DO LIMITE
+    if (total_allocations > MAX_ALLOCATIONS * 0.8)
+    {
+        fprintf(stderr,
+                "AVISO: %.0f%% do limite de alocações atingido (%d/%d)\n",
+                (double)total_allocations / MAX_ALLOCATIONS * 100,
+                total_allocations, MAX_ALLOCATIONS);
+    }
+
     // Validação 1: Verificar limite de alocações
     if (total_allocations >= MAX_ALLOCATIONS)
     {
+        // ERRO FATAL - limite atingido
         fprintf(stderr,
-                "ERRO: Limite máximo de alocações atingido (%d)!\n", 
+                "ERRO FATAL: Limite máximo de alocações (%d) atingido!\n"
+                "Para aumentar o limite, edite MAX_ALLOCATIONS em a89alloc.h\n",
                 MAX_ALLOCATIONS);
-        fprintf(stderr,
-                "Considere aumentar MAX_ALLOCATIONS ou revisar o código.\n");
-        return NULL;
+        //exit(EXIT_FAILURE);
+         total_allocations++;
+
     }
     
     // Validação 2: Verificar tamanho válido
@@ -77,17 +93,129 @@ void* a89alloc(size_t size, const char* file, int line)
     }
     else
     {
-        // Falha na alocação. Encerra programa.
+        // Tratamento de falha na alocação
         fprintf(stderr,
-                "a89alloc:ERRO: Falha na alocação de %zu bytes em %s:%d\n", 
+                "ERRO: Falha na alocação de %zu bytes em %s:%d\n", 
                 size, file, line);
         fprintf(stderr,
                 "Possíveis causas: memória insuficiente ou fragmentação.\n");
-
         exit(EXIT_FAILURE);
     }
     
     return ptr;
+}
+
+
+/********************************************************************
+A89REALLOC - O QUE ACONTECE EM CADA CASO:
+
+Chamada                     Comportamento               Rastreamento
+=====================================================================
+A89REALLOC(NULL, size)      malloc(size)                Nova alocação
+A89REALLOC(ptr, 0)          free(ptr) + NULL            Remove do array
+A89REALLOC(ptr, new_size)   realloc(ptr, new_size)      Atualiza registro
+ptr não rastreado           AVISO + tenta recuperar     Remove + novo
+realloc() falha             Retorna NULL                Registro inalterado
+                            memória original preservada
+*********************************************************************/
+
+void* a89realloc(void* ptr, size_t new_size, const char* file, int line)
+{
+    // Caso 1: realloc(NULL, size) = malloc(size)
+    if (ptr == NULL)
+    {
+        return a89alloc(new_size, file, line);
+    }
+    
+    // Caso 2: realloc(ptr, 0) = free(ptr) + return NULL
+    if (new_size == 0)
+    {
+        a89free(ptr);
+        return NULL;
+    }
+    
+    // Validação 1: Verificar limite de alocações
+    if (total_allocations >= MAX_ALLOCATIONS)
+    {
+        fprintf(stderr,
+                "ERRO: Limite máximo de alocações atingido (%d)!\n", 
+                MAX_ALLOCATIONS);
+        fprintf(stderr,
+                "Considere aumentar MAX_ALLOCATIONS ou revisar o código.\n");
+        return NULL;
+    }
+    
+    // Validação 2: Verificar parâmetros de entrada
+    if (file == NULL)
+    {
+        fprintf(stderr,
+                "ERRO: Parâmetro 'file' é NULL em a89realloc()\n");
+        return NULL;
+    }
+    
+    // Busca o ponteiro no array de alocações
+    int index = -1;
+    for (int i = 0; i < total_allocations; i++)
+    {
+        if (allocations[i].ptr == ptr)
+        {
+            index = i;
+            break;
+        }
+    }
+    
+    // Ponteiro não encontrado
+    if (index == -1)
+    {
+        fprintf(stderr,
+                "AVISO: Tentativa de realocar ponteiro não rastreado: %p em %s:%d\n", 
+                ptr, file, line);
+        fprintf(stderr, "         Liberando ponteiro antigo e alocando novo...\n");
+        
+        // Libera o ponteiro antigo
+        free(ptr);
+        
+        // Aloca novo bloco
+        return a89alloc(new_size, file, line);
+    }
+    
+    // Salva informações antigas
+    size_t old_size = allocations[index].size;
+    char old_file[256];
+    strncpy(old_file, allocations[index].file, 255);
+    old_file[255] = '\0';
+    int old_line = allocations[index].line;
+    
+    // Tenta realocar
+    void* new_ptr = realloc(ptr, new_size);
+    
+    if (new_ptr == NULL)
+    {
+        // Falha na realocação
+        fprintf(stderr,
+                "ERRO: Falha na realocação de %zu -> %zu bytes em %s:%d\n", 
+                old_size, new_size, file, line);
+        fprintf(stderr,
+                "       Memória original preservada.\n");
+        return NULL;
+    }
+    
+    // Atualiza o registro
+    allocations[index].ptr = new_ptr;
+    allocations[index].size = new_size;
+    
+    // Atualiza localização da realocação
+    strncpy(allocations[index].file, file, 255);
+    allocations[index].file[255] = '\0';
+    allocations[index].line = line;
+    
+    // Log informativo (DEBUG)
+    /*
+    printf("REALOCACAO: %zu -> %zu bytes em %s:%d (ptr: %p -> %p)\n", 
+           old_size, new_size, file, line, ptr, new_ptr);
+    */
+    
+    return new_ptr;
 }
 
 
@@ -102,6 +230,7 @@ void a89free(void* ptr) {
         if (allocations[i].ptr == ptr) {
             // Alocação encontrada - proceder com liberação da memória
             free(ptr);
+            ptr = NULL;
             
             // Otimização: substituir por último elemento (O(1) vs O(n))
             allocations[i] = allocations[total_allocations - 1];
@@ -120,13 +249,14 @@ void a89free(void* ptr) {
     
     // Decisão: liberar mesmo assim para evitar vazamentos
     free(ptr);
+    ptr = NULL;
 }
 
 
 void a89check_leaks(void) {
     if (total_allocations == 0) {
-        //printf("SUCESSO: Nenhum vazamento de memoria detectado!\n");
-        //printf("   Todas as alocacoes foram devidamente liberadas.\n");        
+        printf("SUCESSO: Nenhum vazamento de memoria detectado!\n");
+        printf("   Todas as alocacoes foram devidamente liberadas.\n");
         return;
     }
     
@@ -246,6 +376,12 @@ void a89report_alloc(void) {
         printf("=");
     }
     printf("\n");
+}
+
+void a89alloc_shutdown(void)
+{
+    a89report_alloc();  // Mostra quantas alocações NÃO foram liberadas
+    printf("\nQuantidade total de alocações: %d\n", total_allocations);
 }
 
 // fim de a89alloc.c

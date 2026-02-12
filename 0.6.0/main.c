@@ -61,6 +61,10 @@ int main(int argc, char* argv[])
     }
 
     a89check_leaks();
+
+    printf("\n🔵 TESTE FINAL: Alocações ativas:\n");
+    a89alloc_shutdown();  
+    
     return 0;
 }
 // Fim de main.c

@@ -26,6 +26,8 @@ static int colors_enabled_global = 1;
 static EvaluatorResult create_success_result_bool(int value, int line, int column);
 static EvaluatorResult create_success_result_number(double value, int line, int column);
 static EvaluatorResult create_success_result_string(const char* value, int line, int column);
+static EvaluatorResult create_success_result_text(Text* text, int line, int column);
+
 static EvaluatorResult create_error_result(const char* message, int line, int column);
 static EvaluatorResult create_error_result_fmt(int line, int column, 
                                               const char* format, ...);
@@ -55,6 +57,10 @@ static int execute_stmt_list_with_ctx(ASTNode* node, ExecutionContext* ctx);
 static int execute_if_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx);
 static int execute_while_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx);
 static int execute_for_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx);
+
+static EvaluatorResult execute_load_node(ASTNode* node, SymbolTable* symbols);
+static int execute_save_node(ASTNode* node, ExecutionContext* ctx);
+
 
 // FUNÇÕES PÚBLICAS
 
@@ -90,6 +96,38 @@ static SymbolTable* module_manager_get_symbols(ModuleManager* manager,
 // IMPLEMNTACAO DAS FUNCOES
 //###################################################################
 
+
+// ===================================================================
+// DEBUG: CONTADOR DE NÓS POR TIPO
+// ===================================================================
+// void debug_alloc_counter(ASTNode* node, const char* operation)
+// {
+//     static int total_nodes = 0;
+//     static int nodes_by_type[100] = {0};
+    
+//     if (!node) return;
+    
+//     total_nodes++;
+//     if (node->type < 100) {
+//         nodes_by_type[node->type]++;
+//     }
+    
+//     printf("DEBUG [%s]: Nó tipo %d criado. Total: %d\n", 
+//            operation, node->type, total_nodes);
+    
+//     // Mostra os top 5 tipos a cada 100 nós
+//     if (total_nodes % 100 == 0) {
+//         printf("\n=== TOP 5 TIPOS DE NÓ ALOCADOS ===\n");
+//         for (int i = 0; i < 100; i++) {
+//             if (nodes_by_type[i] > 0) {
+//                 printf("  Tipo %d: %d nós\n", i, nodes_by_type[i]);
+//             }
+//         }
+//         printf("================================\n\n");
+//     }
+// }
+
+
 //===================================================================
 // FUNCOES PARA CRIACAO DE NODES
 //===================================================================
@@ -122,6 +160,17 @@ static EvaluatorResult create_success_result_string(const char* value, int line,
     result.type = RESULT_STRING;
     strncpy(result.value.string, value, sizeof(result.value.string) - 1);
     result.value.string[sizeof(result.value.string) - 1] = '\0';
+    result.line = line;
+    result.column = column;
+    return result;
+}
+
+static EvaluatorResult create_success_result_text(Text* text, int line, int column)
+{
+    EvaluatorResult result;
+    memset(&result, 0, sizeof(EvaluatorResult));
+    result.type = RESULT_TEXT;
+    result.value.text = text;
     result.line = line;
     result.column = column;
     return result;
@@ -583,7 +632,13 @@ static int evaluate_print_stmt_with_format(ASTNode* node, ExecutionContext* ctx)
         {
             snprintf(buffer, sizeof(buffer), "%s", result.value.string);
         }
-        else
+        else if (result.type == RESULT_TEXT) 
+        {
+            // Text imprime o conteúdo diretamente
+            const char* text_content = text_get(result.value.text);
+            snprintf(buffer, sizeof(buffer), "%s", text_content);
+        }
+        else // RESULT_NUMBER
         {
             // Formata número sem zeros desnecessários
             double num = result.value.number;
@@ -657,27 +712,39 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
             EvaluatorResult value_result = evaluate_expr(
                 value_node, ctx->symbols, CTX_ANY);
             
-            if (value_result.type == RESULT_ERROR) {
+            if (value_result.type == RESULT_ERROR)
+            {
                 printf("%s\n", value_result.error_message);
                 return 0;
             }
             
             // Store based on type
             if (value_result.type == RESULT_STRING) {
-                if (!symbol_table_set_string(ctx->symbols, var_name, value_result.value.string)) {
+                if (!symbol_table_set_string(ctx->symbols, var_name, value_result.value.string))
+                {
                     printf("Evaluator error: assigning string to '%s'\n", var_name);
                     return 0;
                 }
             }
             else if (value_result.type == RESULT_NUMBER) {
-                if (!symbol_table_set_number(ctx->symbols, var_name, value_result.value.number)) {
+                if (!symbol_table_set_number(ctx->symbols, var_name, value_result.value.number))
+                {
                     printf("Evaluator error: assigning number to '%s'\n", var_name);
                     return 0;
                 }
             }
             else if (value_result.type == RESULT_BOOL) {
-                if (!symbol_table_set_bool(ctx->symbols, var_name, value_result.value.boolean)) {
+                if (!symbol_table_set_bool(ctx->symbols, var_name, value_result.value.boolean))
+                {
                     printf("Evaluator error: assigning boolean to '%s'\n", var_name);
+                    return 0;
+                }
+            }
+            else if (value_result.type == RESULT_TEXT)
+            {  
+                if (!symbol_table_set_text(ctx->symbols, var_name, value_result.value.text))
+                {
+                    printf("Evaluator error: assigning Text to '%s'\n", var_name);
                     return 0;
                 }
             }
@@ -844,6 +911,19 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
             return 1;
         }
 
+        case NODE_LOAD:  
+        {
+            // LOAD é expressão, não statement isolado
+            // Deve ser usado com assignment (let x = load(...))
+            printf("%s[%d:%d] Evaluator error: load() cannot be used as statement.%s\n",
+                   COLOR_ERROR, node->line, node->column,
+                   COLOR_RESET);
+            printf("  Use: let variavel = load(\"filename\")\n");
+            return 0;
+        }
+        
+        case NODE_SAVE:  
+            return execute_save_node(node, ctx);
             
         default:
             printf("Evaluator error: unsupported statement type: %d\n", node->type);
@@ -1054,6 +1134,60 @@ static int execute_for_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
     return 1;  
 }
 
+static EvaluatorResult execute_load_node(ASTNode* node, SymbolTable* symbols)
+{
+    // Pega o nome do arquivo do nó AST
+    const char* filename = node->data.load_expr.filename;
+    
+    // Tenta carregar o arquivo
+    Text* text = text_create_from_file(filename);
+    if (!text)
+    {
+        return create_error_result_fmt(node->line, node->column,
+            "Evaluator error: could not load file '%s'", filename);
+    }
+    
+    // Retorna o Text como resultado
+    return create_success_result_text(text, node->line, node->column);
+}
+
+static int execute_save_node(ASTNode* node, ExecutionContext* ctx)
+{
+    // Avalia a expressão que deve retornar um Text
+    EvaluatorResult text_result = evaluate_expr(
+        node->data.save_stmt.expression, ctx->symbols, CTX_ANY);
+    
+    if (text_result.type == RESULT_ERROR)
+    {
+        printf("%s\n", text_result.error_message);
+        return 0;
+    }
+    
+    // Verifica se é realmente um Text
+    if (text_result.type != RESULT_TEXT)
+    {
+        printf("%s[%d:%d] Evaluator error: save() expects Text object, got %s%s\n",
+               COLOR_ERROR, node->line, node->column,
+               (text_result.type == RESULT_NUMBER ? "number" :
+                text_result.type == RESULT_STRING ? "string" :
+                text_result.type == RESULT_BOOL ? "boolean" : "unknown"),
+               COLOR_RESET);
+        return 0;
+    }
+    
+    // Pega o nome do arquivo
+    const char* filename = node->data.save_stmt.filename;
+    
+    // Salva o arquivo
+    if (!text_save(text_result.value.text, filename))
+    {
+        printf("%s[%d:%d] Evaluator error: could not save file '%s'%s\n",
+               COLOR_ERROR, node->line, node->column, filename, COLOR_RESET);
+        return 0;
+    }
+    
+    return 1;  // Sucesso
+}
 
 // ==================================================================
 // EVALUATE PROGRAM - FUNÇÃO PRINCIPAL PARA AVALIAR UM PROGRAMA COMPLETO
@@ -1470,6 +1604,9 @@ EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext c
             return create_success_result_bool(not_result, 
                                              node->line, node->column);
         }
+
+        case NODE_LOAD:  
+            return execute_load_node(node, symbols);
             
         default:
             return create_error_result_fmt(node->line, node->column,
@@ -1655,6 +1792,7 @@ void execution_ctx_destroy(ExecutionContext* ctx)
     if (ctx->modules)
     {
         module_manager_destroy(ctx->modules); 
+        ctx->modules = NULL;
     }
     
     a89free(ctx);
