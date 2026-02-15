@@ -809,7 +809,7 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
                 
                 // Chama set() para atribuir ao elemento
                 EvaluatorResult args[] = {arr_result, index_result, value_result};
-                EvaluatorResult set_result = builtin_set(args, 3);
+                EvaluatorResult set_result = builtin_set(args, 3, target_node->line, target_node->column);
                 
                 if (set_result.type == RESULT_ERROR)
                 {
@@ -1842,7 +1842,7 @@ EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext c
             
             // Chama get()
             EvaluatorResult args[] = {arr_result, index_result};
-            return builtin_get(args, 2);
+            return builtin_get(args, 2, node->line, node->column);
         }    
             
         default:
