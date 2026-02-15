@@ -21,6 +21,42 @@ static int colors_enabled_global = 1;
 
 
 //===================================================================
+// TABELA DE DISPATCH PARA FUNÇÕES BUILT-IN
+//===================================================================
+typedef struct
+{
+    const char* name;
+    EvaluatorResult (*func)(EvaluatorResult* args, int arg_count, int line, int column);
+} BuiltinFunction;
+
+// Tabela com todas as funções built-in disponíveis
+static BuiltinFunction builtins[] = {
+    // Funções de Array
+    {"push",     builtin_push},
+    {"pop",      builtin_pop},
+    {"len",      builtin_len},
+    {"is_empty", builtin_is_empty},
+    {"get",      builtin_get},
+    {"set",      builtin_set},
+    {"insert",   builtin_insert},
+    {"remove",   builtin_remove},
+    
+    // Futuro: Funções de String
+    // {"upper",    builtin_upper},
+    // {"lower",    builtin_lower},
+    // {"trim",     builtin_trim},
+    
+    // Futuro: Funções de Math
+    // {"sqrt",     builtin_sqrt},
+    // {"abs",      builtin_abs},
+    // {"sin",      builtin_sin},
+    
+    // Marcador de fim (OBRIGATÓRIO!)
+    {NULL, NULL}
+};
+
+
+//===================================================================
 // PROTOTIPOS DAS FUNCOES
 //===================================================================
 static EvaluatorResult create_success_result_bool(int value, int line, int column);
@@ -615,7 +651,8 @@ static int evaluate_print_stmt_with_format(ASTNode* node, ExecutionContext* ctx)
         {
             // Text imprime o conteúdo diretamente
             const char* text_content = text_get(result.value.text);
-            snprintf(buffer, sizeof(buffer), "%s", text_content);
+            //snprintf(buffer, sizeof(buffer), "%s", text_content);
+            printf("%s", text_content);  
         }
         else // RESULT_NUMBER
         {
@@ -729,6 +766,15 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
                     return 0;
                 }
             }
+            else if (value_result.type == RESULT_ARRAY)
+            {
+                if (!symbol_table_set_array(ctx->symbols, var_name, value_result.value.array))
+                {
+                    printf("Evaluator error: assigning array to '%s'\n", var_name);
+                    return 0;
+                }
+            }
+            
             return 1;
         }
             
@@ -1685,21 +1731,73 @@ EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext c
                 return create_success_result_array(array, node->line, node->column);
             }
 
-
-            
             // ============================================
-            // FUNÇÃO: upper(string) - EXEMPLO FUTURO
+            // DISPATCH PARA FUNÇÕES BUILT-IN
             // ============================================
-            // if (strcmp(func_name, "upper") == 0)
-            // {
-            //     // Implementar quando precisar
-            // }
+            for (int i = 0; builtins[i].name != NULL; i++)
+            {
+                if (strcmp(func_name, builtins[i].name) == 0)
+                {
+                    // Avalia argumentos
+                    EvaluatorResult* args = A89ALLOC(sizeof(EvaluatorResult) * node->data.function_call.arg_count);
+                    
+                    for (int j = 0; j < node->data.function_call.arg_count; j++)
+                    {
+                        args[j] = evaluate_expr(
+                            node->data.function_call.arguments[j],
+                            symbols,
+                            CTX_ANY
+                        );
+                        
+                        if (args[j].type == RESULT_ERROR)
+                        {
+                            a89free(args);
+                            return args[j];  // Retorna o erro
+                        }
+                    }
+                    
+                    // Chama a função através do ponteiro
+                    EvaluatorResult result = builtins[i].func(
+                        args,
+                        node->data.function_call.arg_count,
+                        node->line,
+                        node->column
+                    );
+                    
+                    a89free(args);
+                    return result;
+                }
+            }
             
             // Função desconhecida
             return create_error_result_fmt(node->line, node->column,
                 "Evaluator error: unknown function '%s'", func_name);
         }
 
+        case NODE_ARRAY_INDEX:
+        {
+            // Avalia o array
+            EvaluatorResult arr_result = evaluate_expr(
+                node->data.array_index.array, symbols, CTX_ANY);
+            
+            if (arr_result.type == RESULT_ERROR)
+            {
+                return arr_result;
+            }
+            
+            // Avalia o índice
+            EvaluatorResult index_result = evaluate_expr(
+                node->data.array_index.index, symbols, CTX_ANY);
+            
+            if (index_result.type == RESULT_ERROR)
+            {
+                return index_result;
+            }
+            
+            // Chama get()
+            EvaluatorResult args[] = {arr_result, index_result};
+            return builtin_get(args, 2);
+        }    
             
         default:
             return create_error_result_fmt(node->line, node->column,

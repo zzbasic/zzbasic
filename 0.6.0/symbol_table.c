@@ -330,8 +330,8 @@ int symbol_table_set_array(SymbolTable* table, const char* name, Array* array)
         symbol = A89ALLOC(sizeof(Symbol));
         if (!symbol) return 0;
         
-        strncpy(symbol->name, name, BUFFER_SIZE - 1);
-        symbol->name[BUFFER_SIZE - 1] = '\0';
+        strncpy(symbol->name, name, VARNAME_SIZE - 1);
+        symbol->name[VARNAME_SIZE - 1] = '\0';
         symbol->type = SYM_ARRAY;
         symbol->next = table->head;
         table->head = symbol;

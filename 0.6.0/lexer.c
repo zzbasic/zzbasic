@@ -140,7 +140,9 @@ static const char* TOKEN_STRINGS[] =
     "AS",               // TOKEN_AS
     "COMMA",            // TOKEN_COMMA
     "LOAD",             // TOKEN_LOAD          
-    "SAVE",              // TOKEN_SAVE   
+    "SAVE",             // TOKEN_SAVE  
+    "LBRACKET",         // TOKEN_LBRACKET
+    "RBRACKET",         // TOKEN_RBRACKET
 
     "NOERROR"           // TOKEN_NOERROR
 };
@@ -853,6 +855,22 @@ Token lexer_get_next_token(Lexer* lexer)
             token.line = line;
             token.column = column;
             return token;
+
+        case '[':
+            lexer_advance(lexer);
+            token.type = TOKEN_LBRACKET;
+            strcpy(token.token_text, "[");
+            token.line = line;
+            token.column = column;
+            return token;
+
+        case ']':
+            lexer_advance(lexer);
+            token.type = TOKEN_RBRACKET;
+            strcpy(token.token_text, "]");
+            token.line = line;
+            token.column = column;
+            return token;
             
         default:
         {
@@ -938,10 +956,7 @@ int main()
     
     printf("ZzBasic Lexer Test v0.6.0 \n\n");
 
-    lexer_print_all_tokens("let programa = load(\"calculadora.zz\")\n");
-    wait();
-
-    lexer_print_all_tokens("save(programa, \"backup.zz\")\n");
+    lexer_print_all_tokens("arr[0] = 100\nprint arr[0] nl\n");
 
     return 0;
 }

@@ -114,7 +114,10 @@ typedef enum {
     TOKEN_AS,
     TOKEN_COMMA,  
     TOKEN_LOAD,          
-    TOKEN_SAVE,          
+    TOKEN_SAVE,
+
+    TOKEN_LBRACKET,  // [
+    TOKEN_RBRACKET,  // ]        
 
     TOKEN_NOERROR
 } TokenType;

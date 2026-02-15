@@ -1,6 +1,6 @@
 # =====================================================================
 # ZzBasic - GRAMÁTICA v0.6.0
-# Última atualização: 20260210
+# Última atualização: 20260214
 # =====================================================================
 
 # =====================================================================
@@ -29,7 +29,9 @@ statement           := assignment_stmt
 # =====================================================================
 # ASSIGNMENT
 # =====================================================================
-assignment_stmt     := 'let' IDENTIFIER '=' expression
+#assignment_stmt     := 'let' IDENTIFIER '=' expression
+
+assignment_stmt      := 'let' (IDENTIFIER | IDENTIFIER [expression]) '=' expression
 
 
 # =====================================================================
@@ -172,10 +174,13 @@ expression          := term (('+' | '-') term)*
 # Nível 6: Termos (multiplicação/divisão)
 term                := factor (('*' | '/') factor)*
 
-# Nível 7: Fatores (unários e átomos)
-factor              := ('+' | '-')? atom
+# Nível 7: Fatores (unários e expressão posfix)
+factor              := ('+' | '-')? postfix
 
-# Nível 8: Átomos (mais alta precedência)
+# Nivel 8: atomo com expressão posfixa
+postfix             := atom ('[' logical_expr ']')*
+
+# Nível 9: Átomos (mais alta precedência)
 atom                := NUMBER 
                     | STRING 
                     | TEXT

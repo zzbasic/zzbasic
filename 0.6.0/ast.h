@@ -39,7 +39,8 @@ typedef enum
     NODE_LOAD,
     NODE_SAVE,
     NODE_FUNCTION_CALL,
-    NODE_ARRAY
+    NODE_ARRAY,
+    NODE_ARRAY_INDEX
 
 } NodeType;
 
@@ -124,8 +125,8 @@ typedef struct
 
 typedef struct
 {
-    char var_name[VARNAME_SIZE];
-    ASTNode* value;  // ASTNode que contém a expressão a ser atribuída
+    ASTNode* target;  // NODE_VARIABLE ou NODE_ARRAY_INDEX
+    ASTNode* value;   // ASTNode que contém a expressão a ser atribuída
 } AssignmentData;
 
 typedef struct
@@ -229,6 +230,12 @@ typedef struct FunctionCallData
     int arg_count;                     
 } FunctionCallData;
 
+typedef struct ArrayIndexData
+{
+    ASTNode* array;      // Variável do array
+    ASTNode* index;      // Expressão do índice
+} ArrayIndexData;
+
 typedef struct ASTNode
 {
     NodeType type;
@@ -261,6 +268,7 @@ typedef struct ASTNode
         LoadExprData            load_expr;   
         SaveStatementData       save_stmt;
         FunctionCallData        function_call;
+        ArrayIndexData          array_index;
 
     } data;
 
@@ -273,18 +281,23 @@ typedef struct ASTNode
 ASTNode* create_bool_node(int value, int line, int column);
 ASTNode* create_number_node(double value, int line, int column);
 ASTNode* create_string_node(const char* value, int line, int column);
+
 // CRIA NÓ DE VARIÁVEL. VAR_NAME JÁ DEVE SER VÁLIDO (VALIDADO PELO PARSER)
 ASTNode* create_variable_node(const char* var_name, int line, int column);
+
 // CRIA OPERAÇÃO BINÁRIA. LEFT E RIGHT NÃO PODEM SER NULL
 ASTNode* create_binary_op_node(char operator, ASTNode* left, ASTNode* right, 
                                int line, int column);
+
 // CRIA OPERAÇÃO UNÁRIA. OPERAND NÃO PODE SER NULL
 ASTNode* create_unary_op_node(char operator, ASTNode* operand, 
                               int line, int column);
-// CRIA ATRIBUIÇÃO. VAR_NAME JÁ VALIDADO, VALUE NÃO PODE SER NULL
-ASTNode* create_assignment_node(const char* var_name, ASTNode* value, 
+
+ASTNode* create_assignment_node(ASTNode* target, ASTNode* value, 
                                 int line, int column);
+
 ASTNode* create_statement_list_node(int line, int column);
+
 void statement_list_add(ASTNode* list_node, ASTNode* stmt);
 
 //ASTNode* create_input_node(const char* prompt, char* var_name, int line, int column);
@@ -343,10 +356,11 @@ ASTNode* create_function_call_node(const char* function_name, int line, int colu
 void function_call_add_argument(ASTNode* node, ASTNode* argument);
 
 ASTNode* create_array_node(int line, int column);
-
+ASTNode* create_array_access_node(ASTNode* array, ASTNode* index, int line, int column);
 
 void print_node_add_item(ASTNode* print_node, ASTNode* expr_node);
 void print_set_newline(ASTNode* print_node, int has_newline);
+
 void free_ast(ASTNode* node);
 void print_ast(ASTNode* node, int indent);
 

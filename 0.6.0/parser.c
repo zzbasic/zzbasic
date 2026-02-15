@@ -64,6 +64,7 @@ static ASTNode* parse_comparison_expr(Parser* parser);
 static ASTNode* parse_expr(Parser* parser);
 static ASTNode* parse_term(Parser* parser);
 static ASTNode* parse_factor(Parser* parser);
+static ASTNode* parse_postfix(Parser* parser);
 static ASTNode* parse_atom(Parser* parser);
 
 // ASTNode* parse(Lexer* lexer)
@@ -462,7 +463,7 @@ static ASTNode* parse_stmt(Parser* parser)
 //===================================================================
 static ASTNode* parse_assignment_stmt(Parser* parser)
 {
-    // We already verified it's TOKEN_LET before calling this function
+    // TOKEN_LET verificado antes da chamada a essa função
     parser_advance(parser);  // Consume LET
     
     // Check identifier
@@ -1848,7 +1849,7 @@ static ASTNode* parse_term(Parser* parser) {
 }
 
 //===================================================================
-// factor := ('+' | '-')? atom
+// factor := ('+' | '-')? postfix
 //===================================================================
 static ASTNode* parse_factor(Parser* parser)
 {
@@ -1856,7 +1857,6 @@ static ASTNode* parse_factor(Parser* parser)
     int line = parser->current_token.line;
     int column = parser->current_token.column;
     
-    // Only advance if it's + or -
     if (parser->current_token.type == TOKEN_PLUS || 
         parser->current_token.type == TOKEN_MINUS)
     {
@@ -1868,7 +1868,7 @@ static ASTNode* parse_factor(Parser* parser)
         parser_advance(parser);
     }
     
-    ASTNode* operand = parse_atom(parser);
+    ASTNode* operand = parse_postfix(parser);
     if (parser->has_error || !operand) return NULL;
     
     if (op == '+')
@@ -1880,11 +1880,66 @@ static ASTNode* parse_factor(Parser* parser)
 }
 
 //===================================================================
+// postfix := atom ('[' logical_expr ']')*
+//===================================================================
+static ASTNode* parse_postfix(Parser* parser)
+{
+    int line = parser->current_token.line;
+    int column = parser->current_token.column;
+
+    // Primeiro, parse o atom
+    ASTNode* node = parse_atom(parser);
+    if (parser->has_error || !node) return NULL;
+    
+    // Depois, processa quantos '[...]' houver
+    while (parser->current_token.type == TOKEN_LBRACKET)
+    {
+        parser_advance(parser);  // Consume '['
+        
+        // Parse a expressão dentro dos colchetes
+        ASTNode* index = parse_logical_expr(parser);
+        if (parser->has_error || !index)
+        {
+            free_ast(node);
+            return NULL;
+        }
+        
+        // Verifica se há ']'
+        if (parser->current_token.type != TOKEN_RBRACKET)
+        {
+            parser->has_error = 1;
+            snprintf(parser->error_message, BUFFER_SIZE,
+                "Parser error: expected ']' after array index");
+            free_ast(node);
+            free_ast(index);
+            return NULL;
+        }
+        
+        parser_advance(parser);  // Consume ']'
+        
+        // Cria nó de array access
+        node = create_array_access_node(node, index, line, column);
+        if (!node)
+        {
+            parser->has_error = 1;
+            snprintf(parser->error_message, BUFFER_SIZE,
+                "Parser error: could not create array access node");
+            return NULL;
+        }
+    }
+    
+    return node;
+}
+
+
+//===================================================================
 // atom                := NUMBER 
 //                     | STRING 
 //                     | TEXT
+//                     | ARRAY
 //                     | 'true' 
 //                     | 'false' 
+//                     | function_call
 //                     | IDENTIFIER 
 //                     | load_expr
 //                     | '(' logical_expr ')'

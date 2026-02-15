@@ -105,13 +105,16 @@ ASTNode* create_unary_op_node(char operator, ASTNode* operand,
     return node;
 }
 
-// CREATES ASSIGNMENT. VAR_NAME ALREADY VALIDATED, VALUE CANNOT BE NULL
-ASTNode* create_assignment_node(const char* var_name, ASTNode* value, 
+ASTNode* create_assignment_node(ASTNode* target, ASTNode* value, 
                                 int line, int column)
 {
+    if (!target || !value)
+    {
+        return NULL;
+    }
+    
     ASTNode* node = create_node(NODE_ASSIGNMENT, line, column);
-    strncpy(node->data.assignment.var_name, var_name, VARNAME_SIZE - 1);
-    node->data.assignment.var_name[VARNAME_SIZE - 1] = '\0';
+    node->data.assignment.target = target;
     node->data.assignment.value = value;
     return node;
 }
@@ -463,6 +466,13 @@ ASTNode* create_array_node(int line, int column)
     return node;
 }
 
+ASTNode* create_array_access_node(ASTNode* array, ASTNode* index, int line, int column)
+{
+    ASTNode* node = create_node(NODE_ARRAY_ACCESS, line, column);
+    node->data.array_access.array = array;
+    node->data.array_access.index = index;
+    return node;
+}
 
 
 //===================================================================
@@ -483,6 +493,7 @@ void free_ast(ASTNode* node)
             break;
             
         case NODE_ASSIGNMENT:
+            free_ast(node->data.assignment.target);  
             free_ast(node->data.assignment.value);
             break;
             
@@ -566,16 +577,20 @@ void free_ast(ASTNode* node)
             break;
 
         case NODE_FOR:
-            if (node->data.for_stmt.init_value) {
+            if (node->data.for_stmt.init_value)
+            {
                 free_ast(node->data.for_stmt.init_value);
             }
-            if (node->data.for_stmt.end_value) {
+            if (node->data.for_stmt.end_value)
+            {
                 free_ast(node->data.for_stmt.end_value);
             }
-            if (node->data.for_stmt.step_value) {
+            if (node->data.for_stmt.step_value)
+            {
                 free_ast(node->data.for_stmt.step_value);
             }
-            if (node->data.for_stmt.body) {
+            if (node->data.for_stmt.body)
+            {
                 free_ast(node->data.for_stmt.body);
             }
             break;
@@ -613,7 +628,7 @@ void free_ast(ASTNode* node)
             }
             
             // Libera array de argumentos
-            if (node->data.function_call.arguments != NULL)
+            if (node->data.function_call.arguments)
             {
                 a89free(node->data.function_call.arguments);
             }
@@ -623,6 +638,17 @@ void free_ast(ASTNode* node)
         case NODE_ARRAY:
             // Array é gerenciado pela symbol table
             // Aqui não precisa fazer nada
+            break;
+
+        case NODE_ARRAY_ACCESS:
+            if(node->data.array_access.array)
+            {
+                free_ast(node->data.array_access.array);
+            }
+            if(node->data.array_access.index)
+            {
+                free_ast(node->data.array_access.index);
+            }
             break;
 
         case NODE_BOOL:
@@ -675,8 +701,11 @@ void print_ast(ASTNode* node, int indent)
             break;
             
         case NODE_ASSIGNMENT:
-            printf("ASSIGNMENT: %s\n", node->data.assignment.var_name);
-            print_ast(node->data.assignment.value, indent + 1);
+            printf("ASSIGNMENT:\n");
+            printf("%*sTarget:\n", (indent + 1) * 2, "");
+            print_ast(node->data.assignment.target, indent + 2);
+            printf("%*sValue:\n", (indent + 1) * 2, "");
+            print_ast(node->data.assignment.value, indent + 2);
             break;
 
         case NODE_STATEMENT_LIST:  
@@ -857,6 +886,7 @@ void print_ast(ASTNode* node, int indent)
         case NODE_ARRAY:
             printf("ARRAY\n");
             break;
+
 
     }
 }
