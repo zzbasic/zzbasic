@@ -8,6 +8,7 @@
 #include "color.h"
 #include "a89alloc.h"
 #include "evaluator.h"
+#include "zzarray_wrapper.h"
 
 #define EPSILON 1e-12
 
@@ -719,12 +720,14 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
 {
     if (!node || !ctx) return 0;
     
-    switch (node->type) {
+    switch (node->type)
+    {
         case NODE_ASSIGNMENT:
         {
-            const char* var_name = node->data.assignment.var_name;
+            ASTNode* target_node = node->data.assignment.target;
             ASTNode* value_node = node->data.assignment.value;
             
+            // Avalia o valor a ser atribuído
             EvaluatorResult value_result = evaluate_expr(
                 value_node, ctx->symbols, CTX_ANY);
             
@@ -734,48 +737,91 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
                 return 0;
             }
             
-            // Store based on type
-            if (value_result.type == RESULT_STRING) {
-                if (!symbol_table_set_string(ctx->symbols, var_name, value_result.value.string))
-                {
-                    printf("Evaluator error: assigning string to '%s'\n", var_name);
-                    return 0;
-                }
-            }
-            else if (value_result.type == RESULT_NUMBER) {
-                if (!symbol_table_set_number(ctx->symbols, var_name, value_result.value.number))
-                {
-                    printf("Evaluator error: assigning number to '%s'\n", var_name);
-                    return 0;
-                }
-            }
-            else if (value_result.type == RESULT_BOOL) {
-                if (!symbol_table_set_bool(ctx->symbols, var_name, value_result.value.boolean))
-                {
-                    printf("Evaluator error: assigning boolean to '%s'\n", var_name);
-                    return 0;
-                }
-            }
-            else if (value_result.type == RESULT_TEXT)
-            {  
-                //Text* text_copy = text_create_from_string(text_get(value_result.value.text));
-                //if (!symbol_table_set_text(ctx->symbols, var_name, text_copy))
-                if (!symbol_table_set_text(ctx->symbols, var_name, value_result.value.text))
-                {
-                    printf("Evaluator error: assigning Text to '%s'\n", var_name);
-                    return 0;
-                }
-            }
-            else if (value_result.type == RESULT_ARRAY)
+            // CASO 1: Atribuição a variável simples (let x = 10)
+            if (target_node->type == NODE_VARIABLE)
             {
-                if (!symbol_table_set_array(ctx->symbols, var_name, value_result.value.array))
-                {
-                    printf("Evaluator error: assigning array to '%s'\n", var_name);
-                    return 0;
+                const char* var_name = target_node->data.variable.var_name;
+                
+                // Store based on type
+                if (value_result.type == RESULT_STRING) {
+                    if (!symbol_table_set_string(ctx->symbols, var_name, value_result.value.string))
+                    {
+                        printf("Evaluator error: assigning string to '%s'\n", var_name);
+                        return 0;
+                    }
                 }
+                else if (value_result.type == RESULT_NUMBER) {
+                    if (!symbol_table_set_number(ctx->symbols, var_name, value_result.value.number))
+                    {
+                        printf("Evaluator error: assigning number to '%s'\n", var_name);
+                        return 0;
+                    }
+                }
+                else if (value_result.type == RESULT_BOOL) {
+                    if (!symbol_table_set_bool(ctx->symbols, var_name, value_result.value.boolean))
+                    {
+                        printf("Evaluator error: assigning boolean to '%s'\n", var_name);
+                        return 0;
+                    }
+                }
+                else if (value_result.type == RESULT_TEXT)
+                {  
+                    if (!symbol_table_set_text(ctx->symbols, var_name, value_result.value.text))
+                    {
+                        printf("Evaluator error: assigning Text to '%s'\n", var_name);
+                        return 0;
+                    }
+                }
+                else if (value_result.type == RESULT_ARRAY)
+                {
+                    if (!symbol_table_set_array(ctx->symbols, var_name, value_result.value.array))
+                    {
+                        printf("Evaluator error: assigning array to '%s'\n", var_name);
+                        return 0;
+                    }
+                }
+                
+                return 1;
             }
             
-            return 1;
+            // CASO 2: Atribuição a elemento de array (let arr[i] = x)
+            else if (target_node->type == NODE_ARRAY_INDEX)
+            {
+                // Avalia array
+                EvaluatorResult arr_result = evaluate_expr(
+                    target_node->data.array_index.array,
+                    ctx->symbols, CTX_ANY);
+                
+                if (arr_result.type != RESULT_ARRAY) {
+                    printf("Evaluator error: array index target must be an array\n");
+                    return 0;
+                }
+                
+                // Avalia índice
+                EvaluatorResult index_result = evaluate_expr(
+                    target_node->data.array_index.index,
+                    ctx->symbols, CTX_ANY);
+                
+                if (index_result.type != RESULT_NUMBER) {
+                    printf("Evaluator error: array index must be a number\n");
+                    return 0;
+                }
+                
+                // Chama set() para atribuir ao elemento
+                EvaluatorResult args[] = {arr_result, index_result, value_result};
+                EvaluatorResult set_result = builtin_set(args, 3);
+                
+                if (set_result.type == RESULT_ERROR)
+                {
+                    printf("%s\n", set_result.error_message);
+                    return 0;
+                }
+                
+                return 1;
+            }
+            
+            printf("Evaluator error: invalid assignment target\n");
+            return 0;
         }
             
         case NODE_BOOL:
