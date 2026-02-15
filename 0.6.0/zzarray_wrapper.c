@@ -15,7 +15,7 @@
 //===================================================================
 // push(arr, 5)
 //===================================================================
-static EvaluatorResult builtin_push(EvaluatorResult* args, int arg_count, int line, int column)
+EvaluatorResult builtin_push(EvaluatorResult* args, int arg_count, int line, int column)
 {
     // Valida argumentos
     if (arg_count != 2)
@@ -74,7 +74,7 @@ static EvaluatorResult builtin_push(EvaluatorResult* args, int arg_count, int li
 //===================================================================
 // let x = pop(arr)
 //===================================================================
-static EvaluatorResult builtin_pop(EvaluatorResult* args, int arg_count, int line, int column)
+EvaluatorResult builtin_pop(EvaluatorResult* args, int arg_count, int line, int column)
 {
     if (arg_count != 1)
     {
@@ -112,7 +112,7 @@ static EvaluatorResult builtin_pop(EvaluatorResult* args, int arg_count, int lin
 //===================================================================
 // print len(arr) nl
 //===================================================================
-static EvaluatorResult builtin_len(EvaluatorResult* args, int arg_count, int line, int column)
+EvaluatorResult builtin_len(EvaluatorResult* args, int arg_count, int line, int column)
 {
     if (arg_count != 1)
     {
@@ -149,7 +149,7 @@ static EvaluatorResult builtin_len(EvaluatorResult* args, int arg_count, int lin
 //     print "Vazio!" nl
 // end if
 //===================================================================
-static EvaluatorResult builtin_is_empty(EvaluatorResult* args, int arg_count, int line, int column)
+EvaluatorResult builtin_is_empty(EvaluatorResult* args, int arg_count, int line, int column)
 {
     if (arg_count != 1)
     {
@@ -172,7 +172,7 @@ static EvaluatorResult builtin_is_empty(EvaluatorResult* args, int arg_count, in
 //===================================================================
 // print arr[3] nl    
 //===================================================================
-static EvaluatorResult builtin_get(EvaluatorResult* args, int arg_count, int line, int column)
+EvaluatorResult builtin_get(EvaluatorResult* args, int arg_count, int line, int column)
 {
     if (arg_count != 2)
     {
@@ -217,7 +217,7 @@ static EvaluatorResult builtin_get(EvaluatorResult* args, int arg_count, int lin
 //===================================================================
 // arr[0] = 100   
 //===================================================================
-static EvaluatorResult builtin_set(EvaluatorResult* args, int arg_count, int line, int column)
+EvaluatorResult builtin_set(EvaluatorResult* args, int arg_count, int line, int column)
 {
     if (arg_count != 3)
     {
@@ -284,7 +284,7 @@ static EvaluatorResult builtin_set(EvaluatorResult* args, int arg_count, int lin
 //===================================================================
 // insert(arr, 1, 50)  
 //===================================================================
-static EvaluatorResult builtin_insert(EvaluatorResult* args, int arg_count, int line, int column)
+EvaluatorResult builtin_insert(EvaluatorResult* args, int arg_count, int line, int column)
 {
     if (arg_count != 3)
     {
@@ -337,7 +337,7 @@ static EvaluatorResult builtin_insert(EvaluatorResult* args, int arg_count, int 
 //===================================================================
 // remove(arr, 1)
 //===================================================================
-static EvaluatorResult builtin_remove(EvaluatorResult* args, int arg_count, int line, int column)
+EvaluatorResult builtin_remove(EvaluatorResult* args, int arg_count, int line, int column)
 {
     if (arg_count != 2)
     {
