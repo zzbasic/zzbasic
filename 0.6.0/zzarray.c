@@ -59,6 +59,29 @@ Array* array_create(void)
     return array;
 }
 
+Array* array_create_with_capacity(int capacity)
+{
+    Array* array = A89ALLOC(sizeof(Array));
+    if (!array) return NULL;
+    
+    int cap = (capacity > 0) ? capacity : ARRAY_INITIAL_CAPACITY;
+    
+    array->capacity = cap;
+    array->elements = A89ALLOC(array->capacity * sizeof(void*));
+    
+    if (!array->elements)
+    {
+        a89free(array);
+        return NULL;
+    }
+    
+    // Inicializar com NULL
+    memset(array->elements, 0, array->capacity * sizeof(void*));
+    
+    array->size = 0;
+    return array;
+}
+
 void array_free(Array* array)
 {
     if (array)
