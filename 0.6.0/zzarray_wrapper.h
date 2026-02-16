@@ -3,7 +3,7 @@
 #ifndef ZZARRAY_WRAPPER_H
 #define ZZARRAY_WRAPPER_H
 
-#include "evaluator.h"
+#include "result.h"
 
 // ============================================================
 // WRAPPERS DE ARRAY
