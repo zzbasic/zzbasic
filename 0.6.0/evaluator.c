@@ -1298,7 +1298,33 @@ EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext c
                 }
                 // Text é aceitável em CTX_ANY e CTX_STRING
                 return create_success_result_text(text_value, node->line, node->column);
-            }  
+            } 
+
+            // Try as array
+            Array* array_value;
+            if (symbol_table_get_array(symbols, var_name, &array_value))
+            {
+                if (ctx == CTX_NUMBER)
+                {
+                    return create_error_result_fmt(node->line, node->column,
+                         "Evaluator error: variable '%s' is an array, cannot be used as number", 
+                         var_name);
+                }
+                if (ctx == CTX_BOOL)
+                {
+                    return create_error_result_fmt(node->line, node->column,
+                         "Evaluator error: variable '%s' is an array, cannot be used as boolean", 
+                         var_name);
+                }
+                if (ctx == CTX_STRING)
+                {
+                    return create_error_result_fmt(node->line, node->column,
+                         "Evaluator error: variable '%s' is an array, cannot be used as string", 
+                         var_name);
+                }
+                // Array é aceitável apenas em CTX_ANY
+                return create_success_result_array(array_value, node->line, node->column);
+            }
             
             // Should not reach here
             return create_error_result_fmt(node->line, node->column,
