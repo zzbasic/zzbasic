@@ -59,6 +59,14 @@ void array_free(Array* array)
     {
         if (array->elements)
         {
+            // Libera cada elemento
+            for (int i = 0; i < array->size; i++)
+            {
+                if (array->elements[i])
+                {
+                    a89free(array->elements[i]);
+                }
+            }
             a89free(array->elements);
         }
         a89free(array);
