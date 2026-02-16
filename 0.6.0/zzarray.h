@@ -26,6 +26,8 @@ typedef struct Array
 
 Array* array_create(void);
 
+Array* array_create_with_capacity(int capacity);
+
 void array_free(Array* array);
 
 // Adiciona elemento no final (push)
