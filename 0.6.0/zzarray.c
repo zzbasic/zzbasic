@@ -142,7 +142,7 @@ void* array_remove(Array* array, int index)
 // Obtém elemento em posição específica
 void* array_get(Array* array, int index)
 {
-    if (!array || index < 0 || index >= array->size) return NULL;
+    if (!array || index < 0 || index >= array->capacity) return NULL;
     return array->elements[index];
 }
 
