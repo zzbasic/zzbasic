@@ -28,6 +28,9 @@ static int array_expand(Array* array, int min_capacity)
     // Realoca array de ponteiros
     void** new_elements = A89REALLOC(array->elements, new_cap * sizeof(void*));
     if (!new_elements) return 0;
+
+    // Inicializar novas posições com NULL
+    memset(new_elements + array->capacity, 0, (new_cap - array->capacity) * sizeof(void*));
     
     array->elements = new_elements;
     array->capacity = new_cap;
@@ -48,6 +51,9 @@ Array* array_create(void)
         a89free(array);
         return NULL;
     }
+
+    // Inicializar com NULL
+    memset(array->elements, 0, array->capacity * sizeof(void*));
     
     array->size = 0;
     return array;
