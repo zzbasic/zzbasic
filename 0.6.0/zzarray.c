@@ -40,23 +40,7 @@ static int array_expand(Array* array, int min_capacity)
 
 Array* array_create(void)
 {
-    Array* array = A89ALLOC(sizeof(Array));
-    if (!array) return NULL;
-    
-    array->capacity = ARRAY_INITIAL_CAPACITY;
-    array->elements = A89ALLOC(array->capacity * sizeof(void*));
-    
-    if (!array->elements)
-    {
-        a89free(array);
-        return NULL;
-    }
-
-    // Inicializar com NULL
-    memset(array->elements, 0, array->capacity * sizeof(void*));
-    
-    array->size = 0;
-    return array;
+    return array_create_with_capacity(ARRAY_INITIAL_CAPACITY);
 }
 
 Array* array_create_with_capacity(int capacity)
