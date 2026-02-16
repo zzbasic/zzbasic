@@ -198,7 +198,7 @@ EvaluatorResult builtin_get(EvaluatorResult* args, int arg_count, int line, int 
     int index = (int)args[1].value.number;
     
     // Valida índice
-    if (index < 0 || index >= array_size(arr))
+    if (index < 0 || index >= array_capacity(arr))
     {
         return create_error_result_fmt(line, column,
             "Array index out of bounds: %d", index);
@@ -243,7 +243,7 @@ EvaluatorResult builtin_set(EvaluatorResult* args, int arg_count, int line, int 
     int index = (int)args[1].value.number;
     
     // Valida índice
-    if (index < 0 || index >= array_size(arr))
+    if (index < 0 || index >= array_capacity(arr))
     {
         return create_error_result_fmt(line, column,
             "Array index out of bounds: %d", index);
