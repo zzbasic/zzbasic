@@ -8,6 +8,7 @@
 #include "zzarray.h"
 #include "zzarray_wrapper.h"
 #include "zztext.h"
+#include "result.h"
 
 // ============================================================
 // WRAPPERS DE ARRAY
