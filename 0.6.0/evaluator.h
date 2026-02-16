@@ -8,6 +8,7 @@
 #include "symbol_table.h"
 #include "color_mapping.h"
 #include "zztext.h"
+#include "result.h"
 
 
 // =================================================
@@ -72,33 +73,6 @@ typedef struct
     ModuleManager* modules;  
 } ExecutionContext;
 
-// =================================================
-// Estrutura para gerenciar resultados
-// =================================================
-typedef enum
-{
-    RESULT_ERROR,
-    RESULT_BOOL,
-    RESULT_NUMBER,
-    RESULT_STRING,
-    RESULT_TEXT,
-    RESULT_ARRAY
-} ResultType;
-
-typedef struct
-{
-    ResultType type;
-    union {
-        int     boolean;
-        double  number;
-        char    string[STRING_SIZE];
-        Text*   text;
-        Array*  array;
-    } value;
-    char error_message[BUFFER_SIZE];
-    int line;   
-    int column; 
-} EvaluatorResult;
 
 /********************************************************************
 FLUXO DO EVALUATOR
