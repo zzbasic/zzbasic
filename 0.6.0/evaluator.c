@@ -897,6 +897,23 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
         
         case NODE_SAVE:  
             return execute_save_node(node, ctx);
+
+        case NODE_FUNCTION_CALL:
+        {
+            // Avalia a chamada de função como statement (descarta resultado)
+            EvaluatorResult result = evaluate_expr(node, ctx->symbols, CTX_ANY);
+            
+            if (result.type == RESULT_ERROR)
+            {
+                printf("%s\n", result.error_message);
+                return 0;
+            }
+            
+            // Função call como statement não imprime resultado
+            // (diferente de expressão que seria impressa)
+            return 1;
+        }
+
             
         default:
             printf("Evaluator error: unsupported statement type: %d\n", node->type);
