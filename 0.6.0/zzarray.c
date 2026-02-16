@@ -141,7 +141,26 @@ void* array_get(Array* array, int index)
 // Define elemento em posição específica
 int array_set(Array* array, int index, void* element)
 {
-    if (!array || index < 0 || index >= array->size) return 0;
+    if (!array || index < 0) return 0;
+    
+    // Se índice está além da capacidade, expande
+    if (index >= array->capacity)
+    {
+        if (!array_expand(array, index + 1))
+            return 0;
+    }
+    
+    // Se índice está além do tamanho, expande o tamanho
+    if (index >= array->size)
+    {
+        // Preenche posições vazias com NULL
+        for (int i = array->size; i <= index; i++)
+        {
+            array->elements[i] = NULL;
+        }
+        array->size = index + 1;
+    }
+    
     array->elements[index] = element;
     return 1;
 }
