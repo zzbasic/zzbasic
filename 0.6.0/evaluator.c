@@ -1709,8 +1709,9 @@ EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext c
                         "Evaluator error: array() expects number argument");
                 }
                 
-                // Cria array
-                Array* array = array_create();
+                // Cria array com capacidade solicitada
+                int requested_capacity = (int)arg_result.value.number;
+                Array* array = array_create_with_capacity(requested_capacity);
                 if (!array)
                 {
                     return create_error_result_fmt(node->line, node->column,
