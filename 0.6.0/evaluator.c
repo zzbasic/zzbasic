@@ -9,6 +9,7 @@
 #include "a89alloc.h"
 #include "evaluator.h"
 #include "zzarray_wrapper.h"
+#include "result.h"
 
 #define EPSILON 1e-12
 
@@ -56,19 +57,6 @@ static BuiltinFunction builtins[] = {
     {NULL, NULL}
 };
 
-
-//===================================================================
-// PROTOTIPOS DAS FUNCOES
-//===================================================================
-static EvaluatorResult create_success_result_bool(int value, int line, int column);
-static EvaluatorResult create_success_result_number(double value, int line, int column);
-static EvaluatorResult create_success_result_string(const char* value, int line, int column);
-static EvaluatorResult create_success_result_text(Text* text, int line, int column);
-static EvaluatorResult create_success_result_array(Array* arr, int line, int column);
-
-static EvaluatorResult create_error_result(const char* message, int line, int column);
-static EvaluatorResult create_error_result_fmt(int line, int column, 
-                                              const char* format, ...);
 
 // CORES
 static void reset_current_color(void);
@@ -128,94 +116,6 @@ static int module_manager_resize(ModuleManager* manager);
 static int module_manager_load(ModuleManager* manager, const char* module_name);
 static SymbolTable* module_manager_get_symbols(ModuleManager* manager, 
                                         const char* module_name);
-
-
-//###################################################################
-// IMPLEMNTACAO DAS FUNCOES
-//###################################################################
-
-//===================================================================
-// FUNCOES PARA CRIACAO DE NODES
-//===================================================================
-static EvaluatorResult create_success_result_bool(int value, int line, int column)
-{
-    EvaluatorResult result;
-    memset(&result, 0, sizeof(EvaluatorResult)); 
-    result.type = RESULT_BOOL;
-    result.value.boolean = value;
-    result.line = line;      
-    result.column = column;  
-    return result;    
-}
-
-static EvaluatorResult create_success_result_number(double value, int line, int column)
-{
-    EvaluatorResult result;
-    memset(&result, 0, sizeof(EvaluatorResult)); 
-    result.type = RESULT_NUMBER;
-    result.value.number = value;
-    result.line = line;      
-    result.column = column;  
-    return result;
-}
-
-static EvaluatorResult create_success_result_string(const char* value, int line, int column)
-{
-    EvaluatorResult result;
-    memset(&result, 0, sizeof(EvaluatorResult)); 
-    result.type = RESULT_STRING;
-    strncpy(result.value.string, value, sizeof(result.value.string) - 1);
-    result.value.string[sizeof(result.value.string) - 1] = '\0';
-    result.line = line;
-    result.column = column;
-    return result;
-}
-
-static EvaluatorResult create_success_result_text(Text* text, int line, int column)
-{
-    EvaluatorResult result;
-    memset(&result, 0, sizeof(EvaluatorResult));
-    result.type = RESULT_TEXT;
-    result.value.text = text;
-    result.line = line;
-    result.column = column;
-    return result;
-}
-
-static EvaluatorResult create_success_result_array(Array* array, int line, int column)
-{
-    EvaluatorResult result;
-    result.type = RESULT_ARRAY;
-    result.value.array = array;
-    result.line = line;
-    result.column = column;
-    return result;
-}
-
-static EvaluatorResult create_error_result(const char* message, int line, int column)
-{
-    EvaluatorResult result;
-    memset(&result, 0, sizeof(EvaluatorResult)); 
-    result.type = RESULT_ERROR;
-    snprintf(result.error_message, sizeof(result.error_message), 
-             "%s[%d:%d] %s%s", COLOR_ERROR, line, column, message, COLOR_RESET);
-    result.line = line;
-    result.column = column;
-    return result;
-}
-
-// printf-style version for formatted messages
-static EvaluatorResult create_error_result_fmt(int line, int column, 
-                                              const char* format, ...)
-{
-    char message[BUFFER_SIZE];
-    va_list args;
-    va_start(args, format);
-    vsnprintf(message, sizeof(message), format, args);
-    va_end(args);
-    
-    return create_error_result(message, line, column);
-}
 
 
 // =================================================
