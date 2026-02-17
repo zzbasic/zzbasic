@@ -50,7 +50,7 @@ static ASTNode* parse_import_stmt(Parser* parser);
 static ASTNode* parse_load_expr(Parser* parser);
 static ASTNode* parse_save_stmt(Parser* parser);
 
-static ASTNode* parse_function_call(Parser* parser, const char* function_name);
+static ASTNode* parse_function_call(Parser* parser, char* function_name);
 
 static ASTNode* parse_expr_stmt(Parser* parser);
 
@@ -83,24 +83,6 @@ static void parser_init(Parser* parser, Lexer* lexer)
     parser->current_token = lexer_get_next_token(lexer);
     parser->has_error = 0;
     parser->error_message = NULL;
-}
-
-static void parser_free(Parser* parser)
-{
-    if (!parser)
-        return;
-    
-    // Libera mensagem de erro
-    if (parser->error_message)
-    {
-        a89free(parser->error_message);
-        parser->error_message = NULL;
-    }
-    
-    // Libera token atual se tiver alocações
-    free_token(&parser->current_token);
-    
-    memset(parser, 0, sizeof(Parser));
 }
 
 static void parser_advance(Parser* parser)
@@ -1490,9 +1472,7 @@ static ASTNode* parse_import_stmt(Parser* parser)
     
     if (parser->current_token.type != TOKEN_IDENTIFIER)
     {
-        parser->has_error = 1;
-        snprintf(parser->error_message, BUFFER_SIZE,
-                "Parser error: expected module name after 'import' or 'from'");
+        parser_set_error(parser, "Parser error: expected module name after 'import' or 'from'");
         return NULL;
     }
     
@@ -1641,7 +1621,7 @@ static ASTNode* parse_save_stmt(Parser* parser)
     return create_save_node(expr, filename, line, column);
 }
 
-static ASTNode* parse_function_call(Parser* parser, const char* function_name)
+static ASTNode* parse_function_call(Parser* parser, char* function_name)
 {
     int line = parser->current_token.line;
     int col = parser->current_token.column;
@@ -2040,9 +2020,9 @@ static ASTNode* parse_atom(Parser* parser)
             
         case TOKEN_IDENTIFIER:
         {
-            char name[BUFFER_SIZE];
-            strncpy(name, token.value.varname, BUFFER_SIZE - 1);
-            name[BUFFER_SIZE - 1] = '\0';
+            char name[TEMP_BUFFER_SIZE];
+            strncpy(name, token.value.varname, TEMP_BUFFER_SIZE - 1);
+            name[TEMP_BUFFER_SIZE - 1] = '\0';
             int line = token.line;
             int col = token.column;
             parser_advance(parser);
@@ -2171,6 +2151,24 @@ ASTNode* parse_single_stmt(Lexer* lexer)
     parser_free(&parser);
         
     return result;
+}
+
+void parser_free(Parser* parser)
+{
+    if (!parser)
+        return;
+    
+    // Libera mensagem de erro
+    if (parser->error_message)
+    {
+        a89free(parser->error_message);
+        parser->error_message = NULL;
+    }
+    
+    // Libera token atual se tiver alocações
+    free_token(&parser->current_token);
+    
+    memset(parser, 0, sizeof(Parser));
 }
 
 #ifdef TESTPARSER
