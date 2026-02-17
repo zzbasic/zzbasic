@@ -13,7 +13,6 @@ typedef enum
     RESULT_BOOL,
     RESULT_NUMBER,
     RESULT_STRING,
-    RESULT_TEXT,
     RESULT_ARRAY
 } ResultType;
 
@@ -23,11 +22,11 @@ typedef struct
     union {
         int     boolean;
         double  number;
-        char    string[STRING_SIZE];
+        char*   string;
         Text*   text;
         Array*  array;
     } value;
-    char error_message[BUFFER_SIZE];
+    char* error_message;
     int line;   
     int column; 
 } EvaluatorResult;
