@@ -34,19 +34,20 @@ EvaluatorResult create_success_result_string(const char* value, int line, int co
     EvaluatorResult result;
     memset(&result, 0, sizeof(EvaluatorResult)); 
     result.type = RESULT_STRING;
-    strncpy(result.value.string, value, sizeof(result.value.string) - 1);
-    result.value.string[sizeof(result.value.string) - 1] = '\0';
-    result.line = line;
-    result.column = column;
-    return result;
-}
-
-EvaluatorResult create_success_result_text(Text* text, int line, int column)
-{
-    EvaluatorResult result;
-    memset(&result, 0, sizeof(EvaluatorResult));
-    result.type = RESULT_TEXT;
-    result.value.text = text;
+    
+    if (value)
+    {
+        int len = strlen(value);
+        result.value.string = A89ALLOC(len + 1);
+        strncpy(result.value.string, value, len);
+        result.value.string[len] = '\0';
+    }
+    else
+    {
+        result.value.string = A89ALLOC(1);
+        result.value.string[0] = '\0';
+    }
+    
     result.line = line;
     result.column = column;
     return result;
@@ -67,22 +68,56 @@ EvaluatorResult create_error_result(const char* message, int line, int column)
     EvaluatorResult result;
     memset(&result, 0, sizeof(EvaluatorResult)); 
     result.type = RESULT_ERROR;
-    snprintf(result.error_message, sizeof(result.error_message), 
-             "%s[%d:%d] %s%s", COLOR_ERROR, line, column, message, COLOR_RESET);
+    
+    // Calcula tamanho necessário para a mensagem formatada
+    int msg_len = snprintf(NULL, 0, "%s[%d:%d] %s%s", 
+                           COLOR_ERROR, line, column, message, COLOR_RESET);
+    
+    result.error_message = A89ALLOC(msg_len + 1);
+    if (result.error_message)
+    {
+        snprintf(result.error_message, msg_len + 1,
+                 "%s[%d:%d] %s%s", COLOR_ERROR, line, column, message, COLOR_RESET);
+    }
+    
     result.line = line;
     result.column = column;
     return result;
 }
 
-// Versão no estilo printf para mensagens formatadas
 EvaluatorResult create_error_result_fmt(int line, int column, 
                                        const char* format, ...)
 {
-    char message[BUFFER_SIZE];
     va_list args;
-    va_start(args, format);
-    vsnprintf(message, sizeof(message), format, args);
+    
+    // Primeiro, calcula o tamanho necessário
+    va_start(args, format);    
+    int msg_len = vsnprintf(NULL, 0, format, args);
     va_end(args);
     
-    return create_error_result(message, line, column);
+    // Aloca memória
+    char* message = A89ALLOC(msg_len + 1);
+    if (!message)
+    {
+        EvaluatorResult result;
+        memset(&result, 0, sizeof(EvaluatorResult));
+        result.type = RESULT_ERROR;
+        result.error_message = A89ALLOC(50);
+        if (result.error_message)
+            strcpy(result.error_message, "Memory allocation failed");
+        return result;
+    }
+    
+    // Formata a mensagem
+    va_start(args, format);
+    vsnprintf(message, msg_len + 1, format, args);
+    va_end(args);
+    
+    // Cria o resultado
+    EvaluatorResult result = create_error_result(message, line, column);
+    
+    // Libera o buffer temporário
+    a89free(message);
+    
+    return result;
 }
