@@ -23,7 +23,6 @@ typedef struct
         int     boolean;
         double  number;
         char*   string;
-        Text*   text;
         Array*  array;
     } value;
     char* error_message;
