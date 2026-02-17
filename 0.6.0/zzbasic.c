@@ -137,18 +137,32 @@ ASTNode* compile_program(ReplProgram* program)
         program->ast = NULL;
     }
     
-    // Aloca buffer grande para concatenar todas as linhas
-    char* full_code = A89ALLOC(PROGRAM_LINE_SIZE * MAX_PROGRAM_LINES);
+    // Calcula tamanho total necessário
+    size_t total_size = 0;
+    for (int i = 0; i < program->line_count; i++)
+    {
+        if (program->lines[i])
+            total_size += strlen(program->lines[i]) + 1;  // +1 para \n
+    }
+    
+    if (total_size == 0)
+        return NULL;
+    
+    // Aloca buffer com tamanho exato
+    char* full_code = A89ALLOC(total_size + 1);  // +1 para \0
+    if (!full_code)
+        return NULL;
+    
     full_code[0] = '\0';
     
     // Concatena todas as linhas
     for (int i = 0; i < program->line_count; i++)
     {
-        strncat(full_code, program->lines[i], 
-                PROGRAM_LINE_SIZE * MAX_PROGRAM_LINES - strlen(full_code) - 1);
-
-        strncat(full_code, "\n", 
-                PROGRAM_LINE_SIZE * MAX_PROGRAM_LINES - strlen(full_code) - 1);
+        if (program->lines[i])
+        {
+            strcat(full_code, program->lines[i]);
+            strcat(full_code, "\n");
+        }
     }
     
     // Parse
@@ -264,8 +278,16 @@ static void purge_command(ReplProgram* program, SymbolTable** symbols)
         program->ast = NULL;
     }
     
-    // Zera o array de linhas
-    memset(program->lines, 0, MAX_PROGRAM_LINES * PROGRAM_LINE_SIZE);
+    // Zera o array de linhas; Libera todas as linhas
+    for (int i = 0; i < program->line_count; i++)
+    {
+        if (program->lines[i])
+        {
+            a89free(program->lines[i]);
+            program->lines[i] = NULL;
+        }
+    }
+    program->line_count = 0;
     
     // Limpa variáveis
     symbol_table_destroy(*symbols);
