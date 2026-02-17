@@ -220,9 +220,20 @@ static int program_mode_input(ReplProgram* program, const char* line)
     // Store line if not at max capacity
     if (program->line_count < MAX_PROGRAM_LINES)
     {
-        strncpy(program->lines[program->line_count], line, PROGRAM_LINE_SIZE - 1);
-
-        program->lines[program->line_count][PROGRAM_LINE_SIZE - 1] = '\0';
+        // Aloca memória para a nova linha
+        size_t line_len = strlen(line);
+        program->lines[program->line_count] = A89ALLOC(line_len + 1);
+        
+        if (!program->lines[program->line_count])
+        {
+            printf("%s[Error: Memory allocation failed]%s\n", 
+                   COLOR_ERROR, COLOR_RESET);
+            return 0;
+        }
+        
+        // Copia a linha
+        strncpy(program->lines[program->line_count], line, line_len);
+        program->lines[program->line_count][line_len] = '\0';
         program->line_count++;
     }
     else
@@ -233,6 +244,7 @@ static int program_mode_input(ReplProgram* program, const char* line)
     
     return 0;  // Continua em modo program
 }
+
 
 // Comando 'program'. Entra no modo programa
 static void program_command(ReplProgram* program)
@@ -395,12 +407,31 @@ static void edit_command(ReplProgram* program, const char* arg)
     printf("%02d: ", line_num);
     fflush(stdout);
     
-    char new_line[PROGRAM_LINE_SIZE];
+    char new_line[TEMP_BUFFER_SIZE];
     if (fgets(new_line, sizeof(new_line), stdin) != NULL)
     {
         new_line[strcspn(new_line, "\n")] = '\0';
-        strncpy(program->lines[line_num - 1], new_line, PROGRAM_LINE_SIZE - 1);
-        program->lines[line_num - 1][PROGRAM_LINE_SIZE - 1] = '\0';
+        
+        // Libera a linha antiga se existir
+        if (program->lines[line_num - 1])
+        {
+            a89free(program->lines[line_num - 1]);
+        }
+
+        // Aloca memória para a nova linha
+        size_t new_line_len = strlen(new_line);
+        program->lines[line_num - 1] = A89ALLOC(new_line_len + 1);
+
+        if (!program->lines[line_num - 1])
+        {
+            printf("%s[Error: Memory allocation failed]%s\n", COLOR_ERROR, COLOR_RESET);
+            return;
+        }
+
+        // Copia a nova linha
+        strncpy(program->lines[line_num - 1], new_line, new_line_len);
+        program->lines[line_num - 1][new_line_len] = '\0';
+
     }
 }
 
@@ -446,22 +477,38 @@ static void tokens_command(ReplProgram* program, const char* code)
             return;
         }
         
-        // Concatenate all program lines and show tokens
-        char* full_code = A89ALLOC(PROGRAM_LINE_SIZE * MAX_PROGRAM_LINES);
-        if (full_code)
+        // Calcula tamanho total necessário
+        size_t total_size = 0;
+        for (int i = 0; i < program->line_count; i++)
         {
-            full_code[0] = '\0';
-            for (int i = 0; i < program->line_count; i++)
-            {
-                strncat(full_code, program->lines[i], 
-                        PROGRAM_LINE_SIZE * MAX_PROGRAM_LINES - strlen(full_code) - 1);
-
-                strncat(full_code, "\n", 
-                        PROGRAM_LINE_SIZE * MAX_PROGRAM_LINES - strlen(full_code) - 1);
-            }
-            show_tokens(full_code);
-            a89free(full_code);
+            if (program->lines[i])
+                total_size += strlen(program->lines[i]) + 1;  // +1 para \n
         }
+
+        if (total_size == 0)
+            return;
+
+        // Aloca buffer com tamanho exato
+        char* full_code = A89ALLOC(total_size + 1);  // +1 para \0
+        if (!full_code)
+            return;
+
+        full_code[0] = '\0';
+
+        // Concatena todas as linhas
+        for (int i = 0; i < program->line_count; i++)
+        {
+            if (program->lines[i])
+            {
+                strcat(full_code, program->lines[i]);
+                strcat(full_code, "\n");
+            }
+        }
+
+
+        show_tokens(full_code);
+        a89free(full_code);
+
     }
     else if (code[0] == '\0')
     {
@@ -567,7 +614,7 @@ static void execute_code(const char* line, SymbolTable* symbols)
 
 void run_repl(void)
 {
-    char line[BUFFER_SIZE];
+    char line[TEMP_BUFFER_SIZE];
     SymbolTable* symbols = symbol_table_create();
     ReplProgram program = {0};
     
