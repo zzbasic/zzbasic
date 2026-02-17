@@ -348,11 +348,11 @@ ASTNode* create_import_node(const char* module_name,
                             int import_all,
                             int line, int column);
 
-ASTNode* create_load_node(const char* filename, int line, int column);
+ASTNode* create_load_node(char* filename, int line, int column);
 
-ASTNode* create_save_node(ASTNode* expression, const char* filename, int line, int column);
+ASTNode* create_save_node(ASTNode* expression, char* filename, int line, int column);
 
-ASTNode* create_function_call_node(const char* function_name, int line, int column);
+ASTNode* create_function_call_node(char* function_name, int line, int column);
 void function_call_add_argument(ASTNode* node, ASTNode* argument);
 
 ASTNode* create_array_node(int line, int column);
