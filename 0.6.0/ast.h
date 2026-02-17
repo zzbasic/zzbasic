@@ -213,19 +213,19 @@ typedef struct
 
 typedef struct
 {
-    char filename[BUFFER_SIZE];  // Nome do arquivo; PATH
+    char* filename;  // Nome do arquivo; PATH
 } LoadExprData;
 
 typedef struct
 {
-    ASTNode* expression;         // Expressão que retorna text
-    char filename[BUFFER_SIZE];  // Nome do arquivo
+    ASTNode* expression;    // Expressão que retorna text
+    char* filename;         // Nome do arquivo
 } SaveStatementData;
 
 // Dados para NODE_FUNCTION_CALL
 typedef struct FunctionCallData
 {
-    char function_name[BUFFER_SIZE];  
+    char* function_name;  
     ASTNode** arguments;               
     int arg_count;                     
 } FunctionCallData;
