@@ -282,9 +282,10 @@ int symbol_table_set_string(SymbolTable* table, const char* name, const char* va
     return 1;
 }
 
-int symbol_table_get_string(SymbolTable* table, const char* name, char** out_value)
+int symbol_table_get_string(SymbolTable* table, const char* name, char* out_value, size_t out_size)
 {
-    if (!table || !name || !out_value ) return 0;
+    if (!table || !name || !out_value || out_size == 0)
+        return 0;
     
     Symbol* symbol = find_symbol(table, name);
     if (!symbol)
@@ -301,9 +302,22 @@ int symbol_table_get_string(SymbolTable* table, const char* name, char** out_val
         return 0;
     }
     
-    *out_value = symbol->value.str_value; 
+    // Copia a string com limite de tamanho
+    if (symbol->value.str_value)
+    {
+        strncpy(out_value, symbol->value.str_value, out_size - 1);
+        out_value[out_size - 1] = '\0';
+    }
+    else
+    {
+        out_value[0] = '\0';
+    }
+    
     return 1;
 }
+
+
+
 
 int symbol_table_set_array(SymbolTable* table, const char* name, Array* array)
 {
