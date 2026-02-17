@@ -7,7 +7,6 @@
 #include "a89alloc.h"
 #include "zzarray.h"
 #include "zzarray_wrapper.h"
-#include "zztext.h"
 #include "result.h"
 
 // ============================================================
