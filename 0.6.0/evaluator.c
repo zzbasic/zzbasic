@@ -1114,17 +1114,77 @@ static EvaluatorResult execute_load_node(ASTNode* node, SymbolTable* symbols)
     // Pega o nome do arquivo do nó AST
     const char* filename = node->data.load_expr.filename;
     
-    // Tenta carregar o arquivo
-    Text* text = text_create_from_file(filename);
-    if (!text)
+    // Abre e lê o arquivo
+    FILE* file = fopen(filename, "r");
+    if (!file)
     {
         return create_error_result_fmt(node->line, node->column,
-            "Evaluator error: could not load file '%s'", filename);
+            "Evaluator error: could not open file '%s'", filename);
     }
     
-    // Retorna o Text como resultado
-    return create_success_result_text(text, node->line, node->column);
+    // Calcula tamanho do arquivo
+    fseek(file, 0, SEEK_END); 
+    long file_size = ftell(file); 
+    fseek(file, 0, SEEK_SET);
+    /****************************************************************
+    fseek(file, 0, SEEK_END);
+        Move o ponteiro de leitura/escrita do arquivo para o final do arquivo
+        0 = deslocamento zero a partir da posição de referência
+        SEEK_END = referência é o final do arquivo
+        Resultado: O ponteiro agora está no último byte do arquivo.
+
+    long file_size = ftell(file);
+        ftell() retorna a posição atual do ponteiro no arquivo
+        Como o ponteiro está no final, o valor retornado é exatamente o tamanho do arquivo em bytes
+        Exemplo: Se o arquivo tem 1024 bytes, ftell() retorna 1024.
+
+    fseek(file, 0, SEEK_SET);
+        Move o ponteiro de volta para o início do arquivo
+        0 = deslocamento zero
+        SEEK_SET = referência é o início do arquivo
+        Resultado: O ponteiro volta para a posição inicial, pronto para ler o arquivo do começo.
+    *****************************************************************/
+    
+    if (file_size < 0)
+    {
+        fclose(file);
+        return create_error_result_fmt(node->line, node->column,
+            "Evaluator error: could not determine file size for '%s'", filename);
+    }
+    
+    // Aloca buffer para o conteúdo
+    char* content = A89ALLOC(file_size + 1);
+    if (!content)
+    {
+        fclose(file);
+        return create_error_result_fmt(node->line, node->column,
+            "Evaluator error: memory allocation failed for file '%s'", filename);
+    }
+    
+    // Lê o arquivo
+    size_t bytes_read = fread(content, 1, file_size, file);
+    fclose(file);
+    
+    if (bytes_read != (size_t)file_size)
+    {
+        a89free(content);
+        return create_error_result_fmt(node->line, node->column,
+            "Evaluator error: could not read file '%s'", filename);
+    }
+    
+    content[file_size] = '\0';
+    
+    // Retorna como string
+    EvaluatorResult result;
+    memset(&result, 0, sizeof(EvaluatorResult));
+    result.type = RESULT_STRING;
+    result.value.string = content;  
+    result.line = node->line;
+    result.column = node->column;
+    
+    return result;
 }
+
 
 static int execute_save_node(ASTNode* node, ExecutionContext* ctx)
 {
@@ -1285,7 +1345,7 @@ EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext c
             }
             
             // Try as string
-            char str_value[TEMP_BUFFER_SIZE];
+            char str_value[TEMP_BUFFER_SIZE];  
             if (symbol_table_get_string(symbols, var_name, str_value, sizeof(str_value)))
             {
                 if (ctx == CTX_NUMBER)
