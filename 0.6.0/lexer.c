@@ -8,6 +8,7 @@
 
 #include "color.h"
 #include "lexer.h"
+#include "a89alloc.h"
 
 static void lexer_advance(Lexer* lexer);
 static char lexer_peek(Lexer* lexer);
@@ -357,13 +358,13 @@ static Token lexer_report_error(Lexer* lexer,
                                 ...)
 {
     // Format the message
-    char message[TOKENTEXT_SIZE];
+    char message[ERROR_MSG_SIZE];
     va_list args;
     va_start(args, format);
     vsnprintf(message, sizeof(message), format, args);
     va_end(args);
     
-    char error_text[TOKENTEXT_SIZE];
+    char error_text[ERROR_MSG_SIZE];
     snprintf(error_text,
              sizeof(error_text),
              "Lexer error: %s",
@@ -373,8 +374,8 @@ static Token lexer_report_error(Lexer* lexer,
     memset(&token, 0, sizeof(token));  
 
     token.type = TOKEN_ERROR;
-    strncpy(token.token_text, error_text, TOKENTEXT_SIZE - 1);
-    token.token_text[TOKENTEXT_SIZE - 1] = '\0';
+    strncpy(token.token_text, error_text, ERROR_MSG_SIZE - 1);
+    token.token_text[ERROR_MSG_SIZE - 1] = '\0';
     token.line = line;
     token.column = column;
 
@@ -483,8 +484,8 @@ static Token lexer_read_number(Lexer* lexer)
 
     token.type = TOKEN_NUMBER;
     token.value.number = valor;
-    strncpy(token.token_text, buffer, TOKENTEXT_SIZE - 1);
-    token.token_text[TOKENTEXT_SIZE - 1] = '\0';
+    strncpy(token.token_text, buffer, ERROR_MSG_SIZE - 1);
+    token.token_text[ERROR_MSG_SIZE - 1] = '\0';
     token.line = nr_line;
     token.column = nr_column;
 
