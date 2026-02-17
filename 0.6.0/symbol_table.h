@@ -25,7 +25,7 @@ int symbol_table_get_number(SymbolTable* table, const char* name, double* out_va
 
 // Operações com strings
 int symbol_table_set_string(SymbolTable* table, const char* name, const char* value);
-int symbol_table_get_string(SymbolTable* table, const char* name, char* out_value, size_t max_len);
+int symbol_table_get_string(SymbolTable* table, const char* name, char** out_value);
 
 int symbol_table_set_array(SymbolTable* table, const char* name, Array* array);
 int symbol_table_get_array(SymbolTable* table, const char* name, Array** array);
