@@ -89,7 +89,7 @@ typedef struct
 
 typedef struct
 {
-    char value[STRING_SIZE];
+    char* value;
 } StringData;
 
 typedef struct
@@ -166,7 +166,7 @@ typedef struct
     ASTNode* color; 
     ASTNode* width; 
     ASTNode* alignment; 
-    char prompt[STRING_SIZE];// Prompt opcional (ex: "Digite: ")
+    char* prompt;// Prompt opcional (ex: "Digite: ")
     int set_nocolor; // 1 - nocolor ativado; 0 - nocolor desativado
     char var_name[VARNAME_SIZE];// Nome da variável 
 } InputStatementNode;
