@@ -271,7 +271,6 @@ static void run_command(ReplProgram* program, SymbolTable* symbols)
 static void purge_command(ReplProgram* program, SymbolTable** symbols)
 {
     // Limpa programa
-    program->line_count = 0;
     if (program->ast)
     {
         free_ast(program->ast);
