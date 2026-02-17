@@ -300,7 +300,7 @@ static char* read_user_input(const char* prompt)
         fflush(stdout);  // Garante que o prompt seja exibido antes de ler
     }
     
-    static char buffer[BUFFER_SIZE];
+    static char buffer[TEMP_BUFFER_SIZE];
     
     if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
         return NULL;  // Erro ou EOF
@@ -378,9 +378,9 @@ static int evaluate_input_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
     {
         // Tem prompt → imprimir com formatação
         
-        char buffer[BUFFER_SIZE];
-        strncpy(buffer, input_stmt->prompt, BUFFER_SIZE - 1);
-        buffer[BUFFER_SIZE - 1] = '\0';
+        char buffer[TEMP_BUFFER_SIZE];
+        strncpy(buffer, input_stmt->prompt, TEMP_BUFFER_SIZE - 1);
+        buffer[TEMP_BUFFER_SIZE - 1] = '\0';
         
         // Aplica formatação se estiver ativa
         if (ctx->format.has_format && ctx->format.width > 0)
@@ -401,7 +401,7 @@ static int evaluate_input_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
     // FASE 3: Ler Entrada do Usuário
     // ===================================================
     
-    static char input_buffer[BUFFER_SIZE];
+    static char input_buffer[TEMP_BUFFER_SIZE];
     
     if (fgets(input_buffer, sizeof(input_buffer), stdin) == NULL)
     {
@@ -537,7 +537,7 @@ static int evaluate_print_stmt_with_format(ASTNode* node, ExecutionContext* ctx)
         }
         
         // Converte para string
-        char buffer[BUFFER_SIZE];
+        char buffer[TEMP_BUFFER_SIZE];
         if (result.type == RESULT_BOOL)
         {
             // Trata booleano
@@ -547,13 +547,6 @@ static int evaluate_print_stmt_with_format(ASTNode* node, ExecutionContext* ctx)
         else if (result.type == RESULT_STRING)
         {
             snprintf(buffer, sizeof(buffer), "%s", result.value.string);
-        }
-        else if (result.type == RESULT_TEXT) 
-        {
-            // Text imprime o conteúdo diretamente
-            const char* text_content = text_get(result.value.text);
-            //snprintf(buffer, sizeof(buffer), "%s", text_content);
-            printf("%s", text_content);  
         }
         else // RESULT_NUMBER
         {
@@ -661,14 +654,6 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
                     if (!symbol_table_set_bool(ctx->symbols, var_name, value_result.value.boolean))
                     {
                         printf("Evaluator error: assigning boolean to '%s'\n", var_name);
-                        return 0;
-                    }
-                }
-                else if (value_result.type == RESULT_TEXT)
-                {  
-                    if (!symbol_table_set_text(ctx->symbols, var_name, value_result.value.text))
-                    {
-                        printf("Evaluator error: assigning Text to '%s'\n", var_name);
                         return 0;
                     }
                 }
@@ -1143,25 +1128,33 @@ static EvaluatorResult execute_load_node(ASTNode* node, SymbolTable* symbols)
 
 static int execute_save_node(ASTNode* node, ExecutionContext* ctx)
 {
-    // Avalia a expressão que deve retornar um Text
-    EvaluatorResult text_result = evaluate_expr(
+    // Avalia a expressão que deve retornar uma string
+    EvaluatorResult string_result = evaluate_expr(
         node->data.save_stmt.expression, ctx->symbols, CTX_ANY);
     
-    if (text_result.type == RESULT_ERROR)
+    if (string_result.type == RESULT_ERROR)
     {
-        printf("%s\n", text_result.error_message);
+        printf("%s\n", string_result.error_message);
+        // Libera error_message
+        if (string_result.error_message)
+            a89free(string_result.error_message);
         return 0;
     }
     
-    // Verifica se é realmente um Text
-    if (text_result.type != RESULT_TEXT)
+    // Verifica se é realmente uma string
+    if (string_result.type != RESULT_STRING)  
     {
-        printf("%s[%d:%d] Evaluator error: save() expects Text object, got %s%s\n",
+        printf("%s[%d:%d] Evaluator error: save() expects string, got %s%s\n",
                COLOR_ERROR, node->line, node->column,
-               (text_result.type == RESULT_NUMBER ? "number" :
-                text_result.type == RESULT_STRING ? "string" :
-                text_result.type == RESULT_BOOL ? "boolean" : "unknown"),
+               (string_result.type == RESULT_NUMBER ? "number" :
+                string_result.type == RESULT_BOOL ? "boolean" :
+                string_result.type == RESULT_ARRAY ? "array" : "unknown"),
                COLOR_RESET);
+        // Libera string se foi alocada
+        if (string_result.value.string)
+        {
+            a89free(string_result.value.string);
+        }
         return 0;
     }
     
@@ -1169,13 +1162,39 @@ static int execute_save_node(ASTNode* node, ExecutionContext* ctx)
     const char* filename = node->data.save_stmt.filename;
     
     // Salva o arquivo
-    if (!text_save(text_result.value.text, filename))
+    FILE* file = fopen(filename, "w");
+    if (!file)
     {
-        printf("%s[%d:%d] Evaluator error: could not save file '%s'%s\n",
+        printf("%s[%d:%d] Evaluator error: could not open file '%s' for writing%s\n",
                COLOR_ERROR, node->line, node->column, filename, COLOR_RESET);
+        if (string_result.value.string)
+        {
+            a89free(string_result.value.string);
+        }
         return 0;
     }
     
+    // Escreve o conteúdo da string no arquivo
+    if (fputs(string_result.value.string, file) == EOF)
+    {
+        printf("%s[%d:%d] Evaluator error: could not write to file '%s'%s\n",
+               COLOR_ERROR, node->line, node->column, filename, COLOR_RESET);
+        fclose(file);
+        if (string_result.value.string)
+        {
+            a89free(string_result.value.string);
+        }
+        return 0;
+    }
+    
+    fclose(file);
+    
+    // Libera a string alocada
+    if (string_result.value.string)
+    {
+        a89free(string_result.value.string);
+    }
+
     return 1;  // Sucesso
 }
 
@@ -1266,7 +1285,7 @@ EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext c
             }
             
             // Try as string
-            char str_value[STRING_SIZE];
+            char str_value[TEMP_BUFFER_SIZE];
             if (symbol_table_get_string(symbols, var_name, str_value, sizeof(str_value)))
             {
                 if (ctx == CTX_NUMBER)
@@ -1296,26 +1315,6 @@ EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext c
                 }
                 return create_success_result_bool(bool_value, node->line, node->column);
             }
-
-            // Try as text
-            Text* text_value;
-            if (symbol_table_get_text(symbols, var_name, &text_value))
-            {
-                if (ctx == CTX_NUMBER)
-                {
-                    return create_error_result_fmt(node->line, node->column,
-                         "Evaluator error: variable '%s' is Text, cannot be used as number", 
-                         var_name);
-                }
-                if (ctx == CTX_BOOL)
-                {
-                    return create_error_result_fmt(node->line, node->column,
-                         "Evaluator error: variable '%s' is Text, cannot be used as boolean", 
-                         var_name);
-                }
-                // Text é aceitável em CTX_ANY e CTX_STRING
-                return create_success_result_text(text_value, node->line, node->column);
-            } 
 
             // Try as array
             Array* array_value;
