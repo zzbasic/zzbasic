@@ -27,13 +27,8 @@ int symbol_table_get_number(SymbolTable* table, const char* name, double* out_va
 int symbol_table_set_string(SymbolTable* table, const char* name, const char* value);
 int symbol_table_get_string(SymbolTable* table, const char* name, char* out_value, size_t max_len);
 
-// Operações com text (strings dinâmicas)
-int symbol_table_set_text(SymbolTable* table, const char* name, Text* text);
-int symbol_table_get_text(SymbolTable* table, const char* name, Text** out_text);
-
 int symbol_table_set_array(SymbolTable* table, const char* name, Array* array);
 int symbol_table_get_array(SymbolTable* table, const char* name, Array** array);
-
 
 // Consultas
 int symbol_table_exists(SymbolTable* table, const char* name);  // 1=existe, 0=não existe
