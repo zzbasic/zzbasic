@@ -1650,42 +1650,6 @@ EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext c
             const char* func_name = node->data.function_call.function_name;
             
             // ============================================
-            // FUNÇÃO: text(string)
-            // ============================================
-            if (strcmp(func_name, "text") == 0)
-            {
-                if (node->data.function_call.arg_count != 1)
-                {
-                    return create_error_result_fmt(node->line, node->column,
-                        "Evaluator error: text() expects 1 argument, got %d",
-                        node->data.function_call.arg_count);
-                }
-                
-                // Avalia o argumento como string
-                EvaluatorResult arg_result = evaluate_expr(
-                    node->data.function_call.arguments[0], symbols, CTX_STRING);
-                
-                if (arg_result.type == RESULT_ERROR) return arg_result;
-                
-                if (arg_result.type != RESULT_STRING)
-                {
-                    return create_error_result_fmt(node->line, node->column,
-                        "Evaluator error: text() expects string argument");
-                }
-                
-                // Cria Text a partir da string
-                Text* txt = text_create_from_string(arg_result.value.string);
-                if (!txt)
-                {
-                    return create_error_result_fmt(node->line, node->column,
-                        "Evaluator error: could not create text object");
-                }
-                
-                return create_success_result_text(txt, node->line, node->column);
-            }
-
-
-            // ============================================
             // FUNÇÃO: array(size)
             // ============================================
             if (strcmp(func_name, "array") == 0)
