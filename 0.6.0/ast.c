@@ -421,7 +421,7 @@ ASTNode* create_import_node(const char* module_name,
     return node;
 }
 
-ASTNode* create_load_node(const char* filename, int line, int column)
+ASTNode* create_load_node(char* filename, int line, int column)
 {
     ASTNode* node = create_node(NODE_LOAD, line, column);
     node->line = line;
@@ -442,7 +442,7 @@ ASTNode* create_load_node(const char* filename, int line, int column)
     return node;
 }
 
-ASTNode* create_save_node(ASTNode* expression, const char* filename, int line, int column)
+ASTNode* create_save_node(ASTNode* expression, char* filename, int line, int column)
 {
     ASTNode* node = create_node(NODE_SAVE, line, column);
     node->line = line;
@@ -464,7 +464,7 @@ ASTNode* create_save_node(ASTNode* expression, const char* filename, int line, i
     return node;
 }
 
-ASTNode* create_function_call_node(const char* function_name, int line, int column)
+ASTNode* create_function_call_node(char* function_name, int line, int column)
 {
     ASTNode* node = create_node(NODE_FUNCTION_CALL, line, column);
     
@@ -598,7 +598,7 @@ void free_ast(ASTNode* node)
             }
             if(node->data.input_stmt.prompt)
             {
-                free_ast(node->data.input_stmt.prompt);
+                a89free(node->data.input_stmt.prompt);
             }
             break;        
 
