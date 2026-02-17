@@ -40,9 +40,6 @@ EvaluatorResult create_success_result_number(double value, int line, int column)
 // Cria resultado de sucesso com string
 EvaluatorResult create_success_result_string(const char* value, int line, int column);
 
-// Cria resultado de sucesso com Text
-EvaluatorResult create_success_result_text(Text* text, int line, int column);
-
 // Cria resultado de sucesso com Array
 EvaluatorResult create_success_result_array(Array* arr, int line, int column);
 
