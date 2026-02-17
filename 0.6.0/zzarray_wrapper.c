@@ -133,11 +133,6 @@ EvaluatorResult builtin_len(EvaluatorResult* args, int arg_count, int line, int 
         int len = strlen(args[0].value.string);
         return create_success_result_number((double)len, line, column);
     }
-    else if (args[0].type == RESULT_TEXT)
-    {
-        size_t size = text_size(args[0].value.text);
-        return create_success_result_number((double)size, line, column);
-    }
     else
     {
         return create_error_result_fmt(line, column,
