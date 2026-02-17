@@ -165,6 +165,9 @@ typedef struct
 void lexer_init(Lexer* lexer, const char* source);
 Token lexer_get_next_token(Lexer* lexer);
 
+// Destruição de Token
+void free_token(Token* token);
+
 // Funções de utilidade/debug
 void lexer_print_token(Token token);
 void lexer_print_all_tokens(const char* source);
