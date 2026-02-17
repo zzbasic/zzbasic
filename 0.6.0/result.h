@@ -4,7 +4,6 @@
 #define RESULT_H
 
 #include "zzdefs.h"
-#include "zztext.h"
 #include "zzarray.h"
 
 typedef enum
