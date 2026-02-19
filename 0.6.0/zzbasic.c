@@ -137,32 +137,18 @@ ASTNode* compile_program(ReplProgram* program)
         program->ast = NULL;
     }
     
-    // Calcula tamanho total necessário
-    size_t total_size = 0;
-    for (int i = 0; i < program->line_count; i++)
-    {
-        if (program->lines[i])
-            total_size += strlen(program->lines[i]) + 1;  // +1 para \n
-    }
-    
-    if (total_size == 0)
-        return NULL;
-    
-    // Aloca buffer com tamanho exato
-    char* full_code = A89ALLOC(total_size + 1);  // +1 para \0
-    if (!full_code)
-        return NULL;
-    
+    // Aloca buffer grande para concatenar todas as linhas
+    char* full_code = A89ALLOC(PROGRAM_LINE_SIZE * MAX_PROGRAM_LINES);
     full_code[0] = '\0';
     
     // Concatena todas as linhas
     for (int i = 0; i < program->line_count; i++)
     {
-        if (program->lines[i])
-        {
-            strcat(full_code, program->lines[i]);
-            strcat(full_code, "\n");
-        }
+        strncat(full_code, program->lines[i], 
+                PROGRAM_LINE_SIZE * MAX_PROGRAM_LINES - strlen(full_code) - 1);
+
+        strncat(full_code, "\n", 
+                PROGRAM_LINE_SIZE * MAX_PROGRAM_LINES - strlen(full_code) - 1);
     }
     
     // Parse
@@ -220,20 +206,9 @@ static int program_mode_input(ReplProgram* program, const char* line)
     // Store line if not at max capacity
     if (program->line_count < MAX_PROGRAM_LINES)
     {
-        // Aloca memória para a nova linha
-        size_t line_len = strlen(line);
-        program->lines[program->line_count] = A89ALLOC(line_len + 1);
-        
-        if (!program->lines[program->line_count])
-        {
-            printf("%s[Error: Memory allocation failed]%s\n", 
-                   COLOR_ERROR, COLOR_RESET);
-            return 0;
-        }
-        
-        // Copia a linha
-        strncpy(program->lines[program->line_count], line, line_len);
-        program->lines[program->line_count][line_len] = '\0';
+        strncpy(program->lines[program->line_count], line, PROGRAM_LINE_SIZE - 1);
+
+        program->lines[program->line_count][PROGRAM_LINE_SIZE - 1] = '\0';
         program->line_count++;
     }
     else
@@ -244,7 +219,6 @@ static int program_mode_input(ReplProgram* program, const char* line)
     
     return 0;  // Continua em modo program
 }
-
 
 // Comando 'program'. Entra no modo programa
 static void program_command(ReplProgram* program)
@@ -283,22 +257,15 @@ static void run_command(ReplProgram* program, SymbolTable* symbols)
 static void purge_command(ReplProgram* program, SymbolTable** symbols)
 {
     // Limpa programa
+    program->line_count = 0;
     if (program->ast)
     {
         free_ast(program->ast);
         program->ast = NULL;
     }
     
-    // Zera o array de linhas; Libera todas as linhas
-    for (int i = 0; i < program->line_count; i++)
-    {
-        if (program->lines[i])
-        {
-            a89free(program->lines[i]);
-            program->lines[i] = NULL;
-        }
-    }
-    program->line_count = 0;
+    // Zera o array de linhas
+    memset(program->lines, 0, MAX_PROGRAM_LINES * PROGRAM_LINE_SIZE);
     
     // Limpa variáveis
     symbol_table_destroy(*symbols);
@@ -407,31 +374,12 @@ static void edit_command(ReplProgram* program, const char* arg)
     printf("%02d: ", line_num);
     fflush(stdout);
     
-    char new_line[TEMP_BUFFER_SIZE];
+    char new_line[PROGRAM_LINE_SIZE];
     if (fgets(new_line, sizeof(new_line), stdin) != NULL)
     {
         new_line[strcspn(new_line, "\n")] = '\0';
-        
-        // Libera a linha antiga se existir
-        if (program->lines[line_num - 1])
-        {
-            a89free(program->lines[line_num - 1]);
-        }
-
-        // Aloca memória para a nova linha
-        size_t new_line_len = strlen(new_line);
-        program->lines[line_num - 1] = A89ALLOC(new_line_len + 1);
-
-        if (!program->lines[line_num - 1])
-        {
-            printf("%s[Error: Memory allocation failed]%s\n", COLOR_ERROR, COLOR_RESET);
-            return;
-        }
-
-        // Copia a nova linha
-        strncpy(program->lines[line_num - 1], new_line, new_line_len);
-        program->lines[line_num - 1][new_line_len] = '\0';
-
+        strncpy(program->lines[line_num - 1], new_line, PROGRAM_LINE_SIZE - 1);
+        program->lines[line_num - 1][PROGRAM_LINE_SIZE - 1] = '\0';
     }
 }
 
@@ -477,38 +425,22 @@ static void tokens_command(ReplProgram* program, const char* code)
             return;
         }
         
-        // Calcula tamanho total necessário
-        size_t total_size = 0;
-        for (int i = 0; i < program->line_count; i++)
+        // Concatenate all program lines and show tokens
+        char* full_code = A89ALLOC(PROGRAM_LINE_SIZE * MAX_PROGRAM_LINES);
+        if (full_code)
         {
-            if (program->lines[i])
-                total_size += strlen(program->lines[i]) + 1;  // +1 para \n
-        }
-
-        if (total_size == 0)
-            return;
-
-        // Aloca buffer com tamanho exato
-        char* full_code = A89ALLOC(total_size + 1);  // +1 para \0
-        if (!full_code)
-            return;
-
-        full_code[0] = '\0';
-
-        // Concatena todas as linhas
-        for (int i = 0; i < program->line_count; i++)
-        {
-            if (program->lines[i])
+            full_code[0] = '\0';
+            for (int i = 0; i < program->line_count; i++)
             {
-                strcat(full_code, program->lines[i]);
-                strcat(full_code, "\n");
+                strncat(full_code, program->lines[i], 
+                        PROGRAM_LINE_SIZE * MAX_PROGRAM_LINES - strlen(full_code) - 1);
+
+                strncat(full_code, "\n", 
+                        PROGRAM_LINE_SIZE * MAX_PROGRAM_LINES - strlen(full_code) - 1);
             }
+            show_tokens(full_code);
+            a89free(full_code);
         }
-
-
-        show_tokens(full_code);
-        a89free(full_code);
-
     }
     else if (code[0] == '\0')
     {
@@ -594,6 +526,9 @@ static void vars_command(ReplProgram* program, SymbolTable* symbols, const char*
 
 static void execute_code(const char* line, SymbolTable* symbols)
 {
+    eval_src_ctx.source = line;
+    eval_src_ctx.source_size = strlen(line);
+
     if (line[0] == '\0' || is_empty_line(line))
     {
         return;  
@@ -610,11 +545,14 @@ static void execute_code(const char* line, SymbolTable* symbols)
 
     evaluate_program(ast, symbols);
     free_ast(ast);
+
+    eval_src_ctx.source = NULL;
+    eval_src_ctx.source_size = 0;
 }
 
 void run_repl(void)
 {
-    char line[TEMP_BUFFER_SIZE];
+    char line[BUFFER_SIZE];
     SymbolTable* symbols = symbol_table_create();
     ReplProgram program = {0};
     
@@ -781,6 +719,9 @@ void run_file(const char* filename)
         return;
     }
 
+    eval_src_ctx.source = code;
+    eval_src_ctx.source_size = input_size;    
+
     SymbolTable* symbols = symbol_table_create();
 
     if (code[0] != '\0')
@@ -790,7 +731,6 @@ void run_file(const char* filename)
 
         ASTNode* ast = parse(&lexer);// Agora parse retorna statement list
         if (ast == NULL) {
-            printf("%sParsing error: ast == NULL%s\n", COLOR_ERROR, COLOR_RESET);
             symbol_table_destroy(symbols);
             a89free(code);
             exit(EXIT_FAILURE);
@@ -803,6 +743,9 @@ void run_file(const char* filename)
     }
     
     symbol_table_destroy(symbols);
+
+    eval_src_ctx.source = NULL;
+    eval_src_ctx.source_size = 0;
 }
 
 // ============================================
