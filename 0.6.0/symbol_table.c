@@ -14,6 +14,7 @@ typedef enum
     SYM_NUMBER,
     SYM_STRING,
     SYM_BOOL,
+    SYM_TEXT,
     SYM_ARRAY
 } SymbolType;
 
@@ -25,7 +26,8 @@ typedef struct Symbol
     {
         int         bool_value;
         double      num_value;
-        char*       str_value;
+        char        str_value[STRING_SIZE];
+        Text*       text_value;
         Array*      array_value;
     } value;
     struct Symbol* next;
@@ -77,12 +79,12 @@ void symbol_table_destroy(SymbolTable* table)
     {
         Symbol* next = current->next;
 
-        // Libera string se existir
-        if (current->type == SYM_STRING && current->value.str_value)
+        // Libera text se existir
+        if (current->type == SYM_TEXT && current->value.text_value)
         {
-            a89free(current->value.str_value);
+            //a89free(current->value.text_value);
+            text_free(current->value.text_value);
         }
-
 
         if (current->type == SYM_ARRAY && current->value.array_value)
         {
@@ -230,19 +232,8 @@ int symbol_table_set_string(SymbolTable* table, const char* name, const char* va
         strncpy(symbol->name, name, VARNAME_SIZE - 1);
         symbol->name[VARNAME_SIZE - 1] = '\0';
         symbol->type = SYM_STRING;
-
-        if (value)
-        {
-            int len = strlen(value);
-            symbol->value.str_value = A89ALLOC(len + 1);
-            strncpy(symbol->value.str_value, value, len);
-            symbol->value.str_value[len] = '\0';
-        }
-        else
-        {
-            symbol->value.str_value = A89ALLOC(1);
-            symbol->value.str_value[0] = '\0';
-        }
+        strncpy(symbol->value.str_value, value, STRING_SIZE - 1);
+        symbol->value.str_value[STRING_SIZE - 1] = '\0';
         
         // Insert at beginning
         symbol->next = table->head;
@@ -258,66 +249,76 @@ int symbol_table_set_string(SymbolTable* table, const char* name, const char* va
                     COLOR_ERROR, name, COLOR_RESET);
             return 0;
         }
-
-        // Libera string antiga
-        if (symbol->value.str_value)
-            a89free(symbol->value.str_value);
-        
-        // Aloca nova string
-        if (value)
-        {
-            int len = strlen(value);
-            symbol->value.str_value = A89ALLOC(len + 1);
-            strncpy(symbol->value.str_value, value, len);
-            symbol->value.str_value[len] = '\0';
-        }
-        else
-        {
-            symbol->value.str_value = A89ALLOC(1);
-            symbol->value.str_value[0] = '\0';
-        }
-
+        strncpy(symbol->value.str_value, value, STRING_SIZE - 1);
+        symbol->value.str_value[STRING_SIZE - 1] = '\0';
     }
     
     return 1;
 }
 
-int symbol_table_get_string(SymbolTable* table, const char* name, char* out_value, size_t out_size)
+int symbol_table_get_string(SymbolTable* table, const char* name, char* out_value, size_t max_len)
 {
-    if (!table || !name || !out_value || out_size == 0)
-        return 0;
+    if (!table || !name || !out_value || max_len == 0) return 0;
     
     Symbol* symbol = find_symbol(table, name);
     if (!symbol)
     {
-        fprintf(stderr, "%sError: variable '%s' not found%s\n",
-                COLOR_ERROR, name, COLOR_RESET);
-        return 0;
+        return 0;  // Variable doesn't exist
     }
     
     if (symbol->type != SYM_STRING)
     {
-        fprintf(stderr, "%sError: variable '%s' is not a string%s\n",
-                COLOR_ERROR, name, COLOR_RESET);
-        return 0;
+        return 0;  // It's not a string
     }
     
-    // Copia a string com limite de tamanho
-    if (symbol->value.str_value)
+    strncpy(out_value, symbol->value.str_value, max_len - 1);
+    out_value[max_len - 1] = '\0';
+    return 1;
+}
+
+int symbol_table_set_text(SymbolTable* table, const char* name, Text* text)
+{
+    if (!table || !name || !is_valid_name(name)) return 0;
+    
+    Symbol* symbol = find_symbol(table, name);
+    
+    if (symbol)
     {
-        strncpy(out_value, symbol->value.str_value, out_size - 1);
-        out_value[out_size - 1] = '\0';
+        // Libera texto antigo se existir
+        if (symbol->type == SYM_TEXT && symbol->value.text_value)
+        {
+            text_free(symbol->value.text_value);  // ← usa text_free()!
+        }
+        
+        symbol->type = SYM_TEXT;
+        symbol->value.text_value = text;  // ← só copia o ponteiro!
+        return 1;
     }
-    else
-    {
-        out_value[0] = '\0';
-    }
+    
+    // Criar novo símbolo
+    symbol = A89ALLOC(sizeof(Symbol));
+    strncpy(symbol->name, name, VARNAME_SIZE - 1);
+    symbol->name[VARNAME_SIZE - 1] = '\0';
+    symbol->type = SYM_TEXT;
+    symbol->value.text_value = text;  // ← só copia o ponteiro!
+    
+    symbol->next = table->head;
+    table->head = symbol;
+    table->count++;
     
     return 1;
 }
 
-
-
+int symbol_table_get_text(SymbolTable* table, const char* name, Text** out_text)
+{
+    if (!table || !name || !out_text) return 0;
+    
+    Symbol* symbol = find_symbol(table, name);
+    if (!symbol || symbol->type != SYM_TEXT) return 0;
+    
+    *out_text = (Text*)symbol->value.text_value;  // ← copia o ponteiro Text*
+    return 1;
+}
 
 int symbol_table_set_array(SymbolTable* table, const char* name, Array* array)
 {
