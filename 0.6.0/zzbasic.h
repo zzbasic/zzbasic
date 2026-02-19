@@ -10,7 +10,7 @@
 #include "ast.h"
 
 typedef struct {
-    char* lines[MAX_PROGRAM_LINES];
+    char lines[MAX_PROGRAM_LINES][PROGRAM_LINE_SIZE];
     int line_count;
     int in_program_mode;
     ASTNode* ast;
