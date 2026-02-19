@@ -7,8 +7,8 @@
 #include <stdarg.h> 
 
 #include "color.h"
+#include "utils.h"
 #include "lexer.h"
-#include "a89alloc.h"
 
 static void lexer_advance(Lexer* lexer);
 static char lexer_peek(Lexer* lexer);
@@ -357,25 +357,40 @@ static Token lexer_report_error(Lexer* lexer,
                                 const char* format,
                                 ...)
 {
-    // Format the message
-    char message[ERROR_MSG_SIZE];
+
+    char message[BUFFER_SIZE];
     va_list args;
     va_start(args, format);
     vsnprintf(message, sizeof(message), format, args);
     va_end(args);
-    
-    char error_text[ERROR_MSG_SIZE];
-    snprintf(error_text,
-             sizeof(error_text),
-             "Lexer error: %s",
-             message);
-    
+
+    fprintf(stderr, "%s[%d:%d] Lexer error:%s %s\n",
+            COLOR_ERROR,
+            line,
+            column,
+            COLOR_RESET,
+            message);
+
+    // Exibe a linha com uma seta apontando para o erro
+    display_error_location(lexer->source,
+                           lexer->source_size, 
+                           line,
+                           column);
+
+    if (execution_mode == MODE_FILE)
+    {
+        exit(1);  // Encerra o programa para arquivo .zz
+    }
+
+    // Se chegou aqui, é REPL 
+
+    has_lexical_error = 1;
+
     Token token;
     memset(&token, 0, sizeof(token));  
-
     token.type = TOKEN_ERROR;
-    strncpy(token.token_text, error_text, ERROR_MSG_SIZE - 1);
-    token.token_text[ERROR_MSG_SIZE - 1] = '\0';
+    strncpy(token.token_text, message, BUFFER_SIZE - 1);
+    token.token_text[BUFFER_SIZE - 1] = '\0';
     token.line = line;
     token.column = column;
 
@@ -484,8 +499,8 @@ static Token lexer_read_number(Lexer* lexer)
 
     token.type = TOKEN_NUMBER;
     token.value.number = valor;
-    strncpy(token.token_text, buffer, ERROR_MSG_SIZE - 1);
-    token.token_text[ERROR_MSG_SIZE - 1] = '\0';
+    strncpy(token.token_text, buffer, TOKENTEXT_SIZE - 1);
+    token.token_text[TOKENTEXT_SIZE - 1] = '\0';
     token.line = nr_line;
     token.column = nr_column;
 
@@ -516,7 +531,7 @@ static Token lexer_read_identifier(Lexer* lexer)
     // Read identifier
     while (isalnum(lexer->current_char) || lexer->current_char == '_')
     {
-        if (i >= VARNAME_SIZE - 1)
+        if (i > VARNAME_SIZE - 1)
         {
             buffer[VARNAME_SIZE - 1] = '\0';
             return lexer_report_error(lexer,
@@ -538,39 +553,15 @@ static Token lexer_read_identifier(Lexer* lexer)
     TokenType token_type = check_keyword(buffer);
     if (token_type != TOKEN_NULL)
     {
-        // É uma palavra-chave
         token.type = token_type;
-        
-        // Aloca apenas token_text com a palavra-chave
-        token.token_text = A89ALLOC(strlen(buffer) + 1);
-        if (!token.token_text)
-        {
-            token.type = TOKEN_ERROR;
-            token.value.string = A89ALLOC(50);
-            if (token.value.string)
-                strcpy(token.value.string, "Memory allocation failed");
-            return token;
-        }
         strcpy(token.token_text, buffer);
+        strcpy(token.value.string, buffer);
     }
     //================ SE CHEGOU AQUI NÃO É PALAVRA-CHAVE ==========================
     else
     {
         token.type = TOKEN_IDENTIFIER;
-        strncpy(token.value.varname, buffer, VARNAME_SIZE - 1);
-        token.value.varname[VARNAME_SIZE - 1] = '\0';
-        
-        // Aloca token_text para identificador
-        token.token_text = A89ALLOC(strlen(buffer) + 1);
-        if (!token.token_text)
-        {
-            token.type = TOKEN_ERROR;
-            token.value.string = A89ALLOC(50);
-            if (token.value.string)
-                strcpy(token.value.string, "Memory allocation failed");
-            return token;
-        }
-        strcpy(token.token_text, buffer);
+        strcpy(token.value.varname, buffer);
     }
 
     token.line = id_line;
@@ -579,50 +570,20 @@ static Token lexer_read_identifier(Lexer* lexer)
     return token; 
 }
 
-static Token lexer_read_string(Lexer* lexer)
-{
-    int capacity = 64;
+static Token lexer_read_string(Lexer* lexer) {
+    char buffer[STRING_SIZE];
     int i = 0;
+
     int str_line = lexer->line;
     int str_column = lexer->column;
-
-    char* buffer = A89ALLOC(capacity);
-    if (!buffer)
-    {
-        Token token;
-        memset(&token, 0, sizeof(token));
-        token.type = TOKEN_ERROR;
-        token.value.string = A89ALLOC(50);
-        if (token.value.string)
-            strcpy(token.value.string, "Memory allocation failed");
-        return token;
-    }
     
     lexer_advance(lexer); // Skip opening quote
     
     while (lexer->current_char != '"' && 
            lexer->current_char != '\0' && 
-           lexer->current_char != '\n')
+           lexer->current_char != '\n' &&
+           i < STRING_SIZE-1)
     {
-
-        if (i >= capacity - 1)
-        {
-            capacity *= 2;
-            char* new_buffer = A89REALLOC(buffer, capacity);
-            if (!new_buffer)
-            {
-                a89free(buffer);
-                Token token;
-                memset(&token, 0, sizeof(token));
-                token.type = TOKEN_ERROR;
-                token.value.string = A89ALLOC(50);
-                if (token.value.string)
-                    strcpy(token.value.string, "Memory allocation failed");
-                return token;
-            }
-            buffer = new_buffer; 
-         }
-
         buffer[i++] = lexer->current_char;
         lexer_advance(lexer);
     }
@@ -630,48 +591,27 @@ static Token lexer_read_string(Lexer* lexer)
     if (lexer->current_char != '"')
     {
         buffer[i] = '\0';
-        // Copia mensagem ANTES de liberar o buffer
-        char temp_buffer[256];
-        snprintf(temp_buffer, sizeof(temp_buffer), "%s", buffer);
-
-        a89free(buffer); // LIBERA MEMORIA ANTES DE RETORNAR O ERRO
-
         return lexer_report_error(lexer,
                                   str_line,
                                   str_column,
                                   "missing terminating \" character: %s",
-                                  temp_buffer);
+                                  buffer);
     }
     
     buffer[i] = '\0';
     lexer_advance(lexer); // Skip closing quote
-
-    // Aloca memoria para token_text (com aspas)
-    int token_text_size = i + 3; // 2 aspas + null terminator
-    char* token_text = A89ALLOC(token_text_size);
-    if (!token_text)
-    {
-        a89free(buffer);
-        Token token;
-        memset(&token, 0, sizeof(token));
-        token.type = TOKEN_ERROR;
-        token.value.string = A89ALLOC(50);
-        if (token.value.string)
-            strcpy(token.value.string, "Memory allocation failed");
-        return token;
-    }
-
-    strcpy(token_text, "\""); // Mantenha as aspas em token_text
-    strcat(token_text, buffer);
-    strcat(token_text, "\"");
  
     Token token;
     memset(&token, 0, sizeof(token));
+
     token.type = TOKEN_STRING;
-    token.token_text = token_text;
-    token.value.string = buffer;
-    token.line = str_line;
-    token.column = str_column;
+
+    strcpy(token.token_text, "\""); // Mantenha as aspas em token_text
+    strcat(token.token_text, buffer);
+    strcat(token.token_text, "\"");
+    
+    // Store content without quotes in string_value field
+    strcpy(token.value.string, buffer);
     
     return token;
 }
@@ -694,6 +634,16 @@ void lexer_init(Lexer* lexer,
 
 Token lexer_get_next_token(Lexer* lexer)
 {
+    // Verifica o tamanho da linha
+    if (lexer->line_length >= PROGRAM_LINE_SIZE)
+    {
+        return lexer_report_error(lexer,
+                                  lexer->line,
+                                  1,
+                                  "Line %d exceeds %d character limit",
+                                  lexer->line, PROGRAM_LINE_SIZE);
+    }
+
     while (1)  
     {
         lexer_skip_whitespace(lexer);
@@ -940,7 +890,7 @@ Token lexer_get_next_token(Lexer* lexer)
             
         default:
         {
-            char error_msg[256];
+            char error_msg[BUFFER_SIZE];
             snprintf(error_msg,
                      sizeof(error_msg),
                      "Unexpected character: '%c' (ASCII %d)",
@@ -1011,29 +961,6 @@ void lexer_print_all_tokens(const char* source)
     printf("\nTotal tokens: %d\n", token_count);
     printf("=== END OF ANALYSIS ===\n");
 }
-
-void free_token(Token* token)
-{
-    if (!token)
-        return;
-    
-    if (token->token_text)
-    {
-        a89free(token->token_text);
-        token->token_text = NULL;
-    }
-    
-    // Libera value.string para TOKEN_STRING e palavras-chave
-    if (token->value.string && (token->type == TOKEN_STRING))
-    {
-        a89free(token->value.string);
-        token->value.string = NULL;
-    }
-    
-    memset(token, 0, sizeof(Token));
-}
-
-
 
 #ifdef TESTLEXER
 #include "color.h"
