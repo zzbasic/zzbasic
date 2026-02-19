@@ -7,6 +7,12 @@
 #include "zzbasic.h"
 #include "a89alloc.h"
 
+int execution_mode = MODE_FILE;  // Padrão é arquivo
+
+int has_lexical_error = 0;
+
+EvalSourceContext eval_src_ctx = {NULL, 0};
+
 // ============================================
 // Função Principal
 // ============================================
@@ -17,6 +23,7 @@ int main(int argc, char* argv[])
     if (argc == 1)
     {
         // Modo REPL: nenhum argumento
+        execution_mode = MODE_REPL; 
         print_banner();
         printf("Enter \"help\", a statement or \"exit\" to quit.\n\n");
         run_repl();
@@ -24,6 +31,7 @@ int main(int argc, char* argv[])
     else if (argc == 2)
     {
         // Modo arquivo: um argumento
+        execution_mode = MODE_FILE;
         char* filename = argv[1];
 
         // Verifica se tem extensão .zz
