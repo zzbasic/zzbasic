@@ -19,13 +19,11 @@ typedef struct Parser{
     Lexer* lexer;
     Token current_token;
     int has_error;
-    char* error_message;
+    char error_message[BUFFER_SIZE];
 } Parser;
 
 ASTNode* parse(Lexer* lexer);
 void free_ast(ASTNode* node);
-void parser_free(Parser* parser);
-
 void print_ast(ASTNode* node, int indent);
 
 ASTNode* parse_single_stmt(Lexer* lexer);
