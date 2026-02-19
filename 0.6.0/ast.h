@@ -89,7 +89,7 @@ typedef struct
 
 typedef struct
 {
-    char* value;
+    char value[STRING_SIZE];
 } StringData;
 
 typedef struct
@@ -166,7 +166,7 @@ typedef struct
     ASTNode* color; 
     ASTNode* width; 
     ASTNode* alignment; 
-    char* prompt;// Prompt opcional (ex: "Digite: ")
+    char prompt[STRING_SIZE];// Prompt opcional (ex: "Digite: ")
     int set_nocolor; // 1 - nocolor ativado; 0 - nocolor desativado
     char var_name[VARNAME_SIZE];// Nome da variável 
 } InputStatementNode;
@@ -213,19 +213,19 @@ typedef struct
 
 typedef struct
 {
-    char* filename;  // Nome do arquivo; PATH
+    char filename[BUFFER_SIZE];  // Nome do arquivo; PATH
 } LoadExprData;
 
 typedef struct
 {
-    ASTNode* expression;    // Expressão que retorna text
-    char* filename;         // Nome do arquivo
+    ASTNode* expression;         // Expressão que retorna text
+    char filename[BUFFER_SIZE];  // Nome do arquivo
 } SaveStatementData;
 
 // Dados para NODE_FUNCTION_CALL
 typedef struct FunctionCallData
 {
-    char* function_name;  
+    char function_name[BUFFER_SIZE];  
     ASTNode** arguments;               
     int arg_count;                     
 } FunctionCallData;
@@ -348,11 +348,11 @@ ASTNode* create_import_node(const char* module_name,
                             int import_all,
                             int line, int column);
 
-ASTNode* create_load_node(char* filename, int line, int column);
+ASTNode* create_load_node(const char* filename, int line, int column);
 
-ASTNode* create_save_node(ASTNode* expression, char* filename, int line, int column);
+ASTNode* create_save_node(ASTNode* expression, const char* filename, int line, int column);
 
-ASTNode* create_function_call_node(char* function_name, int line, int column);
+ASTNode* create_function_call_node(const char* function_name, int line, int column);
 void function_call_add_argument(ASTNode* node, ASTNode* argument);
 
 ASTNode* create_array_node(int line, int column);
