@@ -133,11 +133,11 @@ typedef struct
     union
     {
         double number;              // TOKEN_NUMBER
-        char* string;   // TOKEN_STRING e palavras-chave
+        char string[STRING_SIZE];   // TOKEN_STRING e palavras-chave
         char varname[VARNAME_SIZE]; // TOKEN_IDENTIFIER
     } value;
     
-    char* token_text;   // texto explicativo do token      
+    char token_text[BUFFER_SIZE];   // texto explicativo do token      
     
     int line;                       // Número da linha
     int column;                     // Coluna
@@ -154,7 +154,7 @@ typedef struct
     int line;                   // Linha atual
     int column;                 // Coluna atual
     char current_char;          // caractere atual (para conveniência)
-    int line_length;            // Tamanho da linha 
+    int line_length;            // Tamanho da linha(maximo 80 caracteres)  
 } Lexer;
 
 // ============================================
@@ -164,9 +164,6 @@ typedef struct
 // Inicialização e operação
 void lexer_init(Lexer* lexer, const char* source);
 Token lexer_get_next_token(Lexer* lexer);
-
-// Destruição de Token
-void free_token(Token* token);
 
 // Funções de utilidade/debug
 void lexer_print_token(Token token);
