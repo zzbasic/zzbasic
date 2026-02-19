@@ -10,10 +10,10 @@ OBSERVÇÕES:
       encerrar o programa. 
 ********************************************************************/
 #include "color.h"
+#include "utils.h"
 #include "ast.h"
 #include "parser.h"
 #include "a89alloc.h"
-#include "zzdefs.h"
 
 //===================================================================
 // PROTÓTIPOS DAS FUNÇÕES 
@@ -50,7 +50,7 @@ static ASTNode* parse_import_stmt(Parser* parser);
 static ASTNode* parse_load_expr(Parser* parser);
 static ASTNode* parse_save_stmt(Parser* parser);
 
-static ASTNode* parse_function_call(Parser* parser, char* function_name);
+static ASTNode* parse_function_call(Parser* parser, const char* function_name);
 
 static ASTNode* parse_expr_stmt(Parser* parser);
 
@@ -82,7 +82,7 @@ static void parser_init(Parser* parser, Lexer* lexer)
     memset(&parser->current_token, 0, sizeof(Token));  
     parser->current_token = lexer_get_next_token(lexer);
     parser->has_error = 0;
-    parser->error_message = NULL;
+    parser->error_message[0] = '\0';
 }
 
 static void parser_advance(Parser* parser)
@@ -98,47 +98,34 @@ static int parser_expect(Parser* parser, TokenType expected_type)
 static void parser_set_error(Parser* parser, const char* message)
 {
     parser->has_error = 1;
-
-    // Libera mensagem anterior se existir
-    if (parser->error_message)
-    {
-        a89free(parser->error_message);
-        parser->error_message = NULL;
-    }
-
-    // Calcula tamanho necessário
-    // [linha:coluna] + message + cores + espaço extra
-    size_t msg_len = strlen(message) + 50;
-
-    // Aloca memória para formatted_message
-    char* formatted_message = A89ALLOC(msg_len);
-    if (!formatted_message)
-    {
-        // Fallback: armazena mensagem simples
-        parser->error_message = A89ALLOC(strlen(message) + 1);
-        if (parser->error_message)
-            strncpy(parser->error_message, message, strlen(message));
-        return;
-    }
     
-    // Formata a mensagem com cor vermelha
-    snprintf(formatted_message, sizeof(formatted_message),
-             "%s[%d:%d] %s%s",
-             COLOR_ERROR,
+    // Formata a mensagem de erro
+    char error_text[BUFFER_SIZE];
+    snprintf(error_text, sizeof(error_text),
+             "[%d:%d] Parser error: %s",
              parser->current_token.line,
              parser->current_token.column,
-             message,
-             COLOR_RESET);
-    
-    // Aloca e copia para parser->error_message
-    size_t formatted_len = strlen(formatted_message);
-    parser->error_message = A89ALLOC(formatted_len + 1);
-    if (parser->error_message)
+             message);
+
+    if(!has_lexical_error)
     {
-        strncpy(parser->error_message, formatted_message, formatted_len);
+        // Imprime cabeçalho de erro com linha:coluna
+        fprintf(stderr, "%s[%d:%d] Parser error:%s %s\n",
+                COLOR_ERROR, 
+                parser->current_token.line,
+                parser->current_token.column,
+                COLOR_RESET, 
+                message);
+
+        display_error_location(parser->lexer->source,
+                               parser->lexer->source_size,
+                               parser->current_token.line,
+                               parser->current_token.column);
     }
     
-    a89free(formatted_message);
+    // Copia para o buffer do parser
+    strncpy(parser->error_message, error_text, sizeof(parser->error_message) - 1);
+    parser->error_message[sizeof(parser->error_message) - 1] = '\0';
 }
 
 // Verifica se um token é palavra-chave/comando
@@ -214,17 +201,17 @@ static const char* get_color_name(TokenType type)
 
 // Gera mensagem de erro específica para token problemático em print
 static void report_print_keyword_error(Parser* parser, Token token) {
-    char error_msg[ERROR_MSG_SIZE];
+    char error_msg[BUFFER_SIZE];
     
     if (token.type == TOKEN_SEMICOLON) {
         snprintf(error_msg, sizeof(error_msg),
-            "Parser error [%d:%d]: print statement cannot have ';' after it. "
+            "[%d:%d]: print statement cannot have ';' after it. "
             "Remove the ';' or use: print \"text1\" \"text2\" nl",
             token.line, token.column);
     }
     else if (token.type == TOKEN_COLON) {
         snprintf(error_msg, sizeof(error_msg),
-            "Parser error [%d:%d]: print statement cannot have ':' after it. "
+            "[%d:%d]: print statement cannot have ':' after it. "
             "Use new line for next statement.",
             token.line, token.column);
     }
@@ -234,7 +221,7 @@ static void report_print_keyword_error(Parser* parser, Token token) {
         // Mensagens específicas por tipo de comando
         if (token.type == TOKEN_LET) {
             snprintf(error_msg, sizeof(error_msg),
-                "Parser error [%d:%d]: '%s' is a command, not a valid expression. "
+                "[%d:%d]: '%s' is a command, not a valid expression. "
                 "Assign variables BEFORE printing:\n"
                 "  let x = 5\n"
                 "  print x nl",
@@ -242,7 +229,7 @@ static void report_print_keyword_error(Parser* parser, Token token) {
         }
         else if (token.type == TOKEN_PRINT || token.type == TOKEN_QUESTION) {
             snprintf(error_msg, sizeof(error_msg),
-                "Parser error [%d:%d]: '%s' is a command, not a valid expression. "
+                "[%d:%d]: '%s' is a command, not a valid expression. "
                 "Use ONE print with multiple items:\n"
                 "  print \"text1\" \"text2\" nl  (instead of print \"text1\" print \"text2\")",
                 token.line, token.column, keyword_name);
@@ -250,14 +237,14 @@ static void report_print_keyword_error(Parser* parser, Token token) {
         else {
             // Mensagem genérica para outros comandos (futuro)
             snprintf(error_msg, sizeof(error_msg),
-                "Parser error [%d:%d]: '%s' is a command, not a valid expression in print statement.",
+                "[%d:%d]: '%s' is a command, not a valid expression in print statement.",
                 token.line, token.column, keyword_name);
         }
     }
     else {
         // Erro genérico para outros tokens inesperados
         snprintf(error_msg, sizeof(error_msg),
-            "Parser error [%d:%d]: Unexpected '%s' in print statement",
+            "[%d:%d]: Unexpected '%s' in print statement",
             token.line, token.column, token.token_text[0] ? token.token_text : "token");
     }
     
@@ -273,12 +260,12 @@ static int is_operator_token(TokenType type)
 static void report_unexpected_token_error(Parser* parser, const char* context)
 {
     Token token = parser->current_token;
-    char error_msg[ERROR_MSG_SIZE];
+    char error_msg[BUFFER_SIZE];
     
     if (is_operator_token(token.type))
     {
         snprintf(error_msg, sizeof(error_msg),
-            "Parser error: Operator '%s ' cannot appear at this position in %s",
+            "Operator '%s ' cannot appear at this position in %s",
             token.token_text, context);
     }
     else if (token.type == TOKEN_ERROR)
@@ -289,7 +276,7 @@ static void report_unexpected_token_error(Parser* parser, const char* context)
     else
     {
         snprintf(error_msg, sizeof(error_msg),
-            "Parser error: Unexpected '%s ' in %s (expected number, string, identifier or '(  ')",
+            "Unexpected '%s ' in %s (expected number, string, identifier or '(  ')",
             token.token_text, context);
     }
     
@@ -500,15 +487,15 @@ static ASTNode* parse_assignment_stmt(Parser* parser)
         if (is_keyword_token(parser->current_token.type))
         {
             const char* keyword_name = get_keyword_name(parser->current_token.type);
-            char error_msg[ERROR_MSG_SIZE];
+            char error_msg[BUFFER_SIZE];
             snprintf(error_msg, sizeof(error_msg),
-                "Parser error [%d:%d]: '%s' is a command keyword, cannot be used as variable name",
+                "[%d:%d]: '%s' is a command keyword, cannot be used as variable name",
                 parser->current_token.line, parser->current_token.column, keyword_name);
             parser_set_error(parser, error_msg);
         }
         else
         {
-            parser_set_error(parser, "Parser error: expected identifier");
+            parser_set_error(parser, "expected identifier");
         }
         return NULL;
     }
@@ -518,7 +505,7 @@ static ASTNode* parse_assignment_stmt(Parser* parser)
                                            parser->current_token.line,
                                            parser->current_token.column);
     if (!target) {
-        parser_set_error(parser, "Parser error: could not create variable node");
+        parser_set_error(parser, "could not create variable node");
         return NULL;
     }
 
@@ -543,7 +530,7 @@ static ASTNode* parse_assignment_stmt(Parser* parser)
         // Verifica se há ']'
         if (parser->current_token.type != TOKEN_RBRACKET)
         {
-            parser_set_error(parser, "Parser error: expected ']' after array index");
+            parser_set_error(parser, "expected ']' after array index");
             free_ast(target);
             free_ast(index);
             return NULL;
@@ -555,14 +542,14 @@ static ASTNode* parse_assignment_stmt(Parser* parser)
         target = create_array_access_node(target, index, line, column);
         if (!target)
         {
-            parser_set_error(parser, "Parser error: could not create array access node");
+            parser_set_error(parser, "could not create array access node");
             return NULL;
         }
     }
     
     // Check '='
     if (parser->current_token.type != TOKEN_ASSIGN) {
-        parser_set_error(parser, "Parser error: Expected '=' after variable name");
+        parser_set_error(parser, "expected '=' after variable name");
         free_ast(target);
         return NULL;
     }
@@ -655,7 +642,7 @@ static ASTNode* parse_print_stmt(Parser* parser)
             if(parser->current_token.type != TOKEN_LPAREN)
             {
                 parser_set_error(parser,
-                    "Parser error: '(' expected after 'width'."
+                    "'(' expected after 'width'."
                     " 'width' parameter requires value in parentheses."
                     " Example: width(10)");
                 free_ast(print_node);
@@ -667,7 +654,7 @@ static ASTNode* parse_print_stmt(Parser* parser)
             if(parser->current_token.type != TOKEN_NUMBER)
             {
                 parser_set_error(parser,
-                    "Parser error: number expected in width()"
+                    "number expected in width()"
                     " Example: width(10)");
                 free_ast(print_node);
                 return NULL;
@@ -677,7 +664,7 @@ static ASTNode* parse_print_stmt(Parser* parser)
 
             // Valida o intervalo aceitável para width
             if (width_value < 0 || width_value > 256) {
-                parser_set_error(parser, "Parser error: width must be between 1 and 256");
+                parser_set_error(parser, "width must be between 1 and 256");
                 free_ast(print_node);
                 return NULL;
             }
@@ -686,7 +673,7 @@ static ASTNode* parse_print_stmt(Parser* parser)
             if(parser->current_token.type != TOKEN_RPAREN)
             {
                 parser_set_error(parser,
-                    "Parser error: ')' expected."
+                    "')' expected."
                     " 'width' parameter requires value in parentheses."
                     " Example: width(10)");
                 free_ast(print_node);
@@ -752,9 +739,9 @@ static ASTNode* parse_color_stmt(Parser* parser)
     // Verifica se é um token de cor permitido como statement
     if (!is_color_stmt_token(token.type))
     {
-        char error_msg[ERROR_MSG_SIZE];
+        char error_msg[BUFFER_SIZE];
         snprintf(error_msg, sizeof(error_msg),
-            "Parser error [%d:%d]: Color '%s' cannot be used as standalone statement",
+            "[%d:%d]: Color '%s' cannot be used as standalone statement",
             token.line, token.column, token.token_text);
         parser_set_error(parser, error_msg);
         return NULL;
@@ -800,7 +787,7 @@ static ASTNode* parse_input_stmt(Parser* parser)
         if(parser->current_token.type != TOKEN_LPAREN)
         {
             parser_set_error(parser,
-                "Parser error: '(' expected after 'width'."
+                "'(' expected after 'width'."
                 " 'width' parameter requires value in parentheses."
                 " Example: width(10)");
             free_ast(color_node);
@@ -812,7 +799,7 @@ static ASTNode* parse_input_stmt(Parser* parser)
         if(parser->current_token.type != TOKEN_NUMBER)
         {
             parser_set_error(parser,
-                "Parser error: number expected in width()"
+                "number expected in width()"
                 " Example: width(10)");
             free_ast(color_node);
             return NULL;
@@ -822,7 +809,7 @@ static ASTNode* parse_input_stmt(Parser* parser)
 
         // Valida o intervalo aceitável para width
         if (width_value < 0 || width_value > 256) {
-            parser_set_error(parser, "Parser error: width must be between 1 and 256");
+            parser_set_error(parser, "width must be between 1 and 256");
             free_ast(color_node);
             return NULL;
         }
@@ -831,7 +818,7 @@ static ASTNode* parse_input_stmt(Parser* parser)
         if(parser->current_token.type != TOKEN_RPAREN)
         {
             parser_set_error(parser,
-                "Parser error: ')' expected."
+                "')' expected."
                 " 'width' parameter requires value in parentheses."
                 " Example: width(10)");
             free_ast(color_node);
@@ -868,25 +855,13 @@ static ASTNode* parse_input_stmt(Parser* parser)
     }
 
     // PROCESSA O PROMPT
-    char* prompt = NULL;
+    char prompt[STRING_SIZE] = {0};
 
     // Verifica se tem prompt 
     if (parser->current_token.type == TOKEN_STRING)
     {
-        // Aloca dinamicamente para o prompt
-        size_t prompt_len = strlen(parser->current_token.value.string);
-        prompt = A89ALLOC(prompt_len + 1);
-        if (!prompt)
-        {
-            parser_set_error(parser, "Parser error: Memory allocation failed for prompt");
-            if(color_node) free_ast(color_node);
-            if(width_node) free_ast(width_node);
-            if(alignment_node) free_ast(alignment_node);
-            return NULL;
-        }
-        
-        strncpy(prompt, parser->current_token.value.string, prompt_len);
-        prompt[prompt_len] = '\0';
+        strncpy(prompt, parser->current_token.value.string, STRING_SIZE - 1);
+        prompt[STRING_SIZE - 1] = '\0';
         
         parser_advance(parser);  // Consome string
     }
@@ -903,7 +878,7 @@ static ASTNode* parse_input_stmt(Parser* parser)
     // PROCESSA IDENTIFIER
     if (parser->current_token.type != TOKEN_IDENTIFIER)
     {
-        parser_set_error(parser, "Parser error: Expected identifier after 'input' statment");
+        parser_set_error(parser, "expected identifier after 'input' statment");
         if(color_node) free_ast(color_node);
         if(width_node) free_ast(width_node);
         if(alignment_node) free_ast(alignment_node);
@@ -941,7 +916,7 @@ static ASTNode* parse_if_stmt(Parser* parser)
     
     if (parser->current_token.type != TOKEN_LPAREN)
     {
-        parser_set_error(parser, "Parser error: '(' expected after 'if'");
+        parser_set_error(parser, "'(' expected after 'if'");
         return NULL;
     }
     parser_advance(parser);// Consome '('
@@ -954,7 +929,7 @@ static ASTNode* parse_if_stmt(Parser* parser)
     
     if (parser->current_token.type != TOKEN_RPAREN)
     {
-        parser_set_error(parser, "Parser error: ')' expected after condition in 'if' statement");
+        parser_set_error(parser, "')' expected after condition in 'if' statement");
         free_ast(condition);
         return NULL;
     }
@@ -962,7 +937,7 @@ static ASTNode* parse_if_stmt(Parser* parser)
     
     if (parser->current_token.type != TOKEN_THEN)
     {
-        parser_set_error(parser, "Parser error: 'then' expected after condition in 'if' statement");
+        parser_set_error(parser, "'then' expected after condition in 'if' statement");
         free_ast(condition);
         return NULL;
     }
@@ -972,7 +947,7 @@ static ASTNode* parse_if_stmt(Parser* parser)
     if (parser->current_token.type != TOKEN_EOL && 
         parser->current_token.type != TOKEN_NL)
     {
-        parser_set_error(parser, "Parser error: newline expected after 'then' in 'if' statement");
+        parser_set_error(parser, "newline expected after 'then' in 'if' statement");
         free_ast(condition);
         return NULL;
     }
@@ -1001,7 +976,7 @@ static ASTNode* parse_if_stmt(Parser* parser)
             
             if (parser->current_token.type != TOKEN_LPAREN)
             {
-                parser_set_error(parser, "Parser error: '(' expected after 'if'");
+                parser_set_error(parser, "'(' expected after 'if'");
                 free_ast(condition);
                 free_ast(then_body);
                 if (else_body) free_ast(else_body);
@@ -1020,7 +995,7 @@ static ASTNode* parse_if_stmt(Parser* parser)
             
             if (parser->current_token.type != TOKEN_RPAREN)
             {
-                parser_set_error(parser, "Parser error: ')' expected after condition in 'if' statement");
+                parser_set_error(parser, "')' expected after condition in 'if' statement");
                 free_ast(condition);
                 free_ast(then_body);
                 free_ast(elif_condition);
@@ -1031,7 +1006,7 @@ static ASTNode* parse_if_stmt(Parser* parser)
             
             if (parser->current_token.type != TOKEN_THEN)
             {
-                parser_set_error(parser, "Parser error: 'then' expected after condition in 'if' statement");
+                parser_set_error(parser, "'then' expected after condition in 'if' statement");
                 free_ast(condition);
                 free_ast(then_body);
                 free_ast(elif_condition);
@@ -1044,7 +1019,7 @@ static ASTNode* parse_if_stmt(Parser* parser)
             if (parser->current_token.type != TOKEN_EOL && 
                 parser->current_token.type != TOKEN_NL)
             {
-                parser_set_error(parser, "Parser error: newline expected after 'then' in 'if' statement");
+                parser_set_error(parser, "newline expected after 'then' in 'if' statement");
                 free_ast(condition);
                 free_ast(then_body);
                 free_ast(elif_condition);
@@ -1091,7 +1066,7 @@ static ASTNode* parse_if_stmt(Parser* parser)
             if (parser->current_token.type != TOKEN_EOL && 
                 parser->current_token.type != TOKEN_NL)
             {
-                parser_set_error(parser, "Parser error: newline expected after 'else' in 'if' statement");
+                parser_set_error(parser, "newline expected after 'else' in 'if' statement");
                 free_ast(condition);
                 free_ast(then_body);
                 if (else_body) free_ast(else_body);
@@ -1134,7 +1109,7 @@ static ASTNode* parse_if_stmt(Parser* parser)
     // Verifica 'end if' (obrigatório)
     if (parser->current_token.type != TOKEN_END)
     {
-        parser_set_error(parser, "Parser error: 'end' expected in 'if' statement");
+        parser_set_error(parser, "'end' expected in 'if' statement");
         free_ast(condition);
         free_ast(then_body);
         if (else_body) free_ast(else_body);
@@ -1145,7 +1120,7 @@ static ASTNode* parse_if_stmt(Parser* parser)
     // Espera 'if'
     if (parser->current_token.type != TOKEN_IF)
     {
-        parser_set_error(parser, "Parser error: 'if' expected after 'end'");
+        parser_set_error(parser, "'if' expected after 'end'");
         free_ast(condition);
         free_ast(then_body);
         if (else_body) free_ast(else_body);
@@ -1158,7 +1133,7 @@ static ASTNode* parse_if_stmt(Parser* parser)
         parser->current_token.type != TOKEN_NL &&
         parser->current_token.type != TOKEN_EOF)
     {
-        parser_set_error(parser, "Parser error: newline expected after 'end if'");
+        parser_set_error(parser, "newline expected after 'end if'");
         free_ast(condition);
         free_ast(then_body);
         if (else_body) free_ast(else_body);
@@ -1192,7 +1167,7 @@ static ASTNode* parse_while_stmt(Parser* parser)
     
     if (parser->current_token.type != TOKEN_LPAREN)
     {
-        parser_set_error(parser, "Parser error: '(' expected after 'while' statement");
+        parser_set_error(parser, "'(' expected after 'while' statement");
         return NULL;
     }
     parser_advance(parser);  // Consome '('
@@ -1205,7 +1180,7 @@ static ASTNode* parse_while_stmt(Parser* parser)
     
     if (parser->current_token.type != TOKEN_RPAREN)
     {
-        parser_set_error(parser, "Parser error: ')' expected after condition in 'while' statement");
+        parser_set_error(parser, "')' expected after condition in 'while' statement");
         free_ast(condition);
         return NULL;
     }
@@ -1213,7 +1188,7 @@ static ASTNode* parse_while_stmt(Parser* parser)
     
     if (parser->current_token.type != TOKEN_DO)
     {
-        parser_set_error(parser, "Parser error: 'do' expected after condition in 'while' statement");
+        parser_set_error(parser, "'do' expected after condition in 'while' statement");
         free_ast(condition);
         return NULL;
     }
@@ -1223,7 +1198,7 @@ static ASTNode* parse_while_stmt(Parser* parser)
     if (parser->current_token.type != TOKEN_EOL && 
         parser->current_token.type != TOKEN_NL)
     {
-        parser_set_error(parser, "Parser error: newline expected after 'do' in 'while' statement");
+        parser_set_error(parser, "newline expected after 'do' in 'while' statement");
         free_ast(condition);
         return NULL;
     }
@@ -1241,7 +1216,7 @@ static ASTNode* parse_while_stmt(Parser* parser)
     // Expect 'end' 'while'
     if (parser->current_token.type != TOKEN_END)
     {
-        parser_set_error(parser, "Parser error: 'end' expected in 'while' statement");
+        parser_set_error(parser, "'end' expected in 'while' statement");
         free_ast(condition);
         free_ast(body);
         return NULL;
@@ -1251,7 +1226,7 @@ static ASTNode* parse_while_stmt(Parser* parser)
     // Expect 'while'
     if (parser->current_token.type != TOKEN_WHILE)
     {
-        parser_set_error(parser, "Parser error: 'while' expected after 'end' in 'while' statement");
+        parser_set_error(parser, "'while' expected after 'end' in 'while' statement");
         free_ast(condition);
         free_ast(body);
         return NULL;
@@ -1263,11 +1238,17 @@ static ASTNode* parse_while_stmt(Parser* parser)
         parser->current_token.type != TOKEN_NL &&
         parser->current_token.type != TOKEN_EOF)
     {
-        parser_set_error(parser, "Parser error: newline expected after 'end while'");
+        parser_set_error(parser, "newline expected after 'end while'");
         free_ast(condition);
         free_ast(body);
         return NULL;
     }
+    
+    // if (parser->current_token.type == TOKEN_EOL || 
+    //     parser->current_token.type == TOKEN_NL)
+    // {
+    //     parser_advance(parser);  // Consome EOL/NL
+    // }
     
     // Create WHILE node
     ASTNode* while_node = create_while_node(condition, body, line, column);
@@ -1321,7 +1302,7 @@ static ASTNode* parse_continue_stmt(Parser* parser)
         parser->current_token.type != TOKEN_NL &&
         parser->current_token.type != TOKEN_EOF)
     {
-        parser_set_error(parser, "Error: newline expected after 'continue'");
+        parser_set_error(parser, "newline expected after 'continue'");
         return NULL;
     }
     
@@ -1352,7 +1333,7 @@ static ASTNode* parse_for_stmt(Parser* parser)
 
     if (!parser_expect(parser, TOKEN_IDENTIFIER))
     {
-        parser_set_error(parser, "Parser error: expected identifier after 'for'");
+        parser_set_error(parser, "expected identifier after 'for'");
         return NULL;
     }
     char var_name[VARNAME_SIZE];
@@ -1362,7 +1343,7 @@ static ASTNode* parse_for_stmt(Parser* parser)
 
     if (!parser_expect(parser, TOKEN_ASSIGN))
     {
-        parser_set_error(parser, "Parser error: expected '=' after identifier in for loop");
+        parser_set_error(parser, "expected '=' after identifier in for loop");
         return NULL;
     }
     parser_advance(parser);
@@ -1375,7 +1356,7 @@ static ASTNode* parse_for_stmt(Parser* parser)
 
     if (!parser_expect(parser, TOKEN_TO))
     {
-        parser_set_error(parser, "Parser error: expected 'to' after initial value in for loop");
+        parser_set_error(parser, "expected 'to' after initial value in for loop");
         free_ast(init_value);
         return NULL;
     }
@@ -1403,7 +1384,7 @@ static ASTNode* parse_for_stmt(Parser* parser)
 
     if (!parser_expect(parser, TOKEN_DO))
     {
-        parser_set_error(parser, "Parser error: expected 'do' after for loop conditions");
+        parser_set_error(parser, "expected 'do' after for loop conditions");
         free_ast(init_value);
         free_ast(end_value);
         if (step_value) free_ast(step_value);
@@ -1413,7 +1394,7 @@ static ASTNode* parse_for_stmt(Parser* parser)
 
     if (!parser_expect(parser, TOKEN_EOL))
     {
-        parser_set_error(parser, "Parser error: expected EOL after 'do' in for loop");
+        parser_set_error(parser, "expected EOL after 'do' in for loop");
         free_ast(init_value);
         free_ast(end_value);
         if (step_value) free_ast(step_value);
@@ -1431,7 +1412,7 @@ static ASTNode* parse_for_stmt(Parser* parser)
     }
 
     if (!parser_expect(parser, TOKEN_END)) {
-        parser_set_error(parser, "Parser error: expected 'end' to close for loop");
+        parser_set_error(parser, "expected 'end' to close for loop");
         free_ast(init_value);
         free_ast(end_value);
         if (step_value) free_ast(step_value);
@@ -1442,7 +1423,7 @@ static ASTNode* parse_for_stmt(Parser* parser)
 
     if (!parser_expect(parser, TOKEN_FOR))
     {
-        parser_set_error(parser, "Parser error: expected 'for' after 'end' to close for loop");
+        parser_set_error(parser, "expected 'for' after 'end' to close for loop");
         free_ast(init_value);
         free_ast(end_value);
         if (step_value) free_ast(step_value);
@@ -1472,7 +1453,7 @@ static ASTNode* parse_import_stmt(Parser* parser)
     
     if (parser->current_token.type != TOKEN_IDENTIFIER)
     {
-        parser_set_error(parser, "Parser error: expected module name after 'import' or 'from'");
+        parser_set_error(parser, "expected module name after 'import' or 'from'");
         return NULL;
     }
     
@@ -1537,25 +1518,25 @@ static ASTNode* parse_load_expr(Parser* parser)
 
     if (parser->current_token.type != TOKEN_LPAREN)
     {
-        parser_set_error(parser, "Parser error: expected '(' after 'load'");
+        parser_set_error(parser, "expected '(' after 'load'");
         return NULL;
     }
     parser_advance(parser);  // Consume (
     
     if (parser->current_token.type != TOKEN_STRING)
     {
-        parser_set_error(parser, "Parser error: expected filename string in load()");
+        parser_set_error(parser, "expected filename string in load()");
         return NULL;
     }
     
-    char filename[TEMP_BUFFER_SIZE];
-    strncpy(filename, parser->current_token.value.string, TEMP_BUFFER_SIZE - 1);
-    filename[TEMP_BUFFER_SIZE - 1] = '\0';
+    char filename[BUFFER_SIZE];
+    strncpy(filename, parser->current_token.value.string, BUFFER_SIZE - 1);
+    filename[BUFFER_SIZE - 1] = '\0';
     parser_advance(parser);  // Consume STRING
     
     if (parser->current_token.type != TOKEN_RPAREN)
     {
-        parser_set_error(parser, "Parser error: expected ')' after filename in load()");
+        parser_set_error(parser, "expected ')' after filename in load()");
         return NULL;
     }
     parser_advance(parser);  // Consume )
@@ -1577,7 +1558,7 @@ static ASTNode* parse_save_stmt(Parser* parser)
 
     if (parser->current_token.type != TOKEN_LPAREN)
     {
-        parser_set_error(parser, "Parser error: expected '(' after 'save'");
+        parser_set_error(parser, "expected '(' after 'save'");
         return NULL;
     }
     parser_advance(parser);  // Consume (
@@ -1586,13 +1567,13 @@ static ASTNode* parse_save_stmt(Parser* parser)
     ASTNode* expr = parse_expr_stmt(parser); 
     if (!expr)
     {
-        parser_set_error(parser, "Parser error: expected expression in save()");
+        parser_set_error(parser, "expected expression in save()");
         return NULL;
     }
 
     if (parser->current_token.type != TOKEN_COMMA)
     {
-        parser_set_error(parser, "Parser error: expected ',' in save()");
+        parser_set_error(parser, "expected ',' in save()");
         free_ast(expr);
         return NULL;
     }
@@ -1600,19 +1581,19 @@ static ASTNode* parse_save_stmt(Parser* parser)
     
     if (parser->current_token.type != TOKEN_STRING)
     {
-        parser_set_error(parser, "Parser error: expected filename string in save()");
+        parser_set_error(parser, "expected filename string in save()");
         free_ast(expr);
         return NULL;
     }
     
-    char filename[TEMP_BUFFER_SIZE];
-    strncpy(filename, parser->current_token.value.string, TEMP_BUFFER_SIZE - 1);
-    filename[TEMP_BUFFER_SIZE - 1] = '\0';
+    char filename[BUFFER_SIZE];
+    strncpy(filename, parser->current_token.value.string, BUFFER_SIZE - 1);
+    filename[BUFFER_SIZE - 1] = '\0';
     parser_advance(parser);  // Consume STRING
     
     if (parser->current_token.type != TOKEN_RPAREN)
     {
-        parser_set_error(parser, "Parser error: expected ')' after filename in save()");
+        parser_set_error(parser, "expected ')' after filename in save()");
         free_ast(expr);
         return NULL;
     }
@@ -1621,7 +1602,7 @@ static ASTNode* parse_save_stmt(Parser* parser)
     return create_save_node(expr, filename, line, column);
 }
 
-static ASTNode* parse_function_call(Parser* parser, char* function_name)
+static ASTNode* parse_function_call(Parser* parser, const char* function_name)
 {
     int line = parser->current_token.line;
     int col = parser->current_token.column;
@@ -1649,7 +1630,7 @@ static ASTNode* parse_function_call(Parser* parser, char* function_name)
             
             if (parser->current_token.type != TOKEN_COMMA)
             {
-                parser_set_error(parser, "Parser error: expected ',' or ')' in function call");
+                parser_set_error(parser, "expected ',' or ')' in function call");
                 free_ast(function_node);
                 return NULL;
             }
@@ -1661,7 +1642,7 @@ static ASTNode* parse_function_call(Parser* parser, char* function_name)
     if (!parser_expect(parser, TOKEN_RPAREN))
     {
         free_ast(function_node);
-        parser_set_error(parser, "Parser error: expected ')' in function call");
+        parser_set_error(parser, "expected ')' in function call");
         return NULL;
     }
     
@@ -1963,7 +1944,7 @@ static ASTNode* parse_postfix(Parser* parser)
         // Verifica se há ']'
         if (parser->current_token.type != TOKEN_RBRACKET)
         {
-            parser_set_error(parser,"Parser error: expected ']' after array index");
+            parser_set_error(parser, "expected ']' after array index");
             free_ast(node);
             free_ast(index);
             return NULL;
@@ -1975,7 +1956,7 @@ static ASTNode* parse_postfix(Parser* parser)
         node = create_array_access_node(node, index, line, column);
         if (!node)
         {
-            parser_set_error(parser, "Parser error: could not create array access node");
+            parser_set_error(parser, "could not create array access node");
             return NULL;
         }
     }
@@ -2020,9 +2001,9 @@ static ASTNode* parse_atom(Parser* parser)
             
         case TOKEN_IDENTIFIER:
         {
-            char name[TEMP_BUFFER_SIZE];
-            strncpy(name, token.value.varname, TEMP_BUFFER_SIZE - 1);
-            name[TEMP_BUFFER_SIZE - 1] = '\0';
+            char name[BUFFER_SIZE];
+            strncpy(name, token.value.varname, BUFFER_SIZE - 1);
+            name[BUFFER_SIZE - 1] = '\0';
             int line = token.line;
             int col = token.column;
             parser_advance(parser);
@@ -2050,7 +2031,7 @@ static ASTNode* parse_atom(Parser* parser)
             if (!parser_expect(parser, TOKEN_RPAREN))
             {
                 free_ast(node);
-                parser_set_error(parser, "Parser error: Expected ')'");
+                parser_set_error(parser, "expected ')'");
                 return NULL;
             }
             parser_advance(parser);  // Consume ')'
@@ -2086,7 +2067,6 @@ ASTNode* parse(Lexer* lexer)
         {
             free_ast(result);
         }
-        printf("%s\n", parser.error_message);
         return NULL;
     }
 
@@ -2102,11 +2082,9 @@ ASTNode* parse(Lexer* lexer)
         {
             free_ast(result);
         }
-        printf("%sParser error: incomplete expression.%s\n", COLOR_ERROR, COLOR_RESET);
+        //printf("%sParser error: incomplete expression.%s\n", COLOR_ERROR, COLOR_RESET);
         return NULL;
     }
-
-    parser_free(&parser);    
 
     return result;
 }
@@ -2147,28 +2125,8 @@ ASTNode* parse_single_stmt(Lexer* lexer)
             parser_advance(&parser);
         }
     }
-
-    parser_free(&parser);
         
     return result;
-}
-
-void parser_free(Parser* parser)
-{
-    if (!parser)
-        return;
-    
-    // Libera mensagem de erro
-    if (parser->error_message)
-    {
-        a89free(parser->error_message);
-        parser->error_message = NULL;
-    }
-    
-    // Libera token atual se tiver alocações
-    free_token(&parser->current_token);
-    
-    memset(parser, 0, sizeof(Parser));
 }
 
 #ifdef TESTPARSER
