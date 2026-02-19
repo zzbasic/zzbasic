@@ -57,27 +57,25 @@ ASTNode* create_number_node(double value, int line, int column)
     return node;
 }
 
+
 ASTNode* create_string_node(const char* value, int line, int column)
 {
     ASTNode* node = create_node(NODE_STRING, line, column);
-
+    
     if (value)
     {
-        int len = strlen(value);
-        node->data.string.value = A89ALLOC(len + 1);
-        strncpy(node->data.string.value, value, len); 
-        node->data.string.value[len] = '\0'; 
+        strncpy(node->data.string.value, value, STRING_SIZE - 1);
+        node->data.string.value[STRING_SIZE - 1] = '\0';
     }
     else
     {
-        node->data.string.value = A89ALLOC(1);
         node->data.string.value[0] = '\0';
     }
     
     return node;
 }
 
-// CRIA A VARIÁVEL NODE. VAR_NAME DEVE SER VÁLIDO 
+// CREATES VARIABLE NODE. VAR_NAME MUST ALREADY BE VALID (VALIDATED BY PARSER)
 ASTNode* create_variable_node(const char* var_name, int line, int column)
 {
     ASTNode* node = create_node(NODE_VARIABLE, line, column);
@@ -176,17 +174,9 @@ ASTNode* create_input_node(ASTNode* color, ASTNode* width, ASTNode* alignment,
     node->data.input_stmt.set_nocolor = set_nocolor;
     if(prompt)
     {
-        int len = strlen(prompt);
-        node->data.input_stmt.prompt = A89ALLOC(len + 1);
-        strncpy(node->data.input_stmt.prompt, prompt, len);  
-        node->data.input_stmt.prompt[len] = '\0';  // Garante null terminator
+        strncpy(node->data.input_stmt.prompt, prompt, STRING_SIZE - 1);
+        node->data.input_stmt.prompt[STRING_SIZE - 1] = '\0';
     }
-    else
-    {
-        node->data.input_stmt.prompt = A89ALLOC(1);
-        node->data.input_stmt.prompt[0] = '\0';
-    }
-
     strncpy(node->data.input_stmt.var_name, var_name, VARNAME_SIZE - 1);
     node->data.input_stmt.var_name[VARNAME_SIZE - 1] = '\0';
   
@@ -421,64 +411,33 @@ ASTNode* create_import_node(const char* module_name,
     return node;
 }
 
-ASTNode* create_load_node(char* filename, int line, int column)
+ASTNode* create_load_node(const char* filename, int line, int column)
 {
     ASTNode* node = create_node(NODE_LOAD, line, column);
     node->line = line;
     node->column = column;
-    
-    node->data.load_expr.filename = A89ALLOC(strlen(filename) + 1);
-
-    if(filename)
-    {
-        node->data.load_expr.filename = filename;
-    }
-    else
-    {
-        node->data.load_expr.filename[0] = '\0';
-
-    }
-    
+    strncpy(node->data.load_expr.filename, filename, BUFFER_SIZE - 1);
+    node->data.load_expr.filename[BUFFER_SIZE - 1] = '\0';
     return node;
 }
 
-ASTNode* create_save_node(ASTNode* expression, char* filename, int line, int column)
+ASTNode* create_save_node(ASTNode* expression, const char* filename, int line, int column)
 {
     ASTNode* node = create_node(NODE_SAVE, line, column);
     node->line = line;
     node->column = column;
-
     node->data.save_stmt.expression = expression;
-
-    node->data.save_stmt.filename = A89ALLOC(strlen(filename) + 1);
-
-    if(filename)
-    {
-        node->data.save_stmt.filename = filename;
-    }
-    else
-    {
-        node->data.save_stmt.filename[0] = '\0';
-    }
-
+    strncpy(node->data.save_stmt.filename, filename, BUFFER_SIZE - 1);
+    node->data.save_stmt.filename[BUFFER_SIZE - 1] = '\0';
     return node;
 }
 
-ASTNode* create_function_call_node(char* function_name, int line, int column)
+ASTNode* create_function_call_node(const char* function_name, int line, int column)
 {
     ASTNode* node = create_node(NODE_FUNCTION_CALL, line, column);
     
-    node->data.function_call.function_name = A89ALLOC(strlen(function_name) + 1);
-
-    if(function_name)
-    {
-        node->data.function_call.function_name = function_name;
-    }
-    else
-    {
-        node->data.function_call.function_name[0] = '\0';
-    }
-
+    strncpy(node->data.function_call.function_name, function_name, BUFFER_SIZE - 1);
+    node->data.function_call.function_name[BUFFER_SIZE - 1] = '\0';
     node->data.function_call.arguments = NULL;
     node->data.function_call.arg_count = 0;
     
@@ -596,10 +555,6 @@ void free_ast(ASTNode* node)
             {
                 free_ast(node->data.input_stmt.alignment);
             }
-            if(node->data.input_stmt.prompt)
-            {
-                a89free(node->data.input_stmt.prompt);
-            }
             break;        
 
         case NODE_IF:
@@ -655,10 +610,6 @@ void free_ast(ASTNode* node)
             break;
 
         case NODE_LOAD:
-            if(node->data.load_expr.filename)
-            {
-                a89free(node->data.load_expr.filename);
-            }
             break;
                 
         case NODE_SAVE:
@@ -666,18 +617,10 @@ void free_ast(ASTNode* node)
             {
                 free_ast(node->data.save_stmt.expression);
             }
-            if(node->data.save_stmt.filename)
-            {
-                a89free(node->data.save_stmt.filename);
-            }
             break;
 
         case NODE_FUNCTION_CALL:
         {
-            if(node->data.function_call.function_name)
-            {
-                a89free(node->data.function_call.function_name);
-            }
             // Libera cada argumento
             for (int i = 0; i < node->data.function_call.arg_count; i++)
             {
