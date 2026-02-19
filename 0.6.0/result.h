@@ -4,6 +4,7 @@
 #define RESULT_H
 
 #include "zzdefs.h"
+#include "zztext.h"
 #include "zzarray.h"
 
 typedef enum
@@ -12,6 +13,7 @@ typedef enum
     RESULT_BOOL,
     RESULT_NUMBER,
     RESULT_STRING,
+    RESULT_TEXT,
     RESULT_ARRAY
 } ResultType;
 
@@ -21,10 +23,11 @@ typedef struct
     union {
         int     boolean;
         double  number;
-        char*   string;
+        char    string[STRING_SIZE];
+        Text*   text;
         Array*  array;
     } value;
-    char* error_message;
+    char error_message[BUFFER_SIZE];
     int line;   
     int column; 
 } EvaluatorResult;
@@ -38,6 +41,9 @@ EvaluatorResult create_success_result_number(double value, int line, int column)
 
 // Cria resultado de sucesso com string
 EvaluatorResult create_success_result_string(const char* value, int line, int column);
+
+// Cria resultado de sucesso com Text
+EvaluatorResult create_success_result_text(Text* text, int line, int column);
 
 // Cria resultado de sucesso com Array
 EvaluatorResult create_success_result_array(Array* arr, int line, int column);
