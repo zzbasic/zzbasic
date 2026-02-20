@@ -204,4 +204,9 @@ int array_is_empty(const Array* array)
     return array ? (array->size == 0) : 1;
 }
 
+void array_print(const Array* array)
+{
+    int dummy;
+}
+
 // Fim de zzarray.c
