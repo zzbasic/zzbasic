@@ -553,8 +553,12 @@ static ASTNode* parse_assignment_stmt(Parser* parser)
         free_ast(target);
         return NULL;
     }
-    
+ 
     parser_advance(parser);  // Consume '='
+
+    // PEGA LINHA E COLUNA DA STRING
+    int line = parser->current_token.line;
+    int column = parser->current_token.column;
 
     // For string variables: expect STRING_LITERAL
     if(parser->current_token.type == TOKEN_STRING)
@@ -563,11 +567,12 @@ static ASTNode* parse_assignment_stmt(Parser* parser)
                                                   parser->current_token.line,
                                                   parser->current_token.column);
 
-        parser_advance(parser);  // Consume STRING_LITERAL
+        parser_advance(parser);  // Consome STRING_LITERAL
 
         return create_assignment_node(target, string_node,
-                                      string_node->line,
-                                      string_node->column);
+                                      line,
+                                      column);
+
     }
 
     ASTNode* expr = parse_expr(parser);
