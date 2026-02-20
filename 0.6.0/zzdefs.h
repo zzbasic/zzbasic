@@ -34,6 +34,9 @@ extern int execution_mode;
 // Flag que indica se houver erro no Lexer
 extern int has_lexical_error;
 
+// Flag que indica se houver erro no Evaluator
+extern int has_evaluation_error;
+
 // ============================================
 // Contexto de Execução para Evaluator 
 //
