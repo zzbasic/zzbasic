@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <stdlib.h>
 
 #include "result.h"
 #include "color.h"
@@ -79,6 +80,8 @@ EvaluatorResult create_error_result(const char* message, int line, int column)
 EvaluatorResult create_error_result_fmt(int line, int column, 
                                        const char* format, ...)
 {
+    has_evaluation_error = 1;
+
     char message[BUFFER_SIZE];
     va_list args;
     va_start(args, format);
@@ -96,5 +99,10 @@ EvaluatorResult create_error_result_fmt(int line, int column,
                                column);
     }
     
+    if(execution_mode == MODE_FILE)
+    {
+        exit(EXIT_FAILURE);
+    }
+
     return create_error_result(message, line, column);
 }
