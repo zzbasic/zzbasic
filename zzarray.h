@@ -57,5 +57,7 @@ int array_capacity(const Array* array);
 // Verifica se array está vazio
 int array_is_empty(const Array* array);
 
+void array_print(const Array* array);
+
 #endif
 // Fim de zzarray.h
