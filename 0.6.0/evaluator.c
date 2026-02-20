@@ -633,7 +633,12 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
             
             if (value_result.type == RESULT_ERROR)
             {
-                printf("execute_stmt_with_ctx(): %s\n", value_result.error_message);
+                if(has_evaluation_error)
+                {
+                    has_evaluation_error = 0;
+                    return 0;
+                }
+                create_error_result_fmt(node->line, node->column,value_result.error_message);
                 return 0;
             }
             
