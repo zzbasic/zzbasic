@@ -651,7 +651,8 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
                 if (value_result.type == RESULT_STRING) {
                     if (!symbol_table_set_string(ctx->symbols, var_name, value_result.value.string))
                     {
-                        printf("Evaluator error: assigning string to '%s'\n", var_name);
+                        create_error_result_fmt(node->line, node->column,
+                            "Evaluator error: assigning string to '%s'", var_name);
                         return 0;
                     }
                 }
