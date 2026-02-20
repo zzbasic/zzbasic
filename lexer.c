@@ -570,7 +570,8 @@ static Token lexer_read_identifier(Lexer* lexer)
     return token; 
 }
 
-static Token lexer_read_string(Lexer* lexer) {
+static Token lexer_read_string(Lexer* lexer)
+{
     char buffer[STRING_SIZE];
     int i = 0;
 
@@ -603,6 +604,9 @@ static Token lexer_read_string(Lexer* lexer) {
  
     Token token;
     memset(&token, 0, sizeof(token));
+
+    token.line = str_line;
+    token.column = str_column;
 
     token.type = TOKEN_STRING;
 
