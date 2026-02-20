@@ -23,13 +23,13 @@ EvaluatorResult builtin_push(EvaluatorResult* args, int arg_count, int line, int
     if (arg_count != 2)
     {
         return create_error_result_fmt(line, column,
-            "push() expects 2 arguments (array, element), got %d", arg_count);
+            "Array error: push() expects 2 arguments (array, element), got %d", arg_count);
     }
     
     if (args[0].type != RESULT_ARRAY)
     {
         return create_error_result_fmt(line, column,
-            "push() expects array as first argument");
+            "Array error: push() expects array as first argument");
     }
     
     Array* arr = args[0].value.array;
@@ -39,7 +39,7 @@ EvaluatorResult builtin_push(EvaluatorResult* args, int arg_count, int line, int
     double* element = A89ALLOC(sizeof(double));
     if (!element)
     {
-        return create_error_result_fmt(line, column, "Memory allocation failed");
+        return create_error_result_fmt(line, column, "Array error: memory allocation failed");
     }
     
     // Copia valor do argumento
@@ -53,20 +53,20 @@ EvaluatorResult builtin_push(EvaluatorResult* args, int arg_count, int line, int
         // Por enquanto, retorna erro
         a89free(element);
         return create_error_result_fmt(line, column,
-            "push() with strings not yet supported");
+            "Array error: push() with strings not yet supported");
     }
     else
     {
         a89free(element);
         return create_error_result_fmt(line, column,
-            "push() unsupported type");
+            "Array error: push() unsupported type");
     }
     
     // Adiciona ao array
     if (!array_push(arr, element))
     {
         a89free(element);
-        return create_error_result_fmt(line, column, "Could not push to array");
+        return create_error_result_fmt(line, column, "Array error: could not push to array");
     }
     
     // Retorna sucesso (sem valor específico)
@@ -81,27 +81,27 @@ EvaluatorResult builtin_pop(EvaluatorResult* args, int arg_count, int line, int 
     if (arg_count != 1)
     {
         return create_error_result_fmt(line, column,
-            "pop() expects 1 argument (array), got %d", arg_count);
+            "Array error: pop() expects 1 argument (array), got %d", arg_count);
     }
     
     if (args[0].type != RESULT_ARRAY)
     {
         return create_error_result_fmt(line, column,
-            "pop() expects array as argument");
+            "Array error: pop() expects array as argument");
     }
     
     Array* arr = args[0].value.array;
     
     if (array_is_empty(arr))
     {
-        return create_error_result_fmt(line, column, "Cannot pop from empty array");
+        return create_error_result_fmt(line, column, "Array error: cannot pop from empty array");
     }
     
     // Remove do final
     void* element = array_pop(arr);
     if (!element)
     {
-        return create_error_result_fmt(line, column, "Could not pop from array");
+        return create_error_result_fmt(line, column, "Array error: could not pop from array");
     }
     
     // Converte de volta para double
@@ -119,7 +119,7 @@ EvaluatorResult builtin_len(EvaluatorResult* args, int arg_count, int line, int 
     if (arg_count != 1)
     {
         return create_error_result_fmt(line, column,
-            "len() expects 1 argument, got %d", arg_count);
+            "Array error: len() expects 1 argument, got %d", arg_count);
     }
     
     // Funciona com ARRAY ou STRING
@@ -142,7 +142,7 @@ EvaluatorResult builtin_len(EvaluatorResult* args, int arg_count, int line, int 
     else
     {
         return create_error_result_fmt(line, column,
-            "len() expects array, string or text");
+            "Array error: len() expects array, string or text");
     }
 }
 
@@ -156,13 +156,13 @@ EvaluatorResult builtin_is_empty(EvaluatorResult* args, int arg_count, int line,
     if (arg_count != 1)
     {
         return create_error_result_fmt(line, column,
-            "is_empty() expects 1 argument, got %d", arg_count);
+            "Array error: is_empty() expects 1 argument, got %d", arg_count);
     }
     
     if (args[0].type != RESULT_ARRAY)
     {
         return create_error_result_fmt(line, column,
-            "is_empty() expects array as argument");
+            "Array error: is_empty() expects array as argument");
     }
     
     Array* arr = args[0].value.array;
@@ -179,19 +179,19 @@ EvaluatorResult builtin_get(EvaluatorResult* args, int arg_count, int line, int 
     if (arg_count != 2)
     {
         return create_error_result_fmt(line, column,
-            "get() expects 2 arguments (array, index), got %d", arg_count);
+            "Array error: get() expects 2 arguments (array, index), got %d", arg_count);
     }
     
     if (args[0].type != RESULT_ARRAY)
     {
         return create_error_result_fmt(line, column,
-            "get() expects array as first argument");
+            "Array error: get() expects array as first argument");
     }
     
     if (args[1].type != RESULT_NUMBER)
     {
         return create_error_result_fmt(line, column,
-            "get() expects number as index");
+            "Array error: get() expects number as index");
     }
     
     Array* arr = args[0].value.array;
@@ -201,13 +201,13 @@ EvaluatorResult builtin_get(EvaluatorResult* args, int arg_count, int line, int 
     if (index < 0 || index >= array_capacity(arr))
     {
         return create_error_result_fmt(line, column,
-            "Array index out of bounds: %d", index);
+            "Array error: array index out of bounds: %d", index);
     }
     
     void* element = array_get(arr, index);
     if (!element)
     {
-        return create_error_result_fmt(line, column, "Could not get element");
+        return create_error_result_fmt(line, column, "Array error: could not get element");
     }
     
     // Converte de volta para double
@@ -224,19 +224,19 @@ EvaluatorResult builtin_set(EvaluatorResult* args, int arg_count, int line, int 
     if (arg_count != 3)
     {
         return create_error_result_fmt(line, column,
-            "set() expects 3 arguments (array, index, value), got %d", arg_count);
+            "Array error: set() expects 3 arguments (array, index, value), got %d", arg_count);
     }
     
     if (args[0].type != RESULT_ARRAY)
     {
         return create_error_result_fmt(line, column,
-            "set() expects array as first argument");
+            "Array error: set() expects array as first argument");
     }
     
     if (args[1].type != RESULT_NUMBER)
     {
         return create_error_result_fmt(line, column,
-            "set() expects number as index");
+            "Array error: set() expects number as index");
     }
     
     Array* arr = args[0].value.array;
@@ -246,14 +246,14 @@ EvaluatorResult builtin_set(EvaluatorResult* args, int arg_count, int line, int 
     if (index < 0 || index >= array_capacity(arr))
     {
         return create_error_result_fmt(line, column,
-            "Array index out of bounds: %d", index);
+            "Array error: array index out of bounds: %d", index);
     }
     
     // Cria novo elemento
     double* element = A89ALLOC(sizeof(double));
     if (!element)
     {
-        return create_error_result_fmt(line, column, "Memory allocation failed");
+        return create_error_result_fmt(line, column, "Array error: memory allocation failed");
     }
     
     if (args[2].type == RESULT_NUMBER)
@@ -263,7 +263,7 @@ EvaluatorResult builtin_set(EvaluatorResult* args, int arg_count, int line, int 
     else
     {
         a89free(element);
-        return create_error_result_fmt(line, column, "set() unsupported type");
+        return create_error_result_fmt(line, column, "Array error: set() unsupported type");
     }
     
     // Libera elemento antigo
@@ -277,7 +277,7 @@ EvaluatorResult builtin_set(EvaluatorResult* args, int arg_count, int line, int 
     if (!array_set(arr, index, element))
     {
         a89free(element);
-        return create_error_result_fmt(line, column, "Could not set element");
+        return create_error_result_fmt(line, column, "Array error: could not set element");
     }
     
     return create_success_result_number(1, line, column);
@@ -291,19 +291,19 @@ EvaluatorResult builtin_insert(EvaluatorResult* args, int arg_count, int line, i
     if (arg_count != 3)
     {
         return create_error_result_fmt(line, column,
-            "insert() expects 3 arguments (array, index, value), got %d", arg_count);
+            "Array error: insert() expects 3 arguments (array, index, value), got %d", arg_count);
     }
     
     if (args[0].type != RESULT_ARRAY)
     {
         return create_error_result_fmt(line, column,
-            "insert() expects array as first argument");
+            "Array error: insert() expects array as first argument");
     }
     
     if (args[1].type != RESULT_NUMBER)
     {
         return create_error_result_fmt(line, column,
-            "insert() expects number as index");
+            "Array error: insert() expects number as index");
     }
     
     Array* arr = args[0].value.array;
@@ -313,7 +313,7 @@ EvaluatorResult builtin_insert(EvaluatorResult* args, int arg_count, int line, i
     double* element = A89ALLOC(sizeof(double));
     if (!element)
     {
-        return create_error_result_fmt(line, column, "Memory allocation failed");
+        return create_error_result_fmt(line, column, "Array error: memory allocation failed");
     }
     
     if (args[2].type == RESULT_NUMBER)
@@ -323,14 +323,14 @@ EvaluatorResult builtin_insert(EvaluatorResult* args, int arg_count, int line, i
     else
     {
         a89free(element);
-        return create_error_result_fmt(line, column, "insert() unsupported type");
+        return create_error_result_fmt(line, column, "Array error: insert() unsupported type");
     }
     
     // Insere no array
     if (!array_insert(arr, index, element))
     {
         a89free(element);
-        return create_error_result_fmt(line, column, "Could not insert into array");
+        return create_error_result_fmt(line, column, "Array error: could not insert into array");
     }
     
     return create_success_result_number(1, line, column);
@@ -344,19 +344,19 @@ EvaluatorResult builtin_remove(EvaluatorResult* args, int arg_count, int line, i
     if (arg_count != 2)
     {
         return create_error_result_fmt(line, column,
-            "remove() expects 2 arguments (array, index), got %d", arg_count);
+            "Array error: remove() expects 2 arguments (array, index), got %d", arg_count);
     }
     
     if (args[0].type != RESULT_ARRAY)
     {
         return create_error_result_fmt(line, column,
-            "remove() expects array as first argument");
+            "Array error: remove() expects array as first argument");
     }
     
     if (args[1].type != RESULT_NUMBER)
     {
         return create_error_result_fmt(line, column,
-            "remove() expects number as index");
+            "Array error: remove() expects number as index");
     }
     
     Array* arr = args[0].value.array;
@@ -366,14 +366,14 @@ EvaluatorResult builtin_remove(EvaluatorResult* args, int arg_count, int line, i
     if (index < 0 || index >= array_size(arr))
     {
         return create_error_result_fmt(line, column,
-            "Array index out of bounds: %d", index);
+            "Array error: array index out of bounds: %d", index);
     }
     
     // Remove do array
     void* element = array_remove(arr, index);
     if (!element)
     {
-        return create_error_result_fmt(line, column, "Could not remove from array");
+        return create_error_result_fmt(line, column, "Array error: could not remove from array");
     }
     
     // Libera elemento removido
