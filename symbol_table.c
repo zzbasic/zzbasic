@@ -245,8 +245,8 @@ int symbol_table_set_string(SymbolTable* table, const char* name, const char* va
         // Update existing
         if (symbol->type != SYM_STRING)
         {
-            fprintf(stderr, "%sError: variable '%s' is not a string%s\n",
-                    COLOR_ERROR, name, COLOR_RESET);
+            //fprintf(stderr, "%sError: variable '%s' is not a string%s\n",
+            //        COLOR_ERROR, name, COLOR_RESET);
             return 0;
         }
         strncpy(symbol->value.str_value, value, STRING_SIZE - 1);
