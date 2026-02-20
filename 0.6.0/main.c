@@ -11,6 +11,8 @@ int execution_mode = MODE_FILE;  // Padrão é arquivo
 
 int has_lexical_error = 0;
 
+int has_evaluation_error = 0;
+
 EvalSourceContext eval_src_ctx = {NULL, 0};
 
 // ============================================
