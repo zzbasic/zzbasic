@@ -1985,27 +1985,35 @@ static ASTNode* parse_atom(Parser* parser)
     {
         case TOKEN_TRUE:
             parser_advance(parser);
-            return create_bool_node(1, token.line, token.column);
+            return create_bool_node(1,
+                                    parser->current_token.line,
+                                    parser->current_token.column);
 
         case TOKEN_FALSE:
             parser_advance(parser);
-            return create_bool_node(0, token.line, token.column);
+            return create_bool_node(0,
+                                    parser->current_token.line,
+                                    parser->current_token.column);
 
         case TOKEN_NUMBER:
             parser_advance(parser);
-            return create_number_node(token.value.number,token.line, token.column);
+            return create_number_node(token.value.number,
+                                      parser->current_token.line,
+                                      parser->current_token.column);
 
         case TOKEN_STRING:
             parser_advance(parser);
-            return create_string_node(token.value.string,token.line, token.column);
-            
+            return create_string_node(token.value.string,
+                                      parser->current_token.line,
+                                      parser->current_token.column);
+
         case TOKEN_IDENTIFIER:
         {
             char name[BUFFER_SIZE];
             strncpy(name, token.value.varname, BUFFER_SIZE - 1);
             name[BUFFER_SIZE - 1] = '\0';
-            int line = token.line;
-            int col = token.column;
+            int line   = token.line;
+            int column = token.column;
             parser_advance(parser);
             
             // Verifica se é uma chamada de função
@@ -2015,7 +2023,7 @@ static ASTNode* parse_atom(Parser* parser)
             }
             
             // Senão, é uma variável
-            return create_variable_node(name, line, col);
+            return create_variable_node(name, line, column);
         }
 
         case TOKEN_LOAD:
