@@ -20,6 +20,8 @@
 10. [Funções Built-in](#funções-built-in)
 11. [Módulos](#módulos)
 12. [Tipo Text](#tipo-text)
+13. [Resumo dos recursos](#resumo-dos-recursos)
+14. [Limitações conhecidas](#limitações-conhecidas)
 
 ---
 
@@ -1050,7 +1052,7 @@ print
 
 ---
 
-## Resumo de Recursos
+## Resumo dos Recursos
 
 | Recurso | Status | Versão |
 |---------|--------|--------|
