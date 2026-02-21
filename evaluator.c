@@ -554,6 +554,32 @@ static int evaluate_print_stmt_with_format(ASTNode* node, ExecutionContext* ctx)
             const char* text_content = text_get(result.value.text);
             //snprintf(buffer, sizeof(buffer), "%s", text_content);
             printf("%s", text_content);  
+            continue;
+        }
+        else if (result.type == RESULT_ARRAY)
+        {
+            // Imprime array no formato [elem1, elem2, elem3, ...]
+            Array* arr = result.value.array;
+            printf("[");
+            int size = array_size(arr);
+            for (int j = 0; j < size; j++)
+            {
+                if (j > 0) printf(", ");
+                
+                // Cada elemento é armazenado como void* que aponta para double*
+                void* element = array_get(arr, j);
+                if (element)
+                {
+                    double value = *(double*)element;
+                    if (fabs(value - (int)value) < EPSILON) {
+                        printf("%d", (int)value);
+                    } else {
+                        printf("%g", value);
+                    }
+                }
+            }
+            printf("]");
+            continue;
         }
         else // RESULT_NUMBER
         {
@@ -647,7 +673,7 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
             {
                 const char* var_name = target_node->data.variable.var_name;
                 
-                // Store based on type
+                // Armazena com base no tipo
                 if (value_result.type == RESULT_STRING) {
                     if (!symbol_table_set_string(ctx->symbols, var_name, value_result.value.string))
                     {
@@ -736,7 +762,7 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
         case NODE_UNARY_OP:
         case NODE_VARIABLE:
         {
-            // Evaluate for display (any type)
+            // Avalia para exibição (qualquer tipo)
             EvaluatorResult result = evaluate_expr(node, ctx->symbols, CTX_ANY);
             if (result.type == RESULT_ERROR)
             {
@@ -801,7 +827,7 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
         case NODE_LOGICAL_OP:
         case NODE_NOT_LOGICAL_OP:
         {
-            // Evaluate logical/comparison expression
+            // Avalia expressão lógica/de comparação
             EvaluatorResult result = evaluate_expr(node, ctx->symbols, CTX_ANY);
             
             if (result.type == RESULT_ERROR)
@@ -811,7 +837,7 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
             }
             else
             {
-                // Print the result
+                // Exibe o resultado de acordo com o tipo
                 switch(result.type)
                 {
                     case RESULT_BOOL:
