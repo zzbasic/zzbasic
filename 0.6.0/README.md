@@ -779,7 +779,7 @@ print numeros[1]  # 4
 print numeros[2]  # 5
 ```
 
-### Funções Built-in para Arrays
+### Funções Built-in
 
 #### push()
 
