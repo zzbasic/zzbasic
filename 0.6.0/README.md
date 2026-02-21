@@ -16,11 +16,10 @@
 6. [Estruturas de Controle](#estruturas-de-controle)
 7. [Operadores de Comparação](#operadores-de-comparação)
 8. [Operadores Lógicos](#operadores-lógicos)
-9. [Cores e Formatação](#cores-e-formatação)
-10. [Arrays](#arrays)
-11. [Funções Built-in](#funções-built-in)
-12. [Módulos e Importação](#módulos-e-importação)
-13. [Tipo Text](#tipo-text)
+9. [Arrays](#arrays)
+10. [Funções Built-in](#funções-built-in)
+11. [Módulos](#módulos)
+12. [Tipo Text](#tipo-text)
 
 ---
 
