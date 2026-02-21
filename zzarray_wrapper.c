@@ -381,3 +381,4 @@ EvaluatorResult builtin_remove(EvaluatorResult* args, int arg_count, int line, i
     
     return create_success_result_number(1, line, column);
 }
+
