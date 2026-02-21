@@ -21,7 +21,6 @@
 11. [Funções Built-in](#funções-built-in)
 12. [Módulos e Importação](#módulos-e-importação)
 13. [Tipo Text](#tipo-text)
-14. [Exemplos Práticos](#exemplos-práticos)
 
 ---
 
