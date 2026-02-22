@@ -43,7 +43,7 @@
 - Não suporta notação científica (`1.5e-10`)
 
 **Exemplo:**
-```zzbasic
+```basic
 let pi = 3.14159
 let idade = 25
 let saldo = -100.50
@@ -91,7 +91,7 @@ Saída:
 - Suporta espaços e caracteres especiais
 
 **Exemplo:**
-```zzbasic
+```basic
 let nome = "Zurg Evil Emperor"
 let mensagem = "Olá, mundo!"
 let vazio = ""
@@ -107,7 +107,7 @@ let vazio = ""
 - Resultados de operações lógicas
 
 **Exemplo:**
-```zzbasic
+```basic
 let ativo = true
 let desativado = false
 let resultado = 5 > 3  // resultado = true
@@ -121,7 +121,7 @@ let resultado = 5 > 3  // resultado = true
 - Suporta operações de leitura/escrita de arquivo
 
 **Exemplo:**
-```zzbasic
+```basic
 let conteudo = load("arquivo.txt")
 save conteudo "saida.txt"
 ```
@@ -150,7 +150,7 @@ save conteudo "saida.txt"
 4. Adição `+`, Subtração `-`
 
 **Exemplos:**
-```zzbasic
+```basic
 let resultado = 2 + 3 * 4        // = 14 (não 20)
 let resultado = (2 + 3) * 4      // = 20
 let resultado = 10 - 5 - 2       // = 3 (esquerda para direita)
@@ -167,7 +167,7 @@ let resultado = -5 + 3           // = -2
 | `-` | Negativo | `-5` | `-5` |
 
 **Exemplo:**
-```zzbasic
+```basic
 let numero = 10
 let negativo = -numero  // = -10
 let positivo = +numero  // = 10
@@ -177,7 +177,7 @@ let positivo = +numero  // = 10
 
 **Comportamento:** Retorna erro e interrompe a execução.
 
-```zzbasic
+```basic
 let resultado = 10 / 0  // ❌ Erro: division by zero
 ```
 
@@ -202,7 +202,7 @@ let <identificador> = <expressão>
 - Escopo: Global
 
 **Exemplos:**
-```zzbasic
+```basic
 let nome = "Alice"
 print nome nl
 
@@ -241,26 +241,26 @@ true
 ### Tipos de Variáveis
 
 **Variáveis de Número:**
-```zzbasic
+```basic
 let idade = 25
 let altura = 1.75
 let saldo = -500.00
 ```
 
 **Variáveis de String:**
-```zzbasic
+```basic
 let nome = "João"
 let endereco = "Rua das Flores, 123"
 ```
 
 **Variáveis de Booleano:**
-```zzbasic
+```basic
 let ativo = true
 let conectado = false
 ```
 
 **Variáveis de Array:**
-```zzbasic
+```basic
 let lista = array(0)
 let numeros = array(5)
 ```
@@ -285,7 +285,7 @@ print <expressão1> [<expressão2> ...] [nl]
 - `print` sozinho na linha pula a linha; é o mesmo que `print nl`
 
 **Exemplos:**
-```zzbasic
+```basic
 print "Olá, mundo!"
 print 42
 print "O resultado é: " 5 + 3
@@ -297,7 +297,7 @@ print "Linha 1" nl
 **Descrição:** Forma abreviada de `print`.
 
 **Exemplo:**
-```zzbasic
+```basic
 ? "Teste"  # Equivalente a: print "Teste"
 ```
 
@@ -317,7 +317,7 @@ print width(<número>) <expressão>
 - Se o valor a ser exbido tiver mais caracteres que a largura do campo, o valor será exibido e a largura do campo não será respeitada.
 
 **Exemplo:**
-```zzbasic
+```basic
 print width(10) "Teste"    # "Teste     "
 print width(5) 42          # "42   "
 ```
@@ -337,7 +337,7 @@ print <alignment> width(<número>) <expressão>
 ```
 
 **Exemplo:**
-```zzbasic
+```basic
 print width(10) left "Teste"    # "Teste     "
 print width(10) right "Teste"   # "     Teste"
 print width(10) center "Teste"  # "  Teste   "
@@ -386,7 +386,7 @@ print <cor> <expressão> nocolor [<expressão>]
 ```
 
 **Exemplo:**
-```zzbasic
+```basic
 print red "ERRO:" nocolor " Arquivo não encontrado"
 print green "Sucesso"
 print blue width(20) center "TÍTULO"
@@ -406,7 +406,7 @@ print <expressão> nl
 ```
 
 **Exemplo:**
-```zzbasic
+```basic
 print "Linha 1" nl
 print "Linha 2" nl
 print "Linha 3"
@@ -432,7 +432,7 @@ input [<formatação>] "<prompt>" <variável>
 - Detecta automaticamente o tipo
 
 **Exemplos:**
-```zzbasic
+```basic
 # Entrada simples
 input "Digite seu nome: " nome
 input "Digite sua idade: " idade
@@ -465,7 +465,7 @@ end
 - `end if` é obrigatório
 
 **Exemplos:**
-```zzbasic
+```basic
 # if simples
 if (n >= 0) then
   print "Número positivo" nl
@@ -509,7 +509,7 @@ end while
 - Suporta `break` e `continue`
 
 **Exemplos:**
-```zzbasic
+```basic
 # Contagem simples
 let i = 1
 while (i <= 5) do
@@ -548,7 +548,7 @@ end for
 - Suporta `break` e `continue`
 
 **Exemplos:**
-```zzbasic
+```basic
 # FOR simples
 for i = 1 to 5 do
     print i nl
@@ -642,7 +642,7 @@ continue
 | F | F | F |
 
 **Exemplo:**
-```zzbasic
+```basic
 let idade = 25
 let renda = 3000
 
@@ -670,7 +670,7 @@ end if
 | F | F | F |
 
 **Exemplo:**
-```zzbasic
+```basic
 let domingo = 1
 let sabado = 7
 let dia = sabado
@@ -706,7 +706,7 @@ ou
 | F | T |
 
 **Exemplo:**
-```zzbasic
+```basic
 let ativo = false
 
 if (not ativo) then
@@ -722,7 +722,7 @@ end if
 ### Combinações Complexas
 
 **Exemplo:**
-```zzbasic
+```basic
 let idade = 25
 let renda = 3000
 let emprego = true
@@ -754,7 +754,7 @@ let <variável> = array(<quantidade de elementos>)
 - Suportam funções built-in
 
 **Exemplos:**
-```zzbasic
+```basic
 let numeros = array(5)
 
 let numeros[0] = 3
@@ -774,7 +774,7 @@ print numeros nl # [3, 4, 5]
 ```
 
 **Exemplo:**
-```zzbasic
+```basic
 print numeros[0]  # 3
 print numeros[1]  # 4
 print numeros[2]  # 5
@@ -792,7 +792,7 @@ push(<array>, <valor>)
 ```
 
 **Exemplo:**
-```zzbasic
+```basic
 push(numeros, 13)
 print numeros nl # [3, 4, 5, 13]
 ```
@@ -807,7 +807,7 @@ pop(<array>)
 ```
 
 **Exemplo:**
-```zzbasic
+```basic
 let ultimo = pop(numeros)
 print ultimo nl # 13
 ```
@@ -822,7 +822,7 @@ len(<array>)
 ```
 
 **Exemplo:**
-```zzbasic
+```basic
 print len(numeros) nl # 3
 ```
 
@@ -836,7 +836,7 @@ get(<array>, <índice>)
 ```
 
 **Exemplo:**
-```zzbasic
+```basic
 let m = get(numeros, 1)
 print m nl; # 4 
 ```
@@ -851,7 +851,7 @@ set(<array>, <índice>, <valor>)
 ```
 
 **Exemplo:**
-```zzbasic
+```basic
 set(numeros, 1, 13)
 print numeros nl # [3, 13, 5]
 ```
@@ -866,7 +866,7 @@ insert(<array>, <índice>, <valor>)
 ```
 
 **Exemplo:**
-```zzbasic
+```basic
 insert(numeros, 1, 89)
 print numeros nl # [3, 89, 13, 5]
 ```
@@ -881,7 +881,7 @@ remove(<array>, <índice>)
 ```
 
 **Exemplo:**
-```zzbasic
+```basic
 remove(numeros, 2)
 print numeros nl # [3, 89, 5]
 ```
@@ -896,7 +896,7 @@ is_empty(<array>)
 ```
 
 **Exemplo:**
-```zzbasic
+```basic
 print is_empty(numeros) nl # false
 ```
 
@@ -926,7 +926,7 @@ from <nome_modulo> import <função1>, <função2>, ...
 ```
 
 **Exemplo:**
-```zzbasic
+```basic
 import math 
 
 from math import sqrt, pow
@@ -957,7 +957,7 @@ let <variável> = load("<caminho>")
 - O caminho do arquivo deve estar entre aspas duplas
 
 **Exemplo:**
-```zzbasic
+```basic
 let texto = load("testes/erro.zz")
 print texto nl
 ```
@@ -986,7 +986,7 @@ save <expressão> "<caminho>"
 - Erro se não conseguir escrever
 
 **Exemplo:**
-```zzbasic
+```basic
 let dados = "Conteúdo importante"
 save dados "backup.txt"
 ```
@@ -1029,7 +1029,7 @@ NOTA: Observe que o primeiro parâmetro da função `save()` é um objeto Text, 
 
 ## Exemplo de uso
 
-```zzbasic
+```basic
 let texto = load("testes/erro.zz")
 print texto nl
 print
