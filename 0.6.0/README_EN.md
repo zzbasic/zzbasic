@@ -43,7 +43,7 @@
 - Does not support scientific notation (`1.5e-10`)
 
 **Example:**
-```zzbasic
+```basic
 let pi = 3.14159
 let age = 25
 let balance = -100.50
@@ -92,7 +92,7 @@ Output:
 - Supports spaces and special characters
 
 **Example:**
-```zzbasic
+```basic
 let name = "Zurg Evil Emperor"
 let message = "Hello, world!"
 let empty = ""
@@ -108,7 +108,7 @@ let empty = ""
 - Results of logical operations
 
 **Example:**
-```zzbasic
+```basic
 let active = true
 let deactivated = false
 let result = 5 > 3  # result = true
@@ -122,7 +122,7 @@ let result = 5 > 3  # result = true
 - Supports file read/write operations
 
 **Example:**
-```zzbasic
+```basic
 let content = load("file.txt")
 save content "output.txt"
 ```
@@ -150,7 +150,7 @@ save content "output.txt"
 4. Addition `+`, Subtraction `-`
 
 **Examples:**
-```zzbasic
+```basic
 let result = 2 + 3 * 4        # = 14 (not 20)
 let result = (2 + 3) * 4      # = 20
 let result = 10 - 5 - 2       # = 3 (left to right)
@@ -167,7 +167,7 @@ let result = -5 + 3           # = -2
 | `-` | Negative | `-5` | `-5` |
 
 **Example:**
-```zzbasic
+```basic
 let number = 10
 let negative = -number  # = -10
 let positive = +number  # = 10
@@ -177,7 +177,7 @@ let positive = +number  # = 10
 
 **Behavior:** Returns error and interrupts execution.
 
-```zzbasic
+```basic
 let result = 10 / 0  # Error: division by zero
 ```
 
@@ -202,7 +202,7 @@ let <identifier> = <expression>
 - Scope: Global
 
 **Examples:**
-```zzbasic
+```basic
 let name = "Alice"
 print name nl
 
@@ -242,26 +242,26 @@ true
 ### Variable Types
 
 **Number Variables:**
-```zzbasic
+```basic
 let age = 25
 let height = 1.75
 let balance = -500.00
 ```
 
 **String Variables:**
-```zzbasic
+```basic
 let name = "John"
 let address = "Flower Street, 123"
 ```
 
 **Boolean Variables:**
-```zzbasic
+```basic
 let active = true
 let connected = false
 ```
 
 **Array Variables:**
-```zzbasic
+```basic
 let list = array(0)
 let numbers = array(5)
 ```
@@ -286,7 +286,7 @@ print <expression1> [<expression2> ...] [nl]
 - `print` alone on a line skips a line; same as `print nl`
 
 **Examples:**
-```zzbasic
+```basic
 print "Hello, world!"
 print 42
 print "The result is: " 5 + 3
@@ -298,7 +298,7 @@ print "Line 1" nl
 **Description:** Abbreviated form of `print`.
 
 **Example:**
-```zzbasic
+```basic
 ? "Test"  # Equivalent to: print "Test"
 ```
 
@@ -318,7 +318,7 @@ print width(<number>) <expression>
 - If the value to be displayed has more characters than the field width, the value will be displayed and the field width will not be respected.
 
 **Example:**
-```zzbasic
+```basic
 print width(10) "Test"    # "Test     "
 print width(5) 42          # "42   "
 ```
@@ -338,7 +338,7 @@ print <alignment> width(<number>) <expression>
 ```
 
 **Example:**
-```zzbasic
+```basic
 print width(10) left "Test"    # "Test     "
 print width(10) right "Test"   # "     Test"
 print width(10) center "Test"  # "  Test   "
@@ -387,7 +387,7 @@ print <color> <expression> nocolor [<expression>]
 ```
 
 **Example:**
-```zzbasic
+```basic
 print red "ERROR:" nocolor " File not found"
 print green "Success"
 print blue width(20) center "TITLE"
@@ -407,7 +407,7 @@ print <expression> nl
 ```
 
 **Example:**
-```zzbasic
+```basic
 print "Line 1" nl
 print "Line 2" nl
 print "Line 3"
@@ -433,7 +433,7 @@ input [<formatting>] "<prompt>" <variable>
 - Automatically detects the type
 
 **Examples:**
-```zzbasic
+```basic
 # Simple input
 input "Enter your name: " name
 input "Enter your age: " age
@@ -467,7 +467,7 @@ end if
 - `end if` is mandatory
 
 **Examples:**
-```zzbasic
+```basic
 # Simple if
 if (n >= 0) then
   print "Positive number" nl
@@ -513,7 +513,7 @@ end while
 - `end while` is mandatory
 
 **Examples:**
-```zzbasic
+```basic
 # Simple while
 let i = 0
 while (i < 5) do
@@ -551,7 +551,7 @@ end for
 - `end for` is mandatory
 
 **Examples:**
-```zzbasic
+```basic
 # Simple for
 for i = 0 to 4
     print i nl
@@ -623,7 +623,7 @@ continue
 | F | F | F |
 
 **Example:**
-```zzbasic
+```basic
 let age = 25
 let income = 3000
 if (age >= 18 and income >= 2000) then
@@ -649,7 +649,7 @@ end if
 | F | F | F |
 
 **Example:**
-```zzbasic
+```basic
 let sunday = 1
 let saturday = 7
 let day = saturday
@@ -683,7 +683,7 @@ or
 | F | T |
 
 **Example:**
-```zzbasic
+```basic
 let active = false
 if (not active) then
     print "System deactivated" nl
@@ -697,7 +697,7 @@ end if
 ### Complex Combinations
 
 **Example:**
-```zzbasic
+```basic
 let age = 25
 let income = 3000
 let employed = true
@@ -727,7 +727,7 @@ let <variable> = array(<number of elements>)
 - Support built-in functions
 
 **Examples:**
-```zzbasic
+```basic
 let numbers = array(5)
 
 let numbers[0] = 3
@@ -747,7 +747,7 @@ print numbers nl # [3, 4, 5]
 ```
 
 **Example:**
-```zzbasic
+```basic
 print numbers[0]  # 3
 print numbers[1]  # 4
 print numbers[2]  # 5
@@ -765,7 +765,7 @@ push(<array>, <value>)
 ```
 
 **Example:**
-```zzbasic
+```basic
 push(numbers, 13)
 print numbers nl # [3, 4, 5, 13]
 ```
@@ -780,7 +780,7 @@ pop(<array>)
 ```
 
 **Example:**
-```zzbasic
+```basic
 let last = pop(numbers)
 print last nl # 13
 ```
@@ -795,7 +795,7 @@ len(<array>)
 ```
 
 **Example:**
-```zzbasic
+```basic
 print len(numbers) nl # 3
 ```
 
@@ -809,7 +809,7 @@ get(<array>, <index>)
 ```
 
 **Example:**
-```zzbasic
+```basic
 let m = get(numbers, 1)
 print m nl; # 4 
 ```
@@ -824,7 +824,7 @@ set(<array>, <index>, <value>)
 ```
 
 **Example:**
-```zzbasic
+```basic
 set(numbers, 1, 13)
 print numbers nl # [3, 13, 5]
 ```
@@ -839,7 +839,7 @@ insert(<array>, <index>, <value>)
 ```
 
 **Example:**
-```zzbasic
+```basic
 insert(numbers, 1, 89)
 print numbers nl # [3, 89, 13, 5]
 ```
@@ -854,7 +854,7 @@ remove(<array>, <index>)
 ```
 
 **Example:**
-```zzbasic
+```basic
 remove(numbers, 2)
 print numbers nl # [3, 89, 5]
 ```
@@ -869,7 +869,7 @@ is_empty(<array>)
 ```
 
 **Example:**
-```zzbasic
+```basic
 print is_empty(numbers) nl # false
 ```
 
@@ -899,7 +899,7 @@ from <module_name> import <function1>, <function2>, ...
 ```
 
 **Example:**
-```zzbasic
+```basic
 import math 
 
 from math import sqrt, pow
@@ -930,7 +930,7 @@ let <variable> = load("<path>")
 - File path must be in double quotes
 
 **Example:**
-```zzbasic
+```basic
 let text = load("tests/error.zz")
 print text nl
 ```
@@ -959,7 +959,7 @@ save <expression> "<path>"
 - Error if unable to write
 
 **Example:**
-```zzbasic
+```basic
 let data = "Important content"
 save data "backup.txt"
 ```
@@ -1002,7 +1002,7 @@ NOTE: Observe that the first parameter of the `save()` function is a Text object
 
 ## Usage Example
 
-```zzbasic
+```basic
 let text = load("tests/error.zz")
 print text nl
 print
