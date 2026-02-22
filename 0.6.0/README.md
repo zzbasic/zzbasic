@@ -92,7 +92,7 @@ Saída:
 
 **Exemplo:**
 ```zzbasic
-let nome = "João Silva"
+let nome = "Zurg Evil Emperor"
 let mensagem = "Olá, mundo!"
 let vazio = ""
 ```
@@ -367,14 +367,14 @@ print width(10) center "Teste"  # "  Teste   "
 - `bwhite` - Branco brilhante
 
 **Cores de Fundo (Background)**
-- bg_black - Fundo preto
-- bg_red - Fundo vermelho
-- bg_green - Fundo verde
-- bg_yellow - Fundo amarelo
-- bg_blue - Fundo azul
-- bg_magenta - Fundo magenta
-- bg_cyan - Fundo ciano
-- bg_white - Fundo branco
+- `bgblack` - Fundo preto
+- `bgred` - Fundo vermelho
+- `bggreen` - Fundo verde
+- `bgyellow` - Fundo amarelo
+- `bgblue` - Fundo azul
+- `bgmagenta` - Fundo magenta
+- `bgcyan` - Fundo ciano
+- `bgwhite` - Fundo branco
 
 **Comando NOCOLOR:**
 
@@ -1004,14 +1004,6 @@ TEXT é um tipo customizado para manipulação de texto com suporte a leitura/es
 **1. Alocação Dinâmica na Heap**
 
 O tipo TEXT é armazenado na **heap** (memória dinâmica), não na stack:
-
-```c
-typedef struct {
-    char* data;      // Ponteiro para conteúdo (HEAP)
-    size_t size;     // Tamanho atual (sem contar '\0')
-    size_t capacity; // Capacidade alocada
-} Text;
-```
 
 **2. Crescimento Automático**
 
