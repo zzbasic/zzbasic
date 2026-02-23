@@ -456,9 +456,9 @@ Arrays podem ser impressos diretamente:
 
 ```basic
 let numeros = array(5)
-let _ = push(numeros, 1)
-let _ = push(numeros, 2)
-let _ = push(numeros, 3)
+push(numeros, 1)
+push(numeros, 2)
+push(numeros, 3)
 print numeros nl  # Output: [1, 2, 3]
 ```
 
@@ -490,6 +490,14 @@ print "Olá, " nome "!" nl
 # Input para número
 input "Digite sua idade: " idade
 print "Você tem " idade " anos" nl
+```
+
+**OBERVAÇÃO**: `input` só aceita ler o valor de uma variável. Se você tentar ler mais de uma variável no mesmo `input` o interpretador emitirá um erro(na V0.6.0 nada acontece, isso será corrigido no futuro)
+
+```basic
+input numero1 numero2 # ERRO
+print numero1 nl
+print numero2 nl
 ```
 
 ### O prompt do `input` aceita cores, `width` e alinhamento, similar ao `print`
@@ -672,7 +680,7 @@ print "Acesso concedido!" nl
 
 #### Cuidado
 
-Se a condição nunca ficar falsa, o programa ficará em loop infinito!
+Se a condição nunca ficar falsa, o programa ficará em loop infinito! Loop infinito significa que seu programa ficará executando as instruções dentro do loop `while` indefinidamente, para parar o programa você deverá usar CTRL + C. 
 
 ### Comando FOR
 
@@ -1343,7 +1351,7 @@ end while
 
 Agora que você conhece o básico:
 
-1. Explore os exemplos [aqui](exemplos.md)
+1. Explore os exemplos [aqui](exemplos_0_6_0.md)
 2. Crie seus próprios programas
 3. Experimente com arrays e loops
 4. Combine cores e formatação
