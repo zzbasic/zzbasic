@@ -14,6 +14,7 @@ static void lexer_advance(Lexer* lexer);
 static char lexer_peek(Lexer* lexer);
 static char lexer_peek_next(Lexer* lexer);
 static void lexer_skip_whitespace(Lexer* lexer);
+static int lexer_skip_block_comment(Lexer* lexer);
 
 static Token lexer_make_token(Lexer* lexer,
                               TokenType type,
@@ -309,7 +310,7 @@ static char lexer_peek(Lexer* lexer)
     return lexer->source[lexer->position + 1];
 }
 
-// Returns the next character without advancing (lookahead)
+// Retorna o próximo caractere sem avançar (lookahead)
 static char lexer_peek_next(Lexer* lexer)
 {
     if (lexer->position + 1 < lexer->source_size)
@@ -329,8 +330,35 @@ static void lexer_skip_whitespace(Lexer* lexer)
     }
 }
 
+/* Os 3 " iniciais JÁ foram consumidos por lexer_get_next_token() */
+/* Retorna: 1 = sucesso, 0 = erro (comentário não fechado) */
+static int lexer_skip_block_comment(Lexer* lexer)
+{
+    /* Procura pelas 3 aspas de fechamento """ */
+    while (lexer->current_char != '\0')
+    {
+        /* Verificar fechamento ANTES de avançar */
+        if (lexer->current_char == '"' &&
+            lexer_peek_next(lexer) == '"' &&
+            lexer->position + 2 < lexer->source_size &&
+            lexer->source[lexer->position + 2] == '"')
+        {
+            /* Encontrou o fechamento, consome as 3 aspas */
+            lexer_advance(lexer);  /* primeira " */
+            lexer_advance(lexer);  /* segunda " */
+            lexer_advance(lexer);  /* terceira " */
+            return 1;  /* Sucesso */
+        }
+        
+        /* Avançar (lexer_advance() incrementa line automaticamente se \n) */
+        lexer_advance(lexer);
+    }
+    
+    /* Se chegou aqui, comentário não foi fechado - ERRO! */
+    return 0;  /* Erro: comentário não fechado */
+}
 
-// Helper function to check buffer overflow and report error
+// Função auxiliar para verificar estouro de buffer e relatar erro
 static Token lexer_check_buffer_overflow_number(Lexer* lexer,
                                                 char* buffer,
                                                 int current_index)
@@ -652,24 +680,47 @@ Token lexer_get_next_token(Lexer* lexer)
     {
         lexer_skip_whitespace(lexer);
 
-        // COMMENTS
+        //  COMENTARIO DE VARIAS LINHAS
+        if (lexer->current_char == '"' &&
+            lexer_peek_next(lexer) == '"' &&
+            lexer->position + 2 < lexer->source_size &&
+            lexer->source[lexer->position + 2] == '"')
+        {
+            // Consome as 3 " (aspas duplas) iniciais 
+            lexer_advance(lexer);  
+            lexer_advance(lexer);  
+            lexer_advance(lexer);  
+            
+            if (!lexer_skip_block_comment(lexer))
+            {
+                // Erro: comentário de bloco não fechado 
+                return lexer_report_error(lexer,
+                                         lexer->line,
+                                         lexer->column,
+                                         "Unclosed block comment (missing closing \"\"\")");
+            }
+            continue;  // Continua procurando por mais espaços/comentários 
+        }
+
+        // COMENTARIOS DE UMA LINHA
         if (lexer->current_char == '#')
         {
-            // Skip everything until end of line BUT DON'T consume the \n
+            // Ignora tudo até o final da linha, MAS NÃO consome o \n
             while (lexer->current_char != '\n' && 
                    lexer->current_char != '\0')
             {
                 lexer_advance(lexer);
             }
-            // DON'T consume the \n! It will be returned as TOKEN_EOL
-            // Continue in loop to check for more spaces/comments
+            // NÃO consuma o \n! Ele será retornado como TOKEN_EOL
+            // Continue no loop para verificar mais espaços/comentários
             continue;
         }
-        // If not a comment, break from loop and process token
+
+        // Se não for um comentário, saia do loop e processe o token
         break;
     }
 
-    // NOW process token normally
+    // AGORA, processa o token normalmente
     Token token;
     memset(&token, 0, sizeof(token));
 
