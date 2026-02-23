@@ -82,9 +82,9 @@ Enter "help", a statement or "exit" to quit.
 Agora você pode digitar comandos:
 
 ```
-> print "Olá, Mundo!"
+>> print "Olá, Mundo!"
 Olá, Mundo!
->
+>>
 ```
 
 ### Modo Arquivo (Script)
