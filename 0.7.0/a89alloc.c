@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>  // UINT_MAX
+
 #include "a89alloc.h"
 
 typedef struct {
@@ -83,12 +84,6 @@ void* a89alloc(size_t size, const char* file, int line)
                 "Possíveis causas: memória insuficiente ou fragmentação.\n");
         exit(EXIT_FAILURE);
     }
-
-    // DEBUG =========================================
-    // printf("a89alloc SAIDA\n");
-    // printf("alocada memoria para arquivo %s na linha %d\n", file, line);
-    // wait();
-    //================================================
     
     return ptr;
 }
@@ -211,7 +206,6 @@ void a89free(void* ptr) {
     printf("a89free chamada %d vezesz\n", conta_free++);
     #endif
 
-    //wait();
     //================================================
     // Validação: ponteiro NULL é válido (comportamento padrão do free)
     if (ptr == NULL) {
@@ -228,13 +222,6 @@ void a89free(void* ptr) {
             // Otimização: substituir por último elemento (O(1) vs O(n))
             allocations[i] = allocations[total_allocations - 1];
             total_allocations--;
-
-            // DEBUG =========================================
-            // printf("a89free SAIDA DO FOR\n");
-            // printf("Liberada a memoria alocada no arquivo %s, linha %d\n", allocations[i].file, allocations[i].line);
-            // wait();
-            //================================================
-
             
             return;
         }
@@ -250,11 +237,6 @@ void a89free(void* ptr) {
     // Decisão: liberar mesmo assim para evitar vazamentos
     free(ptr);
     ptr = NULL;
-
-    // DEBUG =========================================
-    // printf("a89free SAIDA - FIM DA FUNCAO\n");
-    // wait();
-    //================================================
 }
 
 
