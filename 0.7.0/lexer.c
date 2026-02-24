@@ -149,17 +149,21 @@ static const char* TOKEN_STRINGS[] =
     "NOERROR"           // TOKEN_NOERROR
 };
 
-
-// ==================================================================
-// Tabela de palavras-chave para busca rápida
-// ==================================================================
-typedef struct
+const char* token_type_to_string(TokenType type)
 {
-    const char *lexeme;
-    TokenType type;
-} Keyword;
+    if (type >= 0 && type < (sizeof(TOKEN_STRINGS) / sizeof(TOKEN_STRINGS[0])))
+    {
+        return TOKEN_STRINGS[type];
+    }
+    return "UNKNOWN";
+}
 
-static Keyword keywords[] = 
+
+
+// ==================================================================
+// Tabela de palavras-chave 
+// ==================================================================
+Keyword keywords[] = 
 {
     {"let", TOKEN_LET},
     {"nl", TOKEN_NL},
@@ -224,15 +228,7 @@ static Keyword keywords[] =
     {NULL, TOKEN_NULL}
 };
 
-const char* token_type_to_string(TokenType type)
-{
-    if (type >= 0 && type < (sizeof(TOKEN_STRINGS) / sizeof(TOKEN_STRINGS[0])))
-    {
-        return TOKEN_STRINGS[type];
-    }
-    return "UNKNOWN";
-}
-
+int keywords_size = sizeof(keywords) / sizeof(keywords[0]);
 
 // ============================================
 // Implementation of Private Functions
