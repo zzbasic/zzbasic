@@ -18,7 +18,7 @@ void setup_utf8() {
 }
 #endif
 
-void wait() {
+void zzwait() {
     printf("\n""Press ENTER to continue...");
     getchar(); // Wait for user to press Enter
     printf("\n");
