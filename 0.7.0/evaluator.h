@@ -9,7 +9,7 @@
 #include "color_mapping.h"
 #include "zztext.h"
 #include "result.h"
-
+#include "scope.h"
 
 // =================================================
 // Tipos de alinhamento
@@ -64,7 +64,7 @@ typedef struct {
 // =================================================
 typedef struct
 {
-    SymbolTable* symbols;        // Tabela de símbolos
+    ScopeStack* scope_stack;     // Pilha de escopos
     const char* current_color;   // Cor atual aplicada
     int color_enabled;           // Se cores estão habilitadas
     OutputFormat format;         // Formatação (width e alignment)
