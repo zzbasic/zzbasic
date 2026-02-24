@@ -1158,8 +1158,25 @@ static int execute_for_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
 
 static EvaluatorResult execute_load_node(ASTNode* node, SymbolTable* symbols)
 {
-    // Pega o nome do arquivo do nó AST
-    const char* filename = node->data.load_expr.filename;
+    // Avalia a expressão para obter o nome do arquivo
+    EvaluatorResult filename_result = evaluate_expr(
+        node->data.load_expr.filename_expr, symbols, CTX_STRING);
+    
+    if (filename_result.type == RESULT_ERROR)
+    {
+        return filename_result;
+    }
+    
+    if (filename_result.type != RESULT_STRING)
+    {
+        return create_error_result_fmt(node->line, node->column,
+            "Evaluator error: load() expects string filename, got %s",
+            (filename_result.type == RESULT_NUMBER ? "number" :
+             filename_result.type == RESULT_BOOL ? "boolean" :
+             filename_result.type == RESULT_TEXT ? "text" : "unknown"));
+    }
+    
+    const char* filename = filename_result.value.string;
     
     // Tenta carregar o arquivo
     Text* text = text_create_from_file(filename);
