@@ -5,11 +5,13 @@
 #include <math.h>
 #include <stdarg.h>  
 
+#include "zzdefs.h"
 #include "color.h"
 #include "a89alloc.h"
 #include "evaluator.h"
 #include "zzarray_wrapper.h"
 #include "result.h"
+#include "scope.h"
 
 #define EPSILON 1e-12
 
@@ -423,7 +425,7 @@ static int evaluate_input_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
     {
         // Boolean
         int bool_value = (strcmp(input_buffer, "true") == 0) ? 1 : 0;
-        if (!symbol_table_set_bool(ctx->symbols, var_name, bool_value))
+        if (!symbol_table_set_bool(ctx->scope_stack->current_scope->symbols, var_name, bool_value))
         {
             printf("Evaluator error: failed to set boolean variable '%s'\n", var_name);
             return 0;
@@ -442,7 +444,7 @@ static int evaluate_input_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
             return 0;
         }
 
-        if (!symbol_table_set_number(ctx->symbols, var_name, value))
+        if (!symbol_table_set_number(ctx->scope_stack->current_scope->symbols, var_name, value))
         {
             printf("Evaluator error: failed to set number variable '%s'\n", var_name);
             return 0;
@@ -451,7 +453,7 @@ static int evaluate_input_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
     else
     {
         // String
-        if (!symbol_table_set_string(ctx->symbols, var_name, input_buffer))
+        if (!symbol_table_set_string(ctx->scope_stack->current_scope->symbols, var_name, input_buffer))
         {
             printf("Evaluator error: failed to set string variable '%s'\n", var_name);
             return 0;
@@ -530,7 +532,9 @@ static int evaluate_print_stmt_with_format(ASTNode* node, ExecutionContext* ctx)
         // ======================================================
         // CASO NORMAL: Expressão (número, string, variável, etc)
         // ======================================================
-        EvaluatorResult result = evaluate_expr(item_node, ctx->symbols, CTX_ANY);
+        EvaluatorResult result = evaluate_expr(item_node,
+                                              ctx->scope_stack->current_scope->symbols,
+                                              CTX_ANY);
         if (result.type == RESULT_ERROR) {
             //printf("%s\n", result.error_message);
             return 0;
@@ -654,8 +658,9 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
             ASTNode* value_node = node->data.assignment.value;
             
             // Avalia o valor a ser atribuído
-            EvaluatorResult value_result = evaluate_expr(
-                value_node, ctx->symbols, CTX_ANY);
+            EvaluatorResult value_result = evaluate_expr(value_node,
+                                                         ctx->scope_stack->current_scope->symbols,
+                                                         CTX_ANY);
             
             if (value_result.type == RESULT_ERROR)
             {
@@ -675,7 +680,9 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
                 
                 // Armazena com base no tipo
                 if (value_result.type == RESULT_STRING) {
-                    if (!symbol_table_set_string(ctx->symbols, var_name, value_result.value.string))
+                    if (!symbol_table_set_string(ctx->scope_stack->current_scope->symbols,
+                                                 var_name,
+                                                 value_result.value.string))
                     {
                         create_error_result_fmt(node->line, node->column,
                             "Evaluator error: assigning string to '%s'", var_name);
@@ -683,14 +690,18 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
                     }
                 }
                 else if (value_result.type == RESULT_NUMBER) {
-                    if (!symbol_table_set_number(ctx->symbols, var_name, value_result.value.number))
+                    if (!symbol_table_set_number(ctx->scope_stack->current_scope->symbols,
+                                                 var_name,
+                                                 value_result.value.number))
                     {
                         printf("execute_stmt_with_ctx(): Evaluator error: assigning number to '%s'\n", var_name);
                         return 0;
                     }
                 }
                 else if (value_result.type == RESULT_BOOL) {
-                    if (!symbol_table_set_bool(ctx->symbols, var_name, value_result.value.boolean))
+                    if (!symbol_table_set_bool(ctx->scope_stack->current_scope->symbols,
+                                               var_name,
+                                               value_result.value.boolean))
                     {
                         printf("execute_stmt_with_ctx(): Evaluator error: assigning boolean to '%s'\n", var_name);
                         return 0;
@@ -698,7 +709,9 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
                 }
                 else if (value_result.type == RESULT_TEXT)
                 {  
-                    if (!symbol_table_set_text(ctx->symbols, var_name, value_result.value.text))
+                    if (!symbol_table_set_text(ctx->scope_stack->current_scope->symbols,
+                                              var_name,
+                                              value_result.value.text))
                     {
                         printf(" execute_stmt_with_ctx(): Evaluator error: assigning Text to '%s'\n", var_name);
                         return 0;
@@ -706,7 +719,9 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
                 }
                 else if (value_result.type == RESULT_ARRAY)
                 {
-                    if (!symbol_table_set_array(ctx->symbols, var_name, value_result.value.array))
+                    if (!symbol_table_set_array(ctx->scope_stack->current_scope->symbols,
+                                                var_name,
+                                                value_result.value.array))
                     {
                         printf("execute_stmt_with_ctx(): Evaluator error: assigning array to '%s'\n", var_name);
                         return 0;
@@ -720,9 +735,9 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
             else if (target_node->type == NODE_ARRAY_INDEX)
             {
                 // Avalia array
-                EvaluatorResult arr_result = evaluate_expr(
-                    target_node->data.array_index.array,
-                    ctx->symbols, CTX_ANY);
+                EvaluatorResult arr_result = evaluate_expr(target_node->data.array_index.array,
+                                                           ctx->scope_stack->current_scope->symbols,
+                                                           CTX_ANY);
                 
                 if (arr_result.type != RESULT_ARRAY) {
                     printf("execute_stmt_with_ctx(): Evaluator error: array index target must be an array\n");
@@ -730,9 +745,9 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
                 }
                 
                 // Avalia índice
-                EvaluatorResult index_result = evaluate_expr(
-                    target_node->data.array_index.index,
-                    ctx->symbols, CTX_ANY);
+                EvaluatorResult index_result = evaluate_expr(target_node->data.array_index.index,
+                                                             ctx->scope_stack->current_scope->symbols,
+                                                             CTX_ANY);
                 
                 if (index_result.type != RESULT_NUMBER) {
                     printf("execute_stmt_with_ctx(): Evaluator error: array index must be a number\n");
@@ -763,7 +778,9 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
         case NODE_VARIABLE:
         {
             // Avalia para exibição (qualquer tipo)
-            EvaluatorResult result = evaluate_expr(node, ctx->symbols, CTX_ANY);
+            EvaluatorResult result = evaluate_expr(node,
+                                                   ctx->scope_stack->current_scope->symbols,
+                                                   CTX_ANY);
             if (result.type == RESULT_ERROR)
             {
                 printf("%s\n", result.error_message);
@@ -828,7 +845,9 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
         case NODE_NOT_LOGICAL_OP:
         {
             // Avalia expressão lógica/de comparação
-            EvaluatorResult result = evaluate_expr(node, ctx->symbols, CTX_ANY);
+            EvaluatorResult result = evaluate_expr(node,
+                                                   ctx->scope_stack->current_scope->symbols,
+                                                   CTX_ANY);
             
             if (result.type == RESULT_ERROR)
             {
@@ -933,7 +952,9 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
         case NODE_FUNCTION_CALL:
         {
             // Avalia a chamada de função como statement (descarta resultado)
-            EvaluatorResult result = evaluate_expr(node, ctx->symbols, CTX_ANY);
+            EvaluatorResult result = evaluate_expr(node,
+                                                   ctx->scope_stack->current_scope->symbols,
+                                                   CTX_ANY);
             
             if (result.type == RESULT_ERROR)
             {
@@ -992,24 +1013,33 @@ static int execute_if_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
     // Evaluate condition
     EvaluatorResult cond_result = evaluate_expr(
                                   node->data.if_stmt.condition,
-                                  ctx->symbols, CTX_BOOL);
+                                  scope_get_symbols(ctx->scope_stack), 
+                                  CTX_BOOL);
     
     if (cond_result.type == RESULT_ERROR)
     {
+        has_evaluation_error = 1;
         printf("%s\n", cond_result.error_message);
         return 0;
     }
     
-    // Execute appropriate branch
+    // Execute ramo apropriado
     if (cond_result.value.boolean)
     {
-        // Execute THEN body
+        // Cria novo escopo
+        scope_push(ctx->scope_stack);
+        // Executa ramo THEN 
         return execute_stmt_with_ctx(node->data.if_stmt.then_body, ctx);
+        // Ao sair do escopo libera variáveis locais
     }
     else if (node->data.if_stmt.else_body)
     {
-        // Execute ELSE body
+        // Executa ramo ELSE
+
+        // Cria novo escopo
+        scope_push(ctx->scope_stack);
         return execute_stmt_with_ctx(node->data.if_stmt.else_body, ctx);
+        // Ao sair do escopo libera variáveis locais
     }
     
     // No else body, just return success
@@ -1030,11 +1060,13 @@ static int execute_while_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
     while (1)
     {
         // Avalia condição
-        EvaluatorResult cond_result = evaluate_expr(
-            condition, ctx->symbols, CTX_BOOL);
+        EvaluatorResult cond_result = evaluate_expr(condition,
+                                                    scope_get_symbols(ctx->scope_stack),
+                                                    CTX_BOOL);
         
         if (cond_result.type == RESULT_ERROR)
         {
+            has_evaluation_error = 1;
             printf("%s\n", cond_result.error_message);
             return 0;
         }
@@ -1044,6 +1076,9 @@ static int execute_while_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
         {
             break;
         }
+
+        // Cria novo escopo para cada iteração
+        scope_push(ctx->scope_stack);
         
         // Executa body
         int success = execute_stmt_with_ctx(body, ctx);
@@ -1051,6 +1086,9 @@ static int execute_while_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
         {
             return 0;
         }
+
+        // Ao sair do escopo libera variáveis locais da iteração
+        scope_pop(ctx->scope_stack);
         
         // Verifica se deve sair do loop (break)
         if (ctx->should_break)
@@ -1079,20 +1117,29 @@ static int execute_for_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
     }
 
     ForStatementData* for_stmt = &node->data.for_stmt;
+
+    SymbolTable* symbols = scope_get_symbols(ctx->scope_stack);
+
     
     // Avalia o valor inicial
-    EvaluatorResult init_result = evaluate_expr(for_stmt->init_value, ctx->symbols, CTX_NUMBER);
+    EvaluatorResult init_result = evaluate_expr(for_stmt->init_value,
+                                                symbols,
+                                                CTX_NUMBER);
     if (init_result.type == RESULT_ERROR)
     {
+        has_evaluation_error = 1;
         printf("%s\n", init_result.error_message);
         return 0;
     }
     double init_value = init_result.value.number;
 
     // Avalia o valor final
-    EvaluatorResult end_result = evaluate_expr(for_stmt->end_value, ctx->symbols, CTX_NUMBER);
+    EvaluatorResult end_result = evaluate_expr(for_stmt->end_value,
+                                               symbols,
+                                               CTX_NUMBER);
     if (end_result.type == RESULT_ERROR)
     {
+        has_evaluation_error = 1;
         printf("%s\n", end_result.error_message);
         return 0;
     }
@@ -1102,9 +1149,12 @@ static int execute_for_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
     double step_value = 1.0;
     if (for_stmt->step_value)
     {
-        EvaluatorResult step_result = evaluate_expr(for_stmt->step_value, ctx->symbols, CTX_NUMBER);
+        EvaluatorResult step_result = evaluate_expr(for_stmt->step_value,
+                                                    symbols,
+                                                    CTX_NUMBER);
         if (step_result.type == RESULT_ERROR)
         {
+            has_evaluation_error = 1;
             printf("%s\n", step_result.error_message);
             return 0;
         }
@@ -1126,17 +1176,25 @@ static int execute_for_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
          (ascending && i <= end_value + EPSILON) || (!ascending && i >= end_value - EPSILON);
          i += step_value)
     {
-        if (!symbol_table_set_number(ctx->symbols, for_stmt->var_name, i))
+        if (!symbol_table_set_number(symbols,
+                                     for_stmt->var_name,
+                                     i))
         {
             printf("Evaluator error: failed to set loop variable '%s'\n", for_stmt->var_name);
             return 0;
         }
+
+        // Cria novo escopo para cada iteração
+        scope_push(ctx->scope_stack);
 
         // Executa o corpo do loop
         int success = execute_stmt_list_with_ctx(for_stmt->body, ctx);
         if (!success) {
             return 0;  
         }
+
+        // Ao sair do escopo libera variáveis locais da iteração
+        scope_pop(ctx->scope_stack);        
 
         // Verifica se deve sair do loop (break)
         if (ctx->should_break)
@@ -1193,8 +1251,9 @@ static EvaluatorResult execute_load_node(ASTNode* node, SymbolTable* symbols)
 static int execute_save_node(ASTNode* node, ExecutionContext* ctx)
 {
     // Avalia a expressão que deve retornar um Text
-    EvaluatorResult text_result = evaluate_expr(
-        node->data.save_stmt.expression, ctx->symbols, CTX_ANY);
+    EvaluatorResult text_result = evaluate_expr(node->data.save_stmt.expression,
+                                                ctx->scope_stack->current_scope->symbols,
+                                                CTX_ANY);
     
     if (text_result.type == RESULT_ERROR)
     {
@@ -2005,7 +2064,9 @@ static SymbolTable* module_manager_get_symbols(ModuleManager* manager,
 ExecutionContext* execution_ctx_create(SymbolTable* symbols)
 {
     ExecutionContext* ctx = A89ALLOC(sizeof(ExecutionContext));
-    ctx->symbols = symbols;
+
+    ctx->scope_stack = scope_stack_create();
+
     ctx->current_color = "";
     ctx->color_enabled = 1;
     ctx->should_break = 0;      
@@ -2023,6 +2084,11 @@ void execution_ctx_destroy(ExecutionContext* ctx)
     {
         module_manager_destroy(ctx->modules); 
         ctx->modules = NULL;
+    }
+
+    if (ctx->scope_stack)
+    {
+        scope_stack_destroy(ctx->scope_stack);
     }
     
     a89free(ctx);
