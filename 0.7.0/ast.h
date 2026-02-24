@@ -213,7 +213,7 @@ typedef struct
 
 typedef struct
 {
-    char filename[BUFFER_SIZE];  // Nome do arquivo; PATH
+    ASTNode* filename_expr;  // Expressão que retorna o nome do arquivo
 } LoadExprData;
 
 typedef struct
@@ -348,7 +348,7 @@ ASTNode* create_import_node(const char* module_name,
                             int import_all,
                             int line, int column);
 
-ASTNode* create_load_node(const char* filename, int line, int column);
+ASTNode* create_load_node(ASTNode* filename_expr, int line, int column);
 
 ASTNode* create_save_node(ASTNode* expression, const char* filename, int line, int column);
 
