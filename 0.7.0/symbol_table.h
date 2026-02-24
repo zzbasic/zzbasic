@@ -10,6 +10,10 @@
 
 // Tipo opaco (encapsulamento)
 typedef struct SymbolTable SymbolTable;
+typedef struct Symbol Symbol;
+
+
+Symbol* find_symbol(SymbolTable* table, const char* name);
 
 // Criação/destruição
 SymbolTable* symbol_table_create(void);
