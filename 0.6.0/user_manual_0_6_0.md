@@ -44,7 +44,13 @@ This manual is an introduction to programming using the ZzBasic language. Start 
 
 ## 2. Download and Installation
 
-Currently ZzBasic has executables for Windows and Linux. You can download the executables and install them on your system by following the instructions on the [v0.6.0 Release page](https://github.com/zzbasic/zzbasic/releases/tag/v0.6.0)
+Currently ZzBasic has executables for Windows and Linux.
+
+Gratitude to my dear student Gabriela, for having compiled and tested this version of ZzBasic on Mac.
+<span style="font-size: 36px;">😊🙏</span>
+
+You can download the executables and install them on your system by following the instructions on the<br>
+[v0.6.0 Release page](https://github.com/zzbasic/zzbasic/releases/tag/v0.6.0)
 
 ---
 
