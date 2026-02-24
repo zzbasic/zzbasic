@@ -33,17 +33,17 @@ typedef struct Symbol
     struct Symbol* next;
 } Symbol;
 
-struct SymbolTable
+typedef struct SymbolTable
 {
     Symbol* head;
     int count;
-};
+} SymbolTable;
 
 // ============================================
 // PRIVATE HELPER FUNCTIONS (static)
 // ============================================
 
-static Symbol* find_symbol(SymbolTable* table, const char* name)
+Symbol* find_symbol(SymbolTable* table, const char* name)
 {
     if (!table || !name) return NULL;
     
@@ -328,7 +328,6 @@ int symbol_table_set_array(SymbolTable* table, const char* name, Array* array)
     if (!symbol)
     {
         symbol = A89ALLOC(sizeof(Symbol));
-        if (!symbol) return 0;
         
         strncpy(symbol->name, name, VARNAME_SIZE - 1);
         symbol->name[VARNAME_SIZE - 1] = '\0';
@@ -414,45 +413,4 @@ void symbol_table_print(SymbolTable* table)
     printf("===================================\n");
 }
 
-// ============================================
-// QUICK TEST
-// ============================================
-
-#ifdef TESTSYMBOLTABLE
-#include "utils.h"
-
-int main() {
-    setup_utf8();
-    printf("%s=== Teste Tabela de Símbolos (v0.5.0) ===%s\n\n",
-            COLOR_HEADER, COLOR_RESET);
-    
-    // 1. Creation
-    SymbolTable* table = symbol_table_create();
-
-    printf("1. Tabela criada (count=%d)\n", symbol_table_count(table));
-    
-    if (symbol_table_set_bool(table, "ok", 1)) {
-        printf("   ok = 1 (inserido)\n");
-    } else {
-        printf("   %sERRO ao inserir ok%s\n", COLOR_ERROR, COLOR_RESET);
-    }
-
-    if (symbol_table_set_bool(table, "erro", 0)) {
-        printf("   erro = 0 (inserido)\n");
-    } else {
-        printf("   %sERRO ao inserir erro%s\n", COLOR_ERROR, COLOR_RESET);
-    }
-
-    printf("\n8. Tabela completa:\n");
-    symbol_table_print(table);
-    
-    printf("\n9. Destruindo tabela...\n");
-    symbol_table_destroy(table);
-    printf("   Tabela destruída\n");
-    
-    printf("\n%s=== Teste concluído ===%s\n", COLOR_SUCCESS, COLOR_RESET);
-    
-    a89check_leaks();
-    return 0;
-}
-#endif
+// Fim de symbol_table.c
