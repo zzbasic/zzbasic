@@ -411,13 +411,12 @@ ASTNode* create_import_node(const char* module_name,
     return node;
 }
 
-ASTNode* create_load_node(const char* filename, int line, int column)
+ASTNode* create_load_node(ASTNode* filename_expr, int line, int column)
 {
     ASTNode* node = create_node(NODE_LOAD, line, column);
     node->line = line;
     node->column = column;
-    strncpy(node->data.load_expr.filename, filename, BUFFER_SIZE - 1);
-    node->data.load_expr.filename[BUFFER_SIZE - 1] = '\0';
+    node->data.load_expr.filename_expr = filename_expr;
     return node;
 }
 
@@ -610,6 +609,7 @@ void free_ast(ASTNode* node)
             break;
 
         case NODE_LOAD:
+            free_ast(node->data.load_expr.filename_expr);
             break;
                 
         case NODE_SAVE:
@@ -858,8 +858,10 @@ void print_ast(ASTNode* node, int indent)
             break;
 
         case NODE_LOAD:
-            printf("LOAD \"%s\"\n", node->data.load_expr.filename);
+            printf("LOAD:\n");
+            print_ast(node->data.load_expr.filename_expr, indent + 1);
             break;
+
             
         case NODE_SAVE:
             printf("SAVE to \"%s\"\n", node->data.save_stmt.filename);
