@@ -1,6 +1,6 @@
 # =====================================================================
-# ZzBasic - GRAMÁTICA v0.7.0 - NÃO ALTERADA DESDE v0.6.0 
-# Última atualização: 20260215
+# ZzBasic - GRAMÁTICA v0.7.0 
+# Última atualização: 20260224
 # =====================================================================
 
 # =====================================================================
@@ -10,7 +10,7 @@ program             := statement_list
 
 statement_list      := statement (separator+ statement)*
 
-separator           := EOL | ':' | ';'
+separator           := EOL 
 
 statement           := assignment_stmt
                     | print_stmt
@@ -202,9 +202,10 @@ atom                := NUMBER
 #   let programa = load("calculadora.zz")
 #   let dados    = load("entrada.txt")
 #   let config   = load("config.ini")
+#   let texto    = load(filename)
 # =====================================================================
 
-load_expr := 'load' '(' STRING ')'
+load_expr := 'load' '(' expression ')'
 
 
 # =====================================================================
