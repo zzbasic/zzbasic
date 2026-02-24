@@ -4,7 +4,7 @@
 
 void setup_utf8();
 
-void wait();
+void zzwait();
 
 /********************************************************************
 Exibe uma linha de código-fonte com uma seta apontando para o erro
