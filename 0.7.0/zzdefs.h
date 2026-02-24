@@ -5,7 +5,7 @@
 
 #include <stddef.h> // size_t
 
-#define ZZ_VERSION "0.6.0"
+#define ZZ_VERSION "0.7.0"
 #define ZZ_PROMPT ">> "
 
 // TAMANHO MAXIMO
