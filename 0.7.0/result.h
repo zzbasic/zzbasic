@@ -10,9 +10,9 @@
 typedef enum
 {
     RESULT_ERROR,
-    RESULT_BOOL,
     RESULT_NUMBER,
     RESULT_STRING,
+    RESULT_BOOL,
     RESULT_TEXT,
     RESULT_ARRAY
 } ResultType;
