@@ -9,6 +9,8 @@ OBSERVÇÕES:
     * A89ALLOC, se não conseguir alocar memória, chama exit() para
       encerrar o programa. 
 ********************************************************************/
+#include <stdio.h>
+
 #include "color.h"
 #include "utils.h"
 #include "ast.h"
@@ -23,8 +25,8 @@ static void parser_advance(Parser* parser);
 static int parser_expect(Parser* parser, TokenType expected_type);
 static void parser_set_error(Parser* parser, const char* message);
 
-static int is_keyword_token(TokenType type);
-static const char* get_keyword_name(TokenType type);
+static int is_keyword_token(const char* lexeme);
+//static const char* get_keyword_name(TokenType type);
 static int is_color_token(TokenType type);
 static const char* get_color_name(TokenType type);
 static void report_print_keyword_error(Parser* parser, Token token);
@@ -129,40 +131,34 @@ static void parser_set_error(Parser* parser, const char* message)
 }
 
 // Verifica se um token é palavra-chave/comando
-static int is_keyword_token(TokenType type)
+static int is_keyword_token(const char* lexeme)
 {
-    switch (type) {
-        case TOKEN_LET:      
-        case TOKEN_PRINT:   
-        case TOKEN_QUESTION: // ?
-        case TOKEN_INPUT:     
-        // FUTURO: adicionar novos comandos aqui
-        // case TOKEN_IF:
-        // case TOKEN_FOR:
-        // case TOKEN_WHILE:
-        // case TOKEN_FUNCTION:
-        // case TOKEN_RETURN:
-            return 1;  // É palavra-chave/comando
-        default:
-            return 0;  // Não é palavra-chave
+    for (int i = 0; keywords[i].lexeme != NULL; i++)
+    {
+        if (strcmp(lexeme, keywords[i].lexeme) == 0)
+        {
+            return 1;
+        }
     }
+    return 0; // Não é palavra-chave
+
 }
 
 // Obtém nome amigável de uma palavra-chave
-static const char* get_keyword_name(TokenType type)
-{
-    switch (type)
-    {
-        case TOKEN_LET:      return "let";
-        case TOKEN_PRINT:    return "print";
-        case TOKEN_QUESTION: return "?";
-        case TOKEN_INPUT:    return "input";
-        // FUTURO: adicionar novos comandos aqui
-        // case TOKEN_IF:       return "if";
-        // case TOKEN_FOR:      return "for";
-        default:             return "command";
-    }
-}
+// static const char* get_keyword_name(TokenType type)
+// {
+//     switch (type)
+//     {
+//         case TOKEN_LET:      return "let";
+//         case TOKEN_PRINT:    return "print";
+//         case TOKEN_QUESTION: return "?";
+//         case TOKEN_INPUT:    return "input";
+//         // FUTURO: adicionar novos comandos aqui
+//         // case TOKEN_IF:       return "if";
+//         // case TOKEN_FOR:      return "for";
+//         default:             return "command";
+//     }
+// }
 
 static int is_color_token(TokenType type)
 {
@@ -215,8 +211,8 @@ static void report_print_keyword_error(Parser* parser, Token token) {
             "Use new line for next statement.",
             token.line, token.column);
     }
-    else if (is_keyword_token(token.type)) {
-        const char* keyword_name = get_keyword_name(token.type);
+    else if (is_keyword_token(token.token_text)) {
+        //const char* keyword_name = get_keyword_name(token.type);
         
         // Mensagens específicas por tipo de comando
         if (token.type == TOKEN_LET) {
@@ -225,20 +221,20 @@ static void report_print_keyword_error(Parser* parser, Token token) {
                 "Assign variables BEFORE printing:\n"
                 "  let x = 5\n"
                 "  print x nl",
-                token.line, token.column, keyword_name);
+                token.line, token.column, token.token_text);
         }
         else if (token.type == TOKEN_PRINT || token.type == TOKEN_QUESTION) {
             snprintf(error_msg, sizeof(error_msg),
                 "[%d:%d]: '%s' is a command, not a valid expression. "
                 "Use ONE print with multiple items:\n"
                 "  print \"text1\" \"text2\" nl  (instead of print \"text1\" print \"text2\")",
-                token.line, token.column, keyword_name);
+                token.line, token.column, token.token_text);
         }
         else {
             // Mensagem genérica para outros comandos (futuro)
             snprintf(error_msg, sizeof(error_msg),
                 "[%d:%d]: '%s' is a command, not a valid expression in print statement.",
-                token.line, token.column, keyword_name);
+                token.line, token.column, token.token_text);
         }
     }
     else {
@@ -304,7 +300,7 @@ static ASTNode* parse_program(Parser* parser)
 
 //===================================================================
 // statement_list := statement (separator statement)*
-// separator      := EOL | ':' | ';'
+// separator      := EOL 
 //
 // Parseia uma lista de statements até encontrar (mas não consome):
 // - TOKEN_END   (ex: antes de 'end while', 'end if', etc...)
@@ -352,10 +348,8 @@ static ASTNode* parse_stmt_list(Parser* parser)
         
         Token token = parser->current_token;
         
-        // Verifica se é um separador
-        if (token.type == TOKEN_COLON || 
-            token.type == TOKEN_SEMICOLON ||
-            token.type == TOKEN_EOL)
+        // Verifica se é o separador de statements
+        if (token.type == TOKEN_EOL)
         {
             
             parser_advance(parser);  // Consome o separador
@@ -391,7 +385,15 @@ static ASTNode* parse_stmt_list(Parser* parser)
         }
         else
         {
-            // Não é separador, sai do loop
+            // Não é separador, emite erro e sai do loop
+            char error_msg[BUFFER_SIZE];
+            snprintf(error_msg, sizeof(error_msg),
+               "'%s' cannot be used as a statement separator. "
+                "Use a new line instead.", token.token_text);
+            parser_set_error(parser,error_msg);
+            free_ast(list);
+            return NULL;
+
             break;
         }
     }
@@ -484,13 +486,13 @@ static ASTNode* parse_assignment_stmt(Parser* parser)
     if (parser->current_token.type != TOKEN_IDENTIFIER)
     {
         // Se for palavra-chave, dá erro específico
-        if (is_keyword_token(parser->current_token.type))
+        if (is_keyword_token(parser->current_token.token_text))
         {
-            const char* keyword_name = get_keyword_name(parser->current_token.type);
+            //const char* keyword_name = get_keyword_name(parser->current_token.type);
             char error_msg[BUFFER_SIZE];
             snprintf(error_msg, sizeof(error_msg),
-                "[%d:%d]: '%s' is a command keyword, cannot be used as variable name",
-                parser->current_token.line, parser->current_token.column, keyword_name);
+                "'%s' is a command keyword, cannot be used as variable name",
+                parser->current_token.token_text);
             parser_set_error(parser, error_msg);
         }
         else
@@ -617,7 +619,7 @@ static ASTNode* parse_print_stmt(Parser* parser)
         // Verifica tokens problemáticos: ;, :, ou palavras-chave
         if (token.type == TOKEN_SEMICOLON ||
             token.type == TOKEN_COLON ||
-            is_keyword_token(token.type))
+            is_keyword_token(token.token_text))
         {
             report_print_keyword_error(parser, token);
             free_ast(print_node);
@@ -1510,9 +1512,10 @@ static ASTNode* parse_import_stmt(Parser* parser)
 
 
 //===================================================================
-// load_expr := 'load' '(' STRING ')'
+// load_expr := 'load' '(' expression ')'
 //
 // let texto = load("arquivo.txt")
+// let texto = load(filename)
 //===================================================================
 static ASTNode* parse_load_expr(Parser* parser)
 {
@@ -1526,27 +1529,24 @@ static ASTNode* parse_load_expr(Parser* parser)
         parser_set_error(parser, "expected '(' after 'load'");
         return NULL;
     }
-    parser_advance(parser);  // Consume (
+    parser_advance(parser);  // Consme (
     
-    if (parser->current_token.type != TOKEN_STRING)
+    // Parseia a expressão (pode ser string literal ou variável)
+    ASTNode* filename_expr = parse_logical_expr(parser);
+    if (!filename_expr || parser->has_error)
     {
-        parser_set_error(parser, "expected filename string in load()");
+        parser_set_error(parser, "expected expression in load()");
         return NULL;
     }
-    
-    char filename[BUFFER_SIZE];
-    strncpy(filename, parser->current_token.value.string, BUFFER_SIZE - 1);
-    filename[BUFFER_SIZE - 1] = '\0';
-    parser_advance(parser);  // Consume STRING
     
     if (parser->current_token.type != TOKEN_RPAREN)
     {
         parser_set_error(parser, "expected ')' after filename in load()");
         return NULL;
     }
-    parser_advance(parser);  // Consume )
+    parser_advance(parser);  // Consome )
     
-    return create_load_node(filename, line, column);
+    return create_load_node(filename_expr, line, column);
 }
 
 //===================================================================
@@ -2141,59 +2141,5 @@ ASTNode* parse_single_stmt(Lexer* lexer)
         
     return result;
 }
-
-#ifdef TESTPARSER
-#include "color.h"
-#include "utils.h"
-
-int main()
-{
-    setup_utf8();
-    
-    printf("%s=== TESTE PARSER v0.6.0 ===%s\n\n", 
-           COLOR_HEADER, COLOR_RESET);
-    
-    char* testes[] =
-    {
-        "let programa = load(\"calculadora.zz\")",
-
-        "save(programa, \"backup.zz\")\n"
-    };
-    
-    int num_testes = sizeof(testes) / sizeof(testes[0]);
-    
-    for (int i = 0; i < num_testes; i++)
-    {
-        printf("%s=== Teste %d: '%s' ===%s\n", 
-               COLOR_HEADER, i+1, testes[i], COLOR_RESET);
-        
-        Lexer lexer;
-        lexer_init(&lexer, testes[i]);
-        
-        ASTNode* ast = parse(&lexer);
-        
-        if (ast)
-        {
-            printf("AST gerada:\n");
-            print_ast(ast, 0);
-            free_ast(ast);
-            printf("%sParsing OK%s\n", COLOR_SUCCESS, COLOR_RESET);
-        }
-        else
-        {
-            //printf("%sERRO no parsing%s\n", COLOR_ERROR, COLOR_RESET);
-        }
-        
-        printf("\n");
-
-        wait();
-    }
-    
-    printf("\n%s=== TODOS OS TESTES COMPLETADOS ===%s\n", COLOR_SUCCESS, COLOR_RESET);
-    
-    a89check_leaks();
-    return 0;
-}
-#endif
 
 // Fim de parser.c
