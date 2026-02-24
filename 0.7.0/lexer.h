@@ -122,7 +122,6 @@ typedef enum {
     TOKEN_NOERROR
 } TokenType;
 
-
 // ============================================
 // Estrutura do Token (Expandida)
 // ============================================
@@ -143,6 +142,14 @@ typedef struct
     int column;                     // Coluna
 } Token;
 
+typedef struct
+{
+    const char *lexeme;
+    TokenType type;
+} Keyword;
+
+extern Keyword keywords[];
+extern int keywords_size;
 // ============================================
 // Estrutura do Lexer (Expandida)
 // ============================================
