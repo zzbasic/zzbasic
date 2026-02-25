@@ -34,7 +34,8 @@ static void report_print_keyword_error(Parser* parser, Token token);
 static ASTNode* parse_program(Parser* parser);
 static ASTNode* parse_stmt_list(Parser* parser);
 static ASTNode* parse_stmt(Parser* parser);
-static ASTNode* parse_assignment_stmt(Parser* parser);
+static ASTNode* parse_let_stmt(Parser* parser);
+static ASTNode* parse_assignment_or_expression(Parser* parser);
 static ASTNode* parse_print_stmt(Parser* parser);
 static ASTNode* parse_color_stmt(Parser* parser);
 static ASTNode* parse_input_stmt(Parser* parser);
@@ -402,10 +403,9 @@ static ASTNode* parse_stmt_list(Parser* parser)
 }
 
 //==============================================================================
-// statement           := assignment_stmt
+// statement           := let_stmt
 //                     | print_stmt
 //                     | color_stmt 
-//                     | import_stmt
 //                     | input_stmt 
 //                     | if_stmt
 //                     | while_stmt
@@ -413,13 +413,17 @@ static ASTNode* parse_stmt_list(Parser* parser)
 //                     | break_stmt
 //                     | continue_stmt
 //                     | save_stmt
+//                     | import_stmt
 //                     | expression_stmt
+//                     | assignment_stmt
 //==============================================================================
 static ASTNode* parse_stmt(Parser* parser)
 {
+    if (!parser) return NULL;
+    
     if (parser->current_token.type == TOKEN_LET)
     {
-        return parse_assignment_stmt(parser);
+        return parse_let_stmt(parser);
     }
     else if (parser->current_token.type == TOKEN_PRINT || 
              parser->current_token.type == TOKEN_QUESTION)
@@ -455,6 +459,10 @@ static ASTNode* parse_stmt(Parser* parser)
     {
         return parse_continue_stmt(parser);
     }
+    else if (parser->current_token.type == TOKEN_SAVE)
+    {
+        return parse_save_stmt(parser);
+    }
     else if (parser->current_token.type == TOKEN_IMPORT)
     {
         return parse_import_stmt(parser);
@@ -463,35 +471,27 @@ static ASTNode* parse_stmt(Parser* parser)
     {
         return parse_import_stmt(parser);
     }
-    else if (parser->current_token.type == TOKEN_SAVE)
-    {
-        return parse_save_stmt(parser);
-    }
     else
     {
-        return parse_expr_stmt(parser);
+        return parse_assignment_or_expression(parser);
     }
-}
-
+} // Fim de parse_stmt()
 
 //===================================================================
-// assignment_stmt := LET (identifier | identifier '[' expr ']') '=' expression
+// let_stmt := 'let' IDENTIFIER '=' expression
+//          | 'let' IDENTIFIER '[' expression ']' ('[' expression ']')* '=' expression
 //===================================================================
-static ASTNode* parse_assignment_stmt(Parser* parser)
+static ASTNode* parse_let_stmt(Parser* parser)
 {
-    // TOKEN_LET verificado antes da chamada a essa função
     parser_advance(parser);  // Consume LET
     
-    // Check identifier
     if (parser->current_token.type != TOKEN_IDENTIFIER)
     {
-        // Se for palavra-chave, dá erro específico
         if (is_keyword_token(parser->current_token.token_text))
         {
-            //const char* keyword_name = get_keyword_name(parser->current_token.type);
             char error_msg[BUFFER_SIZE];
             snprintf(error_msg, sizeof(error_msg),
-                "'%s' is a command keyword, cannot be used as variable name",
+                "'%s' is a keyword, cannot be used as variable name",
                 parser->current_token.token_text);
             parser_set_error(parser, error_msg);
         }
@@ -506,22 +506,23 @@ static ASTNode* parse_assignment_stmt(Parser* parser)
     ASTNode* target = create_variable_node(parser->current_token.value.varname,
                                            parser->current_token.line,
                                            parser->current_token.column);
-    if (!target) {
+    if (!target)
+    {
         parser_set_error(parser, "could not create variable node");
         return NULL;
     }
 
-    parser_advance(parser);  // Consume identifier
-    
+    parser_advance(parser);  // Consome identificador
+
     // Verifica se há '[' para array indexing
     while (parser->current_token.type == TOKEN_LBRACKET)
     {
         int line = parser->current_token.line;
         int column = parser->current_token.column;
         
-        parser_advance(parser);  // Consume '['
+        parser_advance(parser);  // Consome '['
         
-        // Parse a expressão dentro dos colchetes
+        // Parse da expressão dentro dos colchetes
         ASTNode* index = parse_logical_expr(parser);
         if (parser->has_error || !index)
         {
@@ -550,19 +551,20 @@ static ASTNode* parse_assignment_stmt(Parser* parser)
     }
     
     // Check '='
-    if (parser->current_token.type != TOKEN_ASSIGN) {
+    if (parser->current_token.type != TOKEN_ASSIGN)
+    {
         parser_set_error(parser, "expected '=' after variable name");
         free_ast(target);
         return NULL;
     }
  
-    parser_advance(parser);  // Consume '='
+    parser_advance(parser);  // Consome '='
 
-    // PEGA LINHA E COLUNA DA STRING
+    // PEGA LINHA E COLUNA DA EXPRESSÃO
     int line = parser->current_token.line;
     int column = parser->current_token.column;
 
-    // For string variables: expect STRING_LITERAL
+    // Para variáveis stringt: espera STRING_LITERAL
     if(parser->current_token.type == TOKEN_STRING)
     {
         ASTNode* string_node = create_string_node(parser->current_token.value.string,
@@ -571,19 +573,88 @@ static ASTNode* parse_assignment_stmt(Parser* parser)
 
         parser_advance(parser);  // Consome STRING_LITERAL
 
-        return create_assignment_node(target, string_node,
-                                      line,
-                                      column);
-
+        // Cria nó LET
+        ASTNode* node = create_let_node(target, string_node, line, column);
+        
+        return node;
     }
 
-    ASTNode* expr = parse_expr(parser);
-    if (parser->has_error) {
+    ASTNode* expr = parse_logical_expr(parser);
+    if (parser->has_error || !expr)
+    {
         free_ast(target);
         return NULL;
     }
 
-    return create_assignment_node(target, expr, expr->line, expr->column);
+    // Cria nó LET
+    ASTNode* node = create_let_node(target, expr, line, column);
+    
+    return node;
+} // Fim de parse_let_stmt()
+
+
+
+//===================================================================
+// assignment_stmt := IDENTIFIER '=' expression | IDENTIFIER '[' expression ']' '=' expression
+// ou
+// expression_stmt := logical_expr
+//===================================================================
+static ASTNode* parse_assignment_or_expression(Parser* parser)
+{
+    if (!parser) return NULL;
+
+    // Parseia a expressão (lado esquerdo)
+    ASTNode* left = parse_logical_expr(parser);
+    if (!left) return NULL;
+    
+    // Se o proximo token é assign, então é a regra assignment_stmt
+    if (parser->current_token.type == TOKEN_ASSIGN)
+    {
+        // Verifica se left é válido para assignment
+        if (left->type != NODE_VARIABLE && left->type != NODE_ARRAY_INDEX)
+        {
+            parser_set_error(parser, "invalid assignment target");
+            free_ast(left);
+            return NULL;
+        }
+       
+        parser_advance(parser); // Consome '='
+        
+        // PEGA LINHA E COLUNA DA EXPRESSÃO
+        int line = parser->current_token.line;
+        int column = parser->current_token.column;
+
+        // Para variáveis string espera STRING_LITERAL
+        if(parser->current_token.type == TOKEN_STRING)
+        {
+            ASTNode* string_node = create_string_node(parser->current_token.value.string,
+                                                      parser->current_token.line,
+                                                      parser->current_token.column);
+
+            parser_advance(parser);  // Consome STRING_LITERAL
+
+            // Cria nó ASSIGNMENT
+            ASTNode* node = create_assignment_node(left, string_node, line, column);
+            
+            return node;
+        }
+
+        // Parseia lado direito
+        ASTNode* right = parse_logical_expr(parser);
+        if (!right)
+        {
+            free_ast(left);
+            return NULL;
+        }
+        
+        // Cria nó ASSIGNMENT
+        ASTNode* node = create_assignment_node(left, right, left->line, left->column);
+        
+        return node;
+    }
+    
+    // Não é assignment, usa a regra expression_stmt
+    return left;
 }
 
 
