@@ -3,7 +3,7 @@
 ## Novos recursos 
 [✅] Comentário de várias linhas
 
-[✅] Help atualizado e com recurso de sair do help e voltar ao prompt atravea da tecla ESC
+[✅] Help atualizado e com recurso de sair do help e voltar ao prompt atraves da tecla ESC
 
 [✅] Separador de statements agora é somente EOL (quebra de linha); evita confusão; melhor para iniciantes
 
