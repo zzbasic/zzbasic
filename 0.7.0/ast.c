@@ -119,6 +119,20 @@ ASTNode* create_assignment_node(ASTNode* target, ASTNode* value,
     return node;
 }
 
+ASTNode* create_let_node(ASTNode* target, ASTNode* value, 
+                         int line, int column)
+{
+    if (!target || !value)
+    {
+        return NULL;
+    }
+    
+    ASTNode* node = create_node(NODE_LET, line, column);
+    node->data.let_stmt.target = target;
+    node->data.let_stmt.value = value;
+    return node;
+}
+
 // Cria um nó de lista de statements
 ASTNode* create_statement_list_node(int line, int column) {
     ASTNode* node = create_node(NODE_STATEMENT_LIST, line, column);
@@ -651,6 +665,11 @@ void free_ast(ASTNode* node)
             }
             break;
 
+        case NODE_LET:
+            free_ast(node->data.let_stmt.target);
+            free_ast(node->data.let_stmt.value);
+            break;
+
         case NODE_BOOL:
         case NODE_NUMBER:
         case NODE_STRING:
@@ -665,7 +684,7 @@ void free_ast(ASTNode* node)
     }
     
     a89free(node); 
-}
+} // Fim de free_ast()
 
 void print_ast(ASTNode* node, int indent)
 {
