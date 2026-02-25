@@ -9,6 +9,7 @@
 #include "color.h"
 #include "a89alloc.h"
 #include "evaluator.h"
+#include "zzarray.h"
 #include "zzarray_wrapper.h"
 #include "result.h"
 #include "scope.h"
@@ -86,19 +87,20 @@ static int execute_if_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx);
 static int execute_while_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx);
 static int execute_for_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx);
 
-static EvaluatorResult execute_load_node(ASTNode* node, SymbolTable* symbols);
+static EvaluatorResult execute_load_node(ASTNode* node, ExecutionContext* ctx);
 static int execute_save_node(ASTNode* node, ExecutionContext* ctx);
 
 
 // FUNÇÕES PÚBLICAS
 
-// int evaluate_program(ASTNode* node, SymbolTable* symbols);
-// EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext ctx);
+// int evaluate_program(ASTNode* node);
+
+// EvaluatorResult evaluate_expr(ASTNode* node, ExecutionContext* ctx, EvalContext eval_ctx)
 
 // EvaluatorResult evaluate(ASTNode* node);// old function (for compatibility)
 
 // width e alignment
-//ExecutionContext* execution_ctx_create(SymbolTable* symbols);
+//ExecutionContext* execution_ctx_create(void);
 //void execution_ctx_destroy(ExecutionContext* ctx);
 //void evaluator_reset_format(ExecutionContext* ctx);
 
@@ -532,9 +534,7 @@ static int evaluate_print_stmt_with_format(ASTNode* node, ExecutionContext* ctx)
         // ======================================================
         // CASO NORMAL: Expressão (número, string, variável, etc)
         // ======================================================
-        EvaluatorResult result = evaluate_expr(item_node,
-                                              ctx->scope_stack->current_scope->symbols,
-                                              CTX_ANY);
+        EvaluatorResult result = evaluate_expr(item_node, ctx, CTX_ANY);
         if (result.type == RESULT_ERROR) {
             //printf("%s\n", result.error_message);
             return 0;
@@ -644,8 +644,8 @@ static int evaluate_print_stmt_with_format(ASTNode* node, ExecutionContext* ctx)
 
 // ==================================================================
 // FUNCOES PARA EXECUCAO (COM CONTEXTO)
+// Executa statements (retorna sucesso/erro) let x = 10, print x, if ...
 // ==================================================================
-
 static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
 {
     if (!node || !ctx) return 0;
@@ -657,119 +657,118 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
             ASTNode* target_node = node->data.assignment.target;
             ASTNode* value_node = node->data.assignment.value;
             
-            // Avalia o valor a ser atribuído
-            EvaluatorResult value_result = evaluate_expr(value_node,
-                                                         ctx->scope_stack->current_scope->symbols,
-                                                         CTX_ANY);
+            // Avalia o valor
+            EvaluatorResult value_result = evaluate_expr(value_node, ctx, CTX_ANY);
             
             if (value_result.type == RESULT_ERROR)
             {
-                if(has_evaluation_error)
-                {
-                    has_evaluation_error = 0;
-                    return 0;
-                }
-                create_error_result_fmt(node->line, node->column,value_result.error_message);
+                has_evaluation_error = 1;
+                printf("%s\n", value_result.error_message);
                 return 0;
             }
             
-            // CASO 1: Atribuição a variável simples (let x = 10)
+            // CASO 1: Atribuição a variável simples (x = 10)
             if (target_node->type == NODE_VARIABLE)
             {
                 const char* var_name = target_node->data.variable.var_name;
                 
-                // Armazena com base no tipo
-                if (value_result.type == RESULT_STRING) {
-                    if (!symbol_table_set_string(ctx->scope_stack->current_scope->symbols,
-                                                 var_name,
-                                                 value_result.value.string))
-                    {
-                        create_error_result_fmt(node->line, node->column,
-                            "Evaluator error: assigning string to '%s'", var_name);
-                        return 0;
-                    }
-                }
-                else if (value_result.type == RESULT_NUMBER) {
-                    if (!symbol_table_set_number(ctx->scope_stack->current_scope->symbols,
-                                                 var_name,
-                                                 value_result.value.number))
-                    {
-                        printf("execute_stmt_with_ctx(): Evaluator error: assigning number to '%s'\n", var_name);
-                        return 0;
-                    }
-                }
-                else if (value_result.type == RESULT_BOOL) {
-                    if (!symbol_table_set_bool(ctx->scope_stack->current_scope->symbols,
-                                               var_name,
-                                               value_result.value.boolean))
-                    {
-                        printf("execute_stmt_with_ctx(): Evaluator error: assigning boolean to '%s'\n", var_name);
-                        return 0;
-                    }
-                }
-                else if (value_result.type == RESULT_TEXT)
-                {  
-                    if (!symbol_table_set_text(ctx->scope_stack->current_scope->symbols,
-                                              var_name,
-                                              value_result.value.text))
-                    {
-                        printf(" execute_stmt_with_ctx(): Evaluator error: assigning Text to '%s'\n", var_name);
-                        return 0;
-                    }
-                }
-                else if (value_result.type == RESULT_ARRAY)
+                // USA scope_set_value() QUE PROCURA NOS ESCOPOS PAI!
+                if (!scope_set_value(ctx->scope_stack, var_name, value_result))
                 {
-                    if (!symbol_table_set_array(ctx->scope_stack->current_scope->symbols,
-                                                var_name,
-                                                value_result.value.array))
-                    {
-                        printf("execute_stmt_with_ctx(): Evaluator error: assigning array to '%s'\n", var_name);
-                        return 0;
-                    }
+                    printf("Evaluator error: variable '%s' not declared. Use 'let %s = value'\n",
+                           var_name, var_name);
+                    return 0;
                 }
                 
                 return 1;
             }
             
-            // CASO 2: Atribuição a elemento de array (let arr[i] = x)
+            // CASO 2: Atribuição a elemento de array (arr[i] = x)
             else if (target_node->type == NODE_ARRAY_INDEX)
             {
-                // Avalia array
-                EvaluatorResult arr_result = evaluate_expr(target_node->data.array_index.array,
-                                                           ctx->scope_stack->current_scope->symbols,
-                                                           CTX_ANY);
+                // Avalia o array (pode ser aninhado: arr[i][j])
+                ASTNode* array_node = target_node->data.array_index.array;
+                ASTNode* index_node = target_node->data.array_index.index;
                 
-                if (arr_result.type != RESULT_ARRAY) {
-                    printf("execute_stmt_with_ctx(): Evaluator error: array index target must be an array\n");
-                    return 0;
-                }
-                
-                // Avalia índice
-                EvaluatorResult index_result = evaluate_expr(target_node->data.array_index.index,
-                                                             ctx->scope_stack->current_scope->symbols,
-                                                             CTX_ANY);
-                
-                if (index_result.type != RESULT_NUMBER) {
-                    printf("execute_stmt_with_ctx(): Evaluator error: array index must be a number\n");
-                    return 0;
-                }
-                
-                // Chama set() para atribuir ao elemento
-                EvaluatorResult args[] = {arr_result, index_result, value_result};
-                EvaluatorResult set_result = builtin_set(args, 3, target_node->line, target_node->column);
-                
-                if (set_result.type == RESULT_ERROR)
+                // Avalia o índice
+                EvaluatorResult index_result = evaluate_expr(index_node, ctx, CTX_NUMBER);
+                if (index_result.type == RESULT_ERROR)
                 {
-                    printf("execute_stmt_with_ctx(): %s\n", set_result.error_message);
+                    has_evaluation_error = 1;
+                    printf("%s\n", index_result.error_message);
                     return 0;
                 }
                 
-                return 1;
+                int index = (int)index_result.value.number;
+                
+                // Se array_node é NODE_VARIABLE, é um array simples
+                if (array_node->type == NODE_VARIABLE)
+                {
+                    const char* array_name = array_node->data.variable.var_name;
+                    
+                    // Procura o array nos escopos (atual → pai → global)
+                    Array* array = NULL;
+                    if (!scope_get_array(ctx->scope_stack, array_name, &array))
+                    {
+                        printf("Evaluator error: array '%s' not declared. Use 'let %s = array(size)'\n",
+                               array_name, array_name);
+                        return 0;
+                    }
+                    
+                    // Verifica se o índice é válido
+                    if (index < 0 || index >= array->size)
+                    {
+                        printf("Evaluator error: array index out of bounds (index=%d, size=%d)\n", 
+                               index, array->size);
+                        return 0;
+                    }
+                    
+                    // Atualiza o elemento do array
+                    if (!array_set(array, index, &value_result.value))
+                    {
+                        printf("Evaluator error: failed to set array element\n");
+                        return 0;
+                    }
+                    
+                    return 1;
+                }
+                
+                // Se array_node é NODE_ARRAY_INDEX, é um array aninhado (arr[i][j])
+                else if (array_node->type == NODE_ARRAY_INDEX)
+                {
+                    // Avalia recursivamente o array aninhado
+                    EvaluatorResult array_result = evaluate_expr(array_node, ctx, CTX_ANY);
+                    if (array_result.type == RESULT_ERROR)
+                    {
+                        has_evaluation_error = 1;
+                        printf("%s\n", array_result.error_message);
+                        return 0;
+                    }
+                    
+                    Array* array = array_result.value.array;
+                    
+                    // Verifica se o índice é válido
+                    if (index < 0 || index >= array->size)
+                    {
+                        printf("Evaluator error: array index out of bounds (index=%d, size=%d)\n", 
+                               index, array->size);
+                        return 0;
+                    }
+                    
+                    // Atualiza o elemento do array
+                    if (!array_set(array, index, &value_result.value))
+                    {
+                        printf("Evaluator error: failed to set array element\n");
+                        return 0;
+                    }
+                    
+                    return 1;
+                }
             }
             
-            printf("execute_stmt_with_ctx(): Evaluator error: invalid assignment target\n");
+            printf("Evaluator error: invalid assignment target\n");
             return 0;
-        }
+        } // Fim do  case NODE_ASSIGNMENT:
             
         case NODE_BOOL:
         case NODE_NUMBER:
@@ -779,7 +778,7 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
         {
             // Avalia para exibição (qualquer tipo)
             EvaluatorResult result = evaluate_expr(node,
-                                                   ctx->scope_stack->current_scope->symbols,
+                                                   ctx,
                                                    CTX_ANY);
             if (result.type == RESULT_ERROR)
             {
@@ -809,7 +808,7 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
                 }
                 return 1;
             }
-        }
+        } // Fim do case NODE_VARIABLE:
             
         case NODE_STRING:
         {
@@ -846,7 +845,7 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
         {
             // Avalia expressão lógica/de comparação
             EvaluatorResult result = evaluate_expr(node,
-                                                   ctx->scope_stack->current_scope->symbols,
+                                                   ctx,
                                                    CTX_ANY);
             
             if (result.type == RESULT_ERROR)
@@ -880,7 +879,7 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
                 }
                 return 1;
             }
-        }
+        } //Fim do case NODE_NOT_LOGICAL_OP:
 
         case NODE_IF:
             return execute_if_stmt_with_ctx(node, ctx);
@@ -933,7 +932,7 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
             }
             
             return 1;
-        }
+        } // Fim do case NODE_IMPORT:
 
         case NODE_LOAD:  
         {
@@ -953,7 +952,7 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
         {
             // Avalia a chamada de função como statement (descarta resultado)
             EvaluatorResult result = evaluate_expr(node,
-                                                   ctx->scope_stack->current_scope->symbols,
+                                                   ctx,
                                                    CTX_ANY);
             
             if (result.type == RESULT_ERROR)
@@ -967,12 +966,175 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
             return 1;
         }
 
+        case NODE_LET:
+        {
+            ASTNode* target_node = node->data.let_stmt.target;
+            ASTNode* value_node = node->data.let_stmt.value;
+            
+            // Avalia a expressão
+            EvaluatorResult value_result = evaluate_expr(value_node, ctx, CTX_ANY);
+            
+            if (value_result.type == RESULT_ERROR)
+            {
+                has_evaluation_error = 1;
+                printf("%s\n", value_result.error_message);
+                return 0;
+            }
+            
+            // Cria variável no escopo ATUAL (não procura nos escopos pai)
+            SymbolTable* current_symbols = scope_get_symbols(ctx->scope_stack);
+            if (!current_symbols)
+            {
+                printf("Evaluator error: no current scope\n");
+                return 0;
+            }
+            
+            // CASO 1: LET simples (let x = v)
+            if (target_node->type == NODE_VARIABLE)
+            {
+                const char* var_name = target_node->data.variable.var_name;
+                
+                switch (value_result.type)
+                {
+                    case RESULT_NUMBER:
+                        if (!symbol_table_set_number(current_symbols, var_name, value_result.value.number))
+                        {
+                            printf("Evaluator error: failed to create variable '%s'\n", var_name);
+                            return 0;
+                        }
+                        break;
+                    
+                    case RESULT_STRING:
+                        if (!symbol_table_set_string(current_symbols, var_name, value_result.value.string))
+                        {
+                            printf("Evaluator error: failed to create variable '%s'\n", var_name);
+                            return 0;
+                        }
+                        break;
+                    
+                    case RESULT_BOOL:
+                        if (!symbol_table_set_bool(current_symbols, var_name, value_result.value.boolean))
+                        {
+                            printf("Evaluator error: failed to create variable '%s'\n", var_name);
+                            return 0;
+                        }
+                        break;
+                    
+                    case RESULT_TEXT:
+                        if (!symbol_table_set_text(current_symbols, var_name, value_result.value.text))
+                        {
+                            printf("Evaluator error: failed to create variable '%s'\n", var_name);
+                            return 0;
+                        }
+                        break;
+                    
+                    case RESULT_ARRAY:
+                        if (!symbol_table_set_array(current_symbols, var_name, value_result.value.array))
+                        {
+                            printf("Evaluator error: failed to create variable '%s'\n", var_name);
+                            return 0;
+                        }
+                        break;
+                    
+                    default:
+                        printf("Evaluator error: invalid value type for variable '%s'\n", var_name);
+                        return 0;
+                }
+                
+                return 1;
+            }
+            
+            // CASO 2: LET com array (let arr[i] = v)
+            else if (target_node->type == NODE_ARRAY_INDEX)
+            {
+                // Avalia o array (pode ser aninhado: arr[i][j])
+                ASTNode* array_node = target_node->data.array_index.array;
+                ASTNode* index_node = target_node->data.array_index.index;
+                
+                // Avalia o índice
+                EvaluatorResult index_result = evaluate_expr(index_node, ctx, CTX_NUMBER);
+                if (index_result.type == RESULT_ERROR)
+                {
+                    has_evaluation_error = 1;
+                    printf("%s\n", index_result.error_message);
+                    return 0;
+                }
+                
+                int index = (int)index_result.value.number;
+                
+                // Se array_node é NODE_VARIABLE, é um array simples
+                if (array_node->type == NODE_VARIABLE)
+                {
+                    const char* array_name = array_node->data.variable.var_name;
+                    
+                    // Procura o array no escopo ATUAL (para LET, não procura nos escopos pai)
+                    Array* array = NULL;
+                    if (!symbol_table_get_array(current_symbols, array_name, &array))
+                    {
+                        printf("Evaluator error: array '%s' not found in current scope\n", array_name);
+                        return 0;
+                    }
+                    
+                    // Verifica se o índice é válido
+                    if (index < 0 || index >= array->size)
+                    {
+                        printf("Evaluator error: array index out of bounds (index=%d, size=%d)\n", 
+                               index, array->size);
+                        return 0;
+                    }
+                    
+                    // Atualiza o elemento do array
+                    if (!array_set(array, index, &value_result.value))
+                    {
+                        printf("Evaluator error: failed to set array element\n");
+                        return 0;
+                    }
+                    
+                    return 1;
+                }
+                
+                // Se array_node é NODE_ARRAY_INDEX, é um array aninhado (arr[i][j])
+                else if (array_node->type == NODE_ARRAY_INDEX)
+                {
+                    // Avalia recursivamente o array aninhado
+                    EvaluatorResult array_result = evaluate_expr(array_node, ctx, CTX_ANY);
+                    if (array_result.type == RESULT_ERROR)
+                    {
+                        has_evaluation_error = 1;
+                        printf("%s\n", array_result.error_message);
+                        return 0;
+                    }
+                    
+                    Array* array = array_result.value.array;
+                    
+                    // Verifica se o índice é válido
+                    if (index < 0 || index >= array->size)
+                    {
+                        printf("Evaluator error: array index out of bounds (index=%d, size=%d)\n", 
+                               index, array->size);
+                        return 0;
+                    }
+                    
+                    // Atualiza o elemento do array
+                    if (!array_set(array, index, &value_result.value))
+                    {
+                        printf("Evaluator error: failed to set array element\n");
+                        return 0;
+                    }
+                    
+                    return 1;
+                }
+            }
+            
+            printf("Evaluator error: invalid LET target\n");
+            return 0;
+        } // Fim do case NODE_LET:
             
         default:
             printf("Evaluator error: unsupported statement type: %d\n", node->type);
             return 0;
-    }
-}
+    } // Fim do switch (node->type)
+} // Fim de execute_stmt_with_ctx()
 
 static int execute_stmt_list_with_ctx(ASTNode* node, ExecutionContext* ctx)
 {
@@ -1013,7 +1175,7 @@ static int execute_if_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
     // Evaluate condition
     EvaluatorResult cond_result = evaluate_expr(
                                   node->data.if_stmt.condition,
-                                  scope_get_symbols(ctx->scope_stack), 
+                                  ctx, 
                                   CTX_BOOL);
     
     if (cond_result.type == RESULT_ERROR)
@@ -1023,14 +1185,19 @@ static int execute_if_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
         return 0;
     }
     
+    int result=  0;
+
     // Execute ramo apropriado
     if (cond_result.value.boolean)
     {
         // Cria novo escopo
         scope_push(ctx->scope_stack);
+
         // Executa ramo THEN 
-        return execute_stmt_with_ctx(node->data.if_stmt.then_body, ctx);
-        // Ao sair do escopo libera variáveis locais
+        result = execute_stmt_with_ctx(node->data.if_stmt.then_body, ctx);
+
+        // Libera escopo
+        scope_pop(ctx->scope_stack);
     }
     else if (node->data.if_stmt.else_body)
     {
@@ -1038,12 +1205,18 @@ static int execute_if_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
 
         // Cria novo escopo
         scope_push(ctx->scope_stack);
-        return execute_stmt_with_ctx(node->data.if_stmt.else_body, ctx);
-        // Ao sair do escopo libera variáveis locais
+
+        result = execute_stmt_with_ctx(node->data.if_stmt.else_body, ctx);
+
+        // Libera escopo
+        scope_pop(ctx->scope_stack);
+    }
+    else
+    {
+        result = 1; // Sem ramo ELSE, apenas retorna sucesso
     }
     
-    // No else body, just return success
-    return 1;
+    return result;
 }
 
 static int execute_while_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
@@ -1055,19 +1228,23 @@ static int execute_while_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
     
     ASTNode* condition = node->data.while_stmt.condition;
     ASTNode* body = node->data.while_stmt.body;
+
+    // Cria novo escopo para o while
+    scope_push(ctx->scope_stack);
     
     // Loop enquanto condição for verdadeira
     while (1)
     {
         // Avalia condição
         EvaluatorResult cond_result = evaluate_expr(condition,
-                                                    scope_get_symbols(ctx->scope_stack),
+                                                    ctx,
                                                     CTX_BOOL);
         
         if (cond_result.type == RESULT_ERROR)
         {
             has_evaluation_error = 1;
             printf("%s\n", cond_result.error_message);
+            scope_pop(ctx->scope_stack);  // ← LIBERA ANTES DE SAIR!
             return 0;
         }
         
@@ -1077,19 +1254,21 @@ static int execute_while_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
             break;
         }
 
-        // Cria novo escopo para cada iteração
+        // Cria escopo para cada iteração
         scope_push(ctx->scope_stack);
         
         // Executa body
         int success = execute_stmt_with_ctx(body, ctx);
+
+        // Libera escopo da iteração
+        scope_pop(ctx->scope_stack);
+
         if (!success)
         {
+            scope_pop(ctx->scope_stack);  // Libera escopo do WHILE
             return 0;
         }
 
-        // Ao sair do escopo libera variáveis locais da iteração
-        scope_pop(ctx->scope_stack);
-        
         // Verifica se deve sair do loop (break)
         if (ctx->should_break)
         {
@@ -1105,6 +1284,7 @@ static int execute_while_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
         }
     }
     
+    scope_pop(ctx->scope_stack);  // Libera escopo do WHILE
     return 1;
 }
 
@@ -1118,12 +1298,11 @@ static int execute_for_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
 
     ForStatementData* for_stmt = &node->data.for_stmt;
 
-    SymbolTable* symbols = scope_get_symbols(ctx->scope_stack);
-
+    //SymbolTable* symbols = scope_get_symbols(ctx->scope_stack);
     
     // Avalia o valor inicial
     EvaluatorResult init_result = evaluate_expr(for_stmt->init_value,
-                                                symbols,
+                                                ctx,
                                                 CTX_NUMBER);
     if (init_result.type == RESULT_ERROR)
     {
@@ -1135,7 +1314,7 @@ static int execute_for_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
 
     // Avalia o valor final
     EvaluatorResult end_result = evaluate_expr(for_stmt->end_value,
-                                               symbols,
+                                               ctx,
                                                CTX_NUMBER);
     if (end_result.type == RESULT_ERROR)
     {
@@ -1150,7 +1329,7 @@ static int execute_for_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
     if (for_stmt->step_value)
     {
         EvaluatorResult step_result = evaluate_expr(for_stmt->step_value,
-                                                    symbols,
+                                                    ctx,
                                                     CTX_NUMBER);
         if (step_result.type == RESULT_ERROR)
         {
@@ -1168,6 +1347,12 @@ static int execute_for_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
         }
     }
 
+    // Cria novo escopo para o for
+    scope_push(ctx->scope_stack);    
+
+    // Pega a tabela de símbolos do novo escopo
+    SymbolTable* symbols = scope_get_symbols(ctx->scope_stack);
+
     // Executa o loop
     // Determina a direção do loop (crescente ou decrescente)
     int ascending = (step_value > 0);
@@ -1184,17 +1369,20 @@ static int execute_for_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
             return 0;
         }
 
-        // Cria novo escopo para cada iteração
+        // Cria novo escopo para cada iteração (para variáveis locais)
         scope_push(ctx->scope_stack);
 
         // Executa o corpo do loop
         int success = execute_stmt_list_with_ctx(for_stmt->body, ctx);
-        if (!success) {
-            return 0;  
-        }
 
         // Ao sair do escopo libera variáveis locais da iteração
-        scope_pop(ctx->scope_stack);        
+        scope_pop(ctx->scope_stack);   
+
+        if (!success)
+        {
+            scope_pop(ctx->scope_stack);  // Libera escopo do for antes de retornar
+            return 0;  
+        }     
 
         // Verifica se deve sair do loop (break)
         if (ctx->should_break)
@@ -1211,14 +1399,17 @@ static int execute_for_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
         }
     }
 
+    // Libera escopo do for
+    scope_pop(ctx->scope_stack);
+
     return 1;  
 }
 
-static EvaluatorResult execute_load_node(ASTNode* node, SymbolTable* symbols)
+static EvaluatorResult execute_load_node(ASTNode* node, ExecutionContext* ctx)
 {
     // Avalia a expressão para obter o nome do arquivo
     EvaluatorResult filename_result = evaluate_expr(
-        node->data.load_expr.filename_expr, symbols, CTX_STRING);
+        node->data.load_expr.filename_expr, ctx, CTX_STRING);
     
     if (filename_result.type == RESULT_ERROR)
     {
@@ -1252,7 +1443,7 @@ static int execute_save_node(ASTNode* node, ExecutionContext* ctx)
 {
     // Avalia a expressão que deve retornar um Text
     EvaluatorResult text_result = evaluate_expr(node->data.save_stmt.expression,
-                                                ctx->scope_stack->current_scope->symbols,
+                                                ctx,
                                                 CTX_ANY);
     
     if (text_result.type == RESULT_ERROR)
@@ -1290,12 +1481,12 @@ static int execute_save_node(ASTNode* node, ExecutionContext* ctx)
 // ==================================================================
 // EVALUATE PROGRAM - FUNÇÃO PRINCIPAL PARA AVALIAR UM PROGRAMA COMPLETO
 // ==================================================================
-int evaluate_program(ASTNode* node, SymbolTable* symbols)
+int evaluate_program(ASTNode* node)
 {
-    if (!node || !symbols) return 0;
+    if (!node) return 0;
     
     // Cria contexto para a execução
-    ExecutionContext* ctx = execution_ctx_create(symbols);
+    ExecutionContext* ctx = execution_ctx_create();
     if (!ctx) return 0;
     
     int result;
@@ -1315,8 +1506,9 @@ int evaluate_program(ASTNode* node, SymbolTable* symbols)
 
 // ==================================================================
 // EVALUATE EXPRESSIONS (COM CONTEXTO)
+// Avalia expressões (retorna valor) x + 10, arr[i], func()
 // ==================================================================
-EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext ctx)
+EvaluatorResult evaluate_expr(ASTNode* node, ExecutionContext* ctx, EvalContext eval_ctx)
 {
     if (node == NULL)
     {
@@ -1324,11 +1516,12 @@ EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext c
     }
     
     switch (node->type)
+
     {
 
         case NODE_BOOL:
         {
-            if (ctx == CTX_STRING)
+            if (eval_ctx == CTX_STRING)
             {
                 return create_error_result_fmt(node->line, node->column,
                      "Evaluator error: boolean cannot be used as string");
@@ -1339,7 +1532,7 @@ EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext c
 
         case NODE_NUMBER:
         {
-            if (ctx == CTX_STRING)
+            if (eval_ctx == CTX_STRING)
             {
                 return create_error_result_fmt(node->line, node->column,
                      "Evaluator error: number cannot be used as string");
@@ -1351,20 +1544,14 @@ EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext c
         case NODE_VARIABLE:
         {
             const char* var_name = node->data.variable.var_name;
-            
-            // Check if exists
-            if (!symbol_table_exists(symbols, var_name))
-            {
-                return create_error_result_fmt(node->line, node->column,
-                     "Evaluator error: variable '%s' not declared. Use 'let %s = value'", 
-                     var_name, var_name);
-            }
-            
-            // Try as number
+
+            // Procura var_name em todos os escopos
+
+            // Tenta como numero
             double num_value;
-            if (symbol_table_get_number(symbols, var_name, &num_value))
+            if (scope_get_number(ctx->scope_stack, var_name, &num_value))
             {
-                if (ctx == CTX_STRING)
+                if (eval_ctx == CTX_STRING)
                 {
                     return create_error_result_fmt(node->line, node->column,
                          "Evaluator error: variable '%s' is a number, cannot be used as string", 
@@ -1373,11 +1560,11 @@ EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext c
                 return create_success_result_number(num_value, node->line, node->column);
             }
             
-            // Try as string
+            // Tenta como string
             char str_value[STRING_SIZE];
-            if (symbol_table_get_string(symbols, var_name, str_value, sizeof(str_value)))
+            if (scope_get_string(ctx->scope_stack, var_name, str_value, sizeof(str_value)))
             {
-                if (ctx == CTX_NUMBER)
+                if (eval_ctx == CTX_NUMBER)
                 {
                     return create_error_result_fmt(node->line, node->column,
                          "Evaluator error: variable '%s' is a string, cannot be used in mathematical operation", 
@@ -1386,17 +1573,17 @@ EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext c
                 return create_success_result_string(str_value, node->line, node->column);
             }
 
-            // Try as boolean
+            // Tenta como boolean
             int bool_value;
-            if (symbol_table_get_bool(symbols, var_name, &bool_value))
+            if (scope_get_bool(ctx->scope_stack, var_name, &bool_value))
             {
-                if (ctx == CTX_NUMBER)
+                if (eval_ctx == CTX_NUMBER)
                 {
                     return create_error_result_fmt(node->line, node->column,
                          "Evaluator error: variable '%s' is a boolean, cannot be used in mathematical operation", 
                          var_name);
                 }
-                if (ctx == CTX_STRING)
+                if (eval_ctx == CTX_STRING)
                 {
                     return create_error_result_fmt(node->line, node->column,
                          "Evaluator error: variable '%s' is a boolean, cannot be used as string", 
@@ -1405,17 +1592,17 @@ EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext c
                 return create_success_result_bool(bool_value, node->line, node->column);
             }
 
-            // Try as text
+            // Tenta como text
             Text* text_value;
-            if (symbol_table_get_text(symbols, var_name, &text_value))
+            if (scope_get_text(ctx->scope_stack, var_name, &text_value))
             {
-                if (ctx == CTX_NUMBER)
+                if (eval_ctx == CTX_NUMBER)
                 {
                     return create_error_result_fmt(node->line, node->column,
                          "Evaluator error: variable '%s' is Text, cannot be used as number", 
                          var_name);
                 }
-                if (ctx == CTX_BOOL)
+                if (eval_ctx == CTX_BOOL)
                 {
                     return create_error_result_fmt(node->line, node->column,
                          "Evaluator error: variable '%s' is Text, cannot be used as boolean", 
@@ -1425,23 +1612,23 @@ EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext c
                 return create_success_result_text(text_value, node->line, node->column);
             } 
 
-            // Try as array
+            // Tenta como array
             Array* array_value;
-            if (symbol_table_get_array(symbols, var_name, &array_value))
+            if (scope_get_array(ctx->scope_stack, var_name, &array_value))
             {
-                if (ctx == CTX_NUMBER)
+                if (eval_ctx == CTX_NUMBER)
                 {
                     return create_error_result_fmt(node->line, node->column,
                          "Evaluator error: variable '%s' is an array, cannot be used as number", 
                          var_name);
                 }
-                if (ctx == CTX_BOOL)
+                if (eval_ctx == CTX_BOOL)
                 {
                     return create_error_result_fmt(node->line, node->column,
                          "Evaluator error: variable '%s' is an array, cannot be used as boolean", 
                          var_name);
                 }
-                if (ctx == CTX_STRING)
+                if (eval_ctx == CTX_STRING)
                 {
                     return create_error_result_fmt(node->line, node->column,
                          "Evaluator error: variable '%s' is an array, cannot be used as string", 
@@ -1451,27 +1638,32 @@ EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext c
                 return create_success_result_array(array_value, node->line, node->column);
             }
             
-            // Should not reach here
+            // Não deve chegar aqui
+            // Não encontrou em nenhum tipo
             return create_error_result_fmt(node->line, node->column,
-                 "Evaluator error: internal error: unknown variable type '%s'", var_name);
+                 "Evaluator error: unknown '%s' variable", var_name);
         }
             
         case NODE_BINARY_OP:
         {
             // Binary operations always expect numbers (for now)
-            if (ctx == CTX_STRING)
+            if (eval_ctx == CTX_STRING)
             {
                 return create_error_result_fmt(node->line, node->column,
                      "Evaluator error: mathematical operation cannot be used as string");
             }
             
             // Evaluate operands in number context
-            EvaluatorResult left_result = evaluate_expr(
-                node->data.binaryop.left, symbols, CTX_NUMBER);
+            EvaluatorResult left_result = evaluate_expr(node->data.binaryop.left,
+                                                        ctx,
+                                                        CTX_NUMBER);
+
             if (left_result.type == RESULT_ERROR) return left_result;
             
-            EvaluatorResult right_result = evaluate_expr(
-                node->data.binaryop.right, symbols, CTX_NUMBER);
+            EvaluatorResult right_result = evaluate_expr(node->data.binaryop.right,
+                                                         ctx,
+                                                         CTX_NUMBER);
+
             if (right_result.type == RESULT_ERROR) return right_result;
             
             // Both must be numbers
@@ -1519,14 +1711,16 @@ EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext c
         case NODE_UNARY_OP:
         {
             // Unary operations always expect numbers
-            if (ctx == CTX_STRING)
+            if (eval_ctx == CTX_STRING)
             {
                 return create_error_result_fmt(node->line, node->column,
                      "Evaluator error: unary operator cannot be applied to string");
             }
             
-            EvaluatorResult operand_result = evaluate_expr(
-                node->data.unaryop.operand, symbols, CTX_NUMBER);
+            EvaluatorResult operand_result = evaluate_expr(node->data.unaryop.operand,
+                                                           ctx,
+                                                           CTX_NUMBER);
+
             if (operand_result.type == RESULT_ERROR)  return operand_result;
             
             if (operand_result.type == RESULT_STRING )
@@ -1554,7 +1748,7 @@ EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext c
             
         case NODE_STRING:
         {
-            if (ctx == CTX_NUMBER)
+            if (eval_ctx == CTX_NUMBER)
             {
                 return create_error_result_fmt(node->line, node->column,
                      "Evaluator error: string cannot be used as number");
@@ -1573,13 +1767,17 @@ EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext c
             // Resultado é sempre booleano
             
             // Avalia lado esquerdo (pode ser número ou booleano)
-            EvaluatorResult left_result = evaluate_expr(
-                node->data.logicalop.left, symbols, CTX_ANY);
+            EvaluatorResult left_result = evaluate_expr(node->data.logicalop.left,
+                                                        ctx,
+                                                        CTX_ANY);
+
             if (left_result.type == RESULT_ERROR) return left_result;
             
             // Avalia lado direito (pode ser número ou booleano)
-            EvaluatorResult right_result = evaluate_expr(
-                node->data.logicalop.right, symbols, CTX_ANY);
+            EvaluatorResult right_result = evaluate_expr(node->data.logicalop.right,
+                                                         ctx,
+                                                         CTX_ANY);
+
             if (right_result.type == RESULT_ERROR) return right_result;
             
             // Ambos devem ser do mesmo tipo (número ou booleano)
@@ -1664,8 +1862,10 @@ EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext c
             LogicalOperator op = node->data.logicalop.operator;
             
             // Avalia lado esquerdo (deve ser booleano)
-            EvaluatorResult left_result = evaluate_expr(
-                node->data.logicalop.left, symbols, CTX_BOOL);
+            EvaluatorResult left_result = evaluate_expr(node->data.logicalop.left,
+                                                        ctx,
+                                                        CTX_BOOL);
+
             if (left_result.type == RESULT_ERROR) return left_result;
             
             // Verifica se é booleano
@@ -1692,8 +1892,10 @@ EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext c
             }
             
             // Avalia lado direito (deve ser booleano)
-            EvaluatorResult right_result = evaluate_expr(
-                node->data.logicalop.right, symbols, CTX_BOOL);
+            EvaluatorResult right_result = evaluate_expr(node->data.logicalop.right,
+                                                         ctx,
+                                                         CTX_BOOL);
+
             if (right_result.type == RESULT_ERROR) return right_result;
             
             // Verifica se é booleano
@@ -1730,8 +1932,10 @@ EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext c
             // Resultado é sempre booleano
             
             // Avalia operando (deve ser booleano)
-            EvaluatorResult operand_result = evaluate_expr(
-                node->data.notop.operand, symbols, CTX_BOOL);
+            EvaluatorResult operand_result = evaluate_expr(node->data.notop.operand,
+                                                           ctx,
+                                                           CTX_BOOL);
+
             if (operand_result.type == RESULT_ERROR) return operand_result;
             
             // Verifica se é booleano
@@ -1750,7 +1954,7 @@ EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext c
         }
 
         case NODE_LOAD: 
-            return execute_load_node(node, symbols);
+            return execute_load_node(node, ctx);
 
         case NODE_FUNCTION_CALL:
         {
@@ -1770,8 +1974,9 @@ EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext c
                 }
                 
                 // Avalia o argumento como string
-                EvaluatorResult arg_result = evaluate_expr(
-                    node->data.function_call.arguments[0], symbols, CTX_STRING);
+                EvaluatorResult arg_result = evaluate_expr(node->data.function_call.arguments[0],
+                                                           ctx,
+                                                           CTX_STRING);
                 
                 if (arg_result.type == RESULT_ERROR) return arg_result;
                 
@@ -1806,8 +2011,9 @@ EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext c
                 }
                 
                 // Avalia o argumento como número
-                EvaluatorResult arg_result = evaluate_expr(
-                    node->data.function_call.arguments[0], symbols, CTX_NUMBER);
+                EvaluatorResult arg_result = evaluate_expr(node->data.function_call.arguments[0],
+                                                           ctx,
+                                                           CTX_NUMBER);
                 
                 if (arg_result.type == RESULT_ERROR) return arg_result;
                 
@@ -1841,11 +2047,9 @@ EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext c
                     
                     for (int j = 0; j < node->data.function_call.arg_count; j++)
                     {
-                        args[j] = evaluate_expr(
-                            node->data.function_call.arguments[j],
-                            symbols,
-                            CTX_ANY
-                        );
+                        args[j] = evaluate_expr(node->data.function_call.arguments[j],
+                                                ctx,
+                                                CTX_ANY);
                         
                         if (args[j].type == RESULT_ERROR)
                         {
@@ -1875,8 +2079,9 @@ EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext c
         case NODE_ARRAY_INDEX:
         {
             // Avalia o array
-            EvaluatorResult arr_result = evaluate_expr(
-                node->data.array_index.array, symbols, CTX_ANY);
+            EvaluatorResult arr_result = evaluate_expr(node->data.array_index.array,
+                                                       ctx,
+                                                       CTX_ANY);
             
             if (arr_result.type == RESULT_ERROR)
             {
@@ -1884,8 +2089,9 @@ EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext c
             }
             
             // Avalia o índice
-            EvaluatorResult index_result = evaluate_expr(
-                node->data.array_index.index, symbols, CTX_ANY);
+            EvaluatorResult index_result = evaluate_expr(node->data.array_index.index,
+                                                         ctx,
+                                                         CTX_ANY);
             
             if (index_result.type == RESULT_ERROR)
             {
@@ -1901,23 +2107,7 @@ EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext c
             return create_error_result_fmt(node->line, node->column,
                  "Evaluator error: unsupported node type: %d", node->type);
     }
-}
-
-//===================================================================
-// OLD FUNCTION (FOR COMPATIBILITY)
-//===================================================================
-EvaluatorResult evaluate(ASTNode* node)
-{
-    SymbolTable* symbols = symbol_table_create();
-    if (!symbols)
-    {
-        return create_error_result("Evaluator error: could not create symbol table", 0, 0);
-    }
-    
-    EvaluatorResult result = evaluate_expr(node, symbols, CTX_ANY);
-    symbol_table_destroy(symbols);
-    return result;
-}
+} // Fim de evaluate_expr()
 
 //===================================================================
 // FUNCOES PARA GERENCIAMENTO DE MODULOS
@@ -2061,7 +2251,7 @@ static SymbolTable* module_manager_get_symbols(ModuleManager* manager,
 //===================================================================
 // FUNCOES PARA GERENCIAR CONTEXTO
 //===================================================================
-ExecutionContext* execution_ctx_create(SymbolTable* symbols)
+ExecutionContext* execution_ctx_create(void)
 {
     ExecutionContext* ctx = A89ALLOC(sizeof(ExecutionContext));
 
