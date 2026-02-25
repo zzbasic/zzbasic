@@ -40,7 +40,8 @@ typedef enum
     CTX_ANY,      // Qualquer tipo aceitável (para exibição: PRINT x)
     CTX_BOOL,     // Espera um booleano: true(1) ou false(0)
     CTX_NUMBER,   // Espera número (operações matemáticas: x + 5)
-    CTX_STRING    // Espera string (concatenação futura: "Olá " + nome)
+    CTX_STRING,    // Espera string (concatenação futura: "Olá " + nome)
+    CTX_ARRAY
 } EvalContext;
 
 // =================================================
@@ -112,15 +113,12 @@ execute_stmt():
                 return 0;
 
 ********************************************************************/
-int evaluate_program(ASTNode* node, SymbolTable* symbols);
+int evaluate_program(ASTNode* node);
 
-EvaluatorResult evaluate_expr(ASTNode* node, SymbolTable* symbols, EvalContext ctx);
-
-// Old function (for compatibility)
-EvaluatorResult evaluate(ASTNode* node);
+EvaluatorResult evaluate_expr(ASTNode* node, ExecutionContext* ctx, EvalContext eval_ctx);
 
 // width e alignment
-ExecutionContext* execution_ctx_create(SymbolTable* symbols);
+ExecutionContext* execution_ctx_create(void);
 void execution_ctx_destroy(ExecutionContext* ctx);
 void evaluator_reset_format(ExecutionContext* ctx);// Formatação
 
