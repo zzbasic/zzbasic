@@ -245,7 +245,7 @@ static void run_command(ReplProgram* program, SymbolTable* symbols)
     }
     else if (program->ast)
     {
-        evaluate_program(program->ast, symbols);
+        evaluate_program(program->ast);
     }
     else
     {
@@ -543,7 +543,7 @@ static void execute_code(const char* line, SymbolTable* symbols)
         return;
     }
 
-    evaluate_program(ast, symbols);
+    evaluate_program(ast);
     free_ast(ast);
 
     eval_src_ctx.source = NULL;
@@ -736,7 +736,7 @@ void run_file(const char* filename)
             exit(EXIT_FAILURE);
         }
 
-        evaluate_program(ast, symbols);
+        evaluate_program(ast);
         
         free_ast(ast);
         a89free(code);
