@@ -1,6 +1,6 @@
 # =====================================================================
 # ZzBasic - GRAMÁTICA v0.7.0 
-# Última atualização: 20260224
+# Última atualização: 20260225
 # =====================================================================
 
 # =====================================================================
@@ -12,7 +12,7 @@ statement_list      := statement (separator+ statement)*
 
 separator           := EOL 
 
-statement           := assignment_stmt
+statement           := let_stmt
                     | print_stmt
                     | color_stmt 
                     | import_stmt
@@ -23,13 +23,25 @@ statement           := assignment_stmt
                     | break_stmt
                     | continue_stmt
                     | save_stmt
+                    | assignment_stmt
                     | expression_stmt
 
 
 # =====================================================================
-# ASSIGNMENT
+# LET STATEMENT (Declaração - Cria nova variável)
 # =====================================================================
-assignment_stmt      := 'let' (IDENTIFIER | IDENTIFIER [expression]) '=' expression
+# Cria uma NOVA variável no escopo ATUAL
+# Se já existe no escopo atual, sobrescreve
+# Não procura nos escopos pai
+#
+# Exemplos:
+#   let x = 10
+#   let nome = "João"
+#   let arr = array(10)
+#
+# =====================================================================
+let_stmt            := 'let' IDENTIFIER '=' expression
+                    | 'let' IDENTIFIER '[' expression ']' ('[' expression ']')* '=' expression
 
 
 # =====================================================================
@@ -139,6 +151,23 @@ continue_stmt := 'continue' EOL
 # =====================================================================
 
 save_stmt := 'save' '(' expression ',' STRING ')'
+
+
+# =====================================================================
+# ASSIGNMENT STATEMENT (Atualização - Modifica variável existente)
+# =====================================================================
+# Atualiza uma variável EXISTENTE
+# Procura nos escopos (atual → pai → avô → global)
+# ERRO se não encontrar em nenhum escopo
+#
+# Exemplos:
+#   x = 20
+#   contador = contador + 1
+#   arr[i] = valor
+#
+# =====================================================================
+assignment_stmt     := IDENTIFIER '=' expression
+                    | IDENTIFIER '[' expression ']' ('[' expression ']')* '=' expression
 
 
 # =====================================================================
