@@ -43,6 +43,22 @@ typedef struct SymbolTable
 // PRIVATE HELPER FUNCTIONS (static)
 // ============================================
 
+int symbol_exists(SymbolTable* table, const char* name)
+{
+    if (!table || !name) return 0;
+    
+    Symbol* current = table->head;
+    while (current)
+    {
+        if (strcmp(current->name, name) == 0)
+        {
+            return 1;
+        }
+        current = current->next;
+    }
+    return 0;
+}
+
 Symbol* find_symbol(SymbolTable* table, const char* name)
 {
     if (!table || !name) return NULL;
