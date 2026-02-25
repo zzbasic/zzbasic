@@ -20,6 +20,7 @@ typedef enum
     NODE_VARIABLE,    
     NODE_BINARY_OP,         // operacao binaria (+, -, *, /)
     NODE_UNARY_OP,          // operacao unaria (+, -)
+    NODE_LET,
     NODE_ASSIGNMENT,        // atribuição  
     NODE_STATEMENT_LIST,
     NODE_PRINT,
@@ -125,8 +126,14 @@ typedef struct
 
 typedef struct
 {
-    ASTNode* target;  // NODE_VARIABLE ou NODE_ARRAY_INDEX
-    ASTNode* value;   // ASTNode que contém a expressão a ser atribuída
+    ASTNode* target; // NODE_VARIABLE ou NODE_ARRAY_INDEX  
+    ASTNode* value;  // ASTNode que contém a expressão a ser atribuída
+} LetStatementData;
+
+typedef struct
+{
+    ASTNode* target; // NODE_VARIABLE ou NODE_ARRAY_INDEX
+    ASTNode* value;  // ASTNode que contém a expressão a ser atribuída
 } AssignmentData;
 
 typedef struct
@@ -251,7 +258,8 @@ typedef struct ASTNode
         BinaryOpData            binaryop;
         UnaryOpData             unaryop;
         LogicalOpData           logicalop; 
-        NotOpData               notop;   
+        NotOpData               notop;
+        LetStatementData        let_stmt;   
         AssignmentData          assignment;
         StatementListData       stmt_list; 
         PrintStatementData      print_stmt; 
@@ -295,6 +303,9 @@ ASTNode* create_unary_op_node(char operator, ASTNode* operand,
 
 ASTNode* create_assignment_node(ASTNode* target, ASTNode* value, 
                                 int line, int column);
+
+ASTNode* create_let_node(ASTNode* target, ASTNode* value, 
+                         int line, int column);
 
 ASTNode* create_statement_list_node(int line, int column);
 
