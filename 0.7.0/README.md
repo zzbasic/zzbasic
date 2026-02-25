@@ -10,7 +10,7 @@
 [✅] Melhorado o sistema de detecção de keywords no comando LET
 
 [✅] Alterado o nome da função `wait()`, do modulo `utils`, para `zzwait()`, a fim de não conflitar com
-   a função wait() do Mac
+   a função `wait()` do Mac
 
 [✅]  `load()` agora pode receber uma string ou uma variável com o nome do arquivo a ser carregado
 
