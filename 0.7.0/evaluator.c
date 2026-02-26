@@ -14,6 +14,8 @@
 #include "result.h"
 #include "scope.h"
 
+//#include "debug.h"
+
 #define EPSILON 1e-12
 
 //===================================================================
@@ -715,18 +717,26 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
                         return 0;
                     }
                     
-                    // Verifica se o índice é válido
-                    if (index < 0 || index >= array->size)
+                    // Encapsula o array em um EvaluatorResult
+                    EvaluatorResult array_result = create_success_result_array(array, node->line, node->column);
+
+                    // Verifica se o índice é válido (maior ou igual a zero)
+                    // Para depois de zero não há problema porque o array é dinâmico
+                    if (index < 0 )
                     {
-                        printf("Evaluator error: array index out of bounds (index=%d, size=%d)\n", 
+                        printf("Evaluator error: array index out of bounds (index=%d)\n", 
                                index, array->size);
                         return 0;
                     }
                     
                     // Atualiza o elemento do array
-                    if (!array_set(array, index, &value_result.value))
+                    EvaluatorResult args[] = {array_result, index_result, value_result};
+
+                    EvaluatorResult set_result = builtin_set(args, 3, node->line, node->column);
+
+                    if (set_result.type == RESULT_ERROR)
                     {
-                        printf("Evaluator error: failed to set array element\n");
+                        printf("%s\n", set_result.error_message);
                         return 0;
                     }
                     
@@ -747,21 +757,26 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
                     
                     Array* array = array_result.value.array;
                     
-                    // Verifica se o índice é válido
-                    if (index < 0 || index >= array->size)
+                    // Verifica se o índice é válido (maior ou igual a zero)
+                    // Para depois de zero não há problema porque o array é dinâmico
+                    if (index < 0)
                     {
-                        printf("Evaluator error: array index out of bounds (index=%d, size=%d)\n", 
+                        printf("Evaluator error: array index out of bounds (index=%d)\n", 
                                index, array->size);
                         return 0;
                     }
                     
                     // Atualiza o elemento do array
-                    if (!array_set(array, index, &value_result.value))
+                    EvaluatorResult args[] = {array_result, index_result, value_result};
+
+                    EvaluatorResult set_result = builtin_set(args, 3, node->line, node->column);
+
+                    if (set_result.type == RESULT_ERROR)
                     {
-                        printf("Evaluator error: failed to set array element\n");
+                        printf("%s\n", set_result.error_message);
                         return 0;
                     }
-                    
+                                    
                     return 1;
                 }
             }
@@ -1074,19 +1089,27 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
                         printf("Evaluator error: array '%s' not found in current scope\n", array_name);
                         return 0;
                     }
+
+                    // Encapsula o array em um EvaluatorResult
+                    EvaluatorResult array_result = create_success_result_array(array, node->line, node->column);
                     
                     // Verifica se o índice é válido
-                    if (index < 0 || index >= array->size)
+                    // Não precisa verificar o limite positivo pois o array dinâmico
+                    if (index < 0)
                     {
-                        printf("Evaluator error: array index out of bounds (index=%d, size=%d)\n", 
+                        printf("Evaluator error: array index out of bounds (index=%d)\n", 
                                index, array->size);
                         return 0;
                     }
                     
                     // Atualiza o elemento do array
-                    if (!array_set(array, index, &value_result.value))
+                    EvaluatorResult args[] = {array_result, index_result, value_result};
+
+                    EvaluatorResult set_result = builtin_set(args, 3, node->line, node->column);
+
+                    if (set_result.type == RESULT_ERROR)
                     {
-                        printf("Evaluator error: failed to set array element\n");
+                        printf("%s\n", set_result.error_message);
                         return 0;
                     }
                     
@@ -1108,7 +1131,8 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
                     Array* array = array_result.value.array;
                     
                     // Verifica se o índice é válido
-                    if (index < 0 || index >= array->size)
+                    // Não precisa verificar limite positivo pois o array é dinâmico
+                    if (index < 0)
                     {
                         printf("Evaluator error: array index out of bounds (index=%d, size=%d)\n", 
                                index, array->size);
@@ -1116,9 +1140,13 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
                     }
                     
                     // Atualiza o elemento do array
-                    if (!array_set(array, index, &value_result.value))
+                    EvaluatorResult args[] = {array_result, index_result, value_result};
+
+                    EvaluatorResult set_result = builtin_set(args, 3, node->line, node->column);
+
+                    if (set_result.type == RESULT_ERROR)
                     {
-                        printf("Evaluator error: failed to set array element\n");
+                        printf("%s\n", set_result.error_message);
                         return 0;
                     }
                     
