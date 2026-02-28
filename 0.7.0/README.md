@@ -16,7 +16,7 @@
 
 [✅] Escopo global e local (esse foi brabo 😄😄😄)
 
-[✅] 8. Melhora na verificação de contexto nas operações e statements: agora context checking rigoroso
+[✅] Melhora na verificação de contexto nas operações e statements: agora context checking rigoroso
 
 [__] Text Pool 
 
