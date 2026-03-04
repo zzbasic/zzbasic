@@ -5,6 +5,7 @@
 #include <string.h>
 #include <limits.h>  // UINT_MAX
 
+#include "color.h"
 #include "a89alloc.h"
 
 typedef struct {
@@ -26,11 +27,16 @@ void* a89alloc(size_t size, const char* file, int line)
     // Validação 1: Verificar limite de alocações
     if (total_allocations >= MAX_ALLOCATIONS)
     {
+        a89report_alloc();
         // ERRO FATAL - limite atingido
         fprintf(stderr,
-                "ERRO FATAL: Limite máximo de alocações (%d) atingido!\n"
-                "Para aumentar o limite, edite MAX_ALLOCATIONS em a89alloc.h\n",
-                MAX_ALLOCATIONS);
+                "%sERRO FATAL: Limite máximo de alocações (%d) atingido!\n"
+                "%sPara aumentar o limite, edite MAX_ALLOCATIONS em a89alloc.h%s\n",
+                COLOR_ERROR,
+                MAX_ALLOCATIONS,
+                COLOR_WARNING,
+                COLOR_RESET);
+
         exit(EXIT_FAILURE);
     }
     
@@ -105,8 +111,8 @@ realloc() falha             Retorna NULL                Registro inalterado
 void* a89realloc(void* ptr, size_t new_size, const char* file, int line)
 {
     #ifdef DEBUG
-    static conta_realloc = 1;
-    printf("a89reallolc chamada %d vezesz\n", conta_realloc++);
+    static int conta_realloc = 1;
+    printf("a89reallolc chamada %d vezes\n", conta_realloc++);
     #endif
 
     // Caso 1: realloc(NULL, size) = malloc(size)
@@ -200,12 +206,6 @@ void* a89realloc(void* ptr, size_t new_size, const char* file, int line)
 }
 
 void a89free(void* ptr) {
-
-    #ifdef DEBUG
-    static conta_free = 1;
-    printf("a89free chamada %d vezesz\n", conta_free++);
-    #endif
-
     //================================================
     // Validação: ponteiro NULL é válido (comportamento padrão do free)
     if (ptr == NULL) {
