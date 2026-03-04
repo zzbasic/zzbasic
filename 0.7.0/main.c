@@ -56,9 +56,6 @@ int main(int argc, char* argv[])
         }
         fclose(test);
         
-        //printf("ZzBasic v%s on %s\n", ZZ_VERSION, get_os_name());
-        //printf("Executing: %s\n", filename);
-
         run_file(filename);  
     }
     else
