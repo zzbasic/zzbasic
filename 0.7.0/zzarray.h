@@ -57,5 +57,25 @@ int array_capacity(const Array* array);
 // Verifica se array está vazio
 int array_is_empty(const Array* array);
 
+// Compara dois arrays
+// Retorna: 1 se iguais, 0 se diferentes
+// 
+// Semântica:
+// - NULL  == NULL   1 (ambos não existem, são iguais)
+// - NULL  == array  0 (um existe, outro não)
+// - array == NULL   0 (um existe, outro não)
+// - array == array  compara conteúdo
+int array_equals(Array* arr1, Array* arr2);
+
+// Troca dois elementos de posição
+// Retorna: 1 se sucesso, 0 se erro
+int array_swap(Array* array, int i, int j);
+
+// Ordena array em ordem crescente
+int array_sort(Array* array);
+
+// Ordena array em ordem decrescente
+int array_rsort(Array* array);
+
 #endif
 // Fim de zzarray.h
