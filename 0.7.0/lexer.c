@@ -146,7 +146,9 @@ static const char* TOKEN_STRINGS[] =
     "LBRACKET",         // TOKEN_LBRACKET
     "RBRACKET",         // TOKEN_RBRACKET
 
-    "NOERROR"           // TOKEN_NOERROR
+    "EMPTY",            // TOKEN_EMPTY
+
+    "NOERROR"          // TOKEN_NOERROR
 };
 
 const char* token_type_to_string(TokenType type)
@@ -225,10 +227,49 @@ Keyword keywords[] =
     {"load", TOKEN_LOAD},          
     {"save", TOKEN_SAVE},
 
+    {"empty", TOKEN_EMPTY},
+
     {NULL, TOKEN_NULL}
 };
 
 int keywords_size = sizeof(keywords) / sizeof(keywords[0]);
+
+// ==================================================================
+// Tabela de funções built-in reservadas
+// ==================================================================
+static const char* functions_builtin[] = {
+    "array",
+    "push",
+    "pop",
+    "len",
+    "is_empty",
+    "get",
+    "set",
+    "insert",
+    "remove", 
+    "swap",
+    "sort",
+    "rsort",
+    "text",
+    "input",
+    "zzwait",
+    "load",
+    "save",
+    NULL
+};
+
+// ==================================================================
+// Função para verificar se é função reservada
+// ==================================================================
+static int is_builtin_function(const char* lexeme)
+{
+    for (int i = 0; functions_builtin[i] != NULL; i++)
+    {
+        if (strcmp(lexeme, functions_builtin[i]) == 0 )
+            return 1;
+    }
+    return 0;
+}
 
 // ============================================
 // Implementation of Private Functions
@@ -573,7 +614,27 @@ static Token lexer_read_identifier(Lexer* lexer)
     Token token;
     memset(&token, 0, sizeof(token));
 
-    // Check keywords
+    // Verifica se é função reservada
+    if (is_builtin_function(buffer))
+    {
+        if(isspace(lexer_peek_next(lexer)))
+        {
+            lexer_skip_whitespace(lexer);
+        }
+
+        if(lexer->current_char == '=')
+        {
+
+        return lexer_report_error(lexer,
+                                  id_line,
+                                  id_column,
+                                  "Lexer error: '%s' is a reserved function name, cannot use as variable",
+                                  buffer);
+        }
+    }
+
+
+    // Verifica se é palavra-chave da linguagem ZzBasic
     TokenType token_type = check_keyword(buffer);
     if (token_type != TOKEN_NULL)
     {
@@ -581,7 +642,7 @@ static Token lexer_read_identifier(Lexer* lexer)
         strcpy(token.token_text, buffer);
         strcpy(token.value.string, buffer);
     }
-    //================ SE CHEGOU AQUI NÃO É PALAVRA-CHAVE ==========================
+    //===== SE CHEGOU AQUI NÃO É PALAVRA-CHAVE NEM NOME DE FUNÇÃO BUILTIN =====
     else
     {
         token.type = TOKEN_IDENTIFIER;
@@ -1023,7 +1084,7 @@ int main()
     
     printf("ZzBasic Lexer Test v0.6.0 \n\n");
 
-    lexer_print_all_tokens("arr[0] = 100\nprint arr[0] nl\n");
+    lexer_print_all_tokens("arr[0] = empty\nprint arr[0] nl\n");
 
     return 0;
 }
