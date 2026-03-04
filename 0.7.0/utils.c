@@ -5,6 +5,8 @@
 #include "utils.h"
 #include "color.h"
 
+//#include "debug.h"
+
 // UTF-8 setup for Windows
 #ifdef _WIN32
 #include <windows.h>
@@ -121,6 +123,20 @@ void display_error_location(const char* source, int source_size, int line, int c
     // ETAPA 6: Imprimir a seta apontando
     // ========================================
     fprintf(stderr, "%s↑%s\n", COLOR_ERROR, COLOR_RESET);
+}
+
+// Compara duas strings. Retorna: 1 se iguais, 0 se diferentes
+// Usada para comparar string e Text
+int string_equals(const char* str1, const char* str2)
+{
+    // Se ambos são NULL, são considerados iguais
+    if (!str1 && !str2) return 1;
+    
+    // Se um é NULL e o outro não, são diferentes
+    if (!str1 || !str2) return 0;
+
+    // Ambos não NULL: compara com strcmp
+    return (strcmp(str1, str2) == 0);
 }
 
 // Fim de utils.c
