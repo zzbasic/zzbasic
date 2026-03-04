@@ -15,6 +15,7 @@ ScopeStack* scope_stack_create(void)
     scope_stack->current_scope->scope_level = 0;
     scope_stack->current_scope->parent = NULL;
     scope_stack->current_scope->symbols = symbol_table_create();
+    scope_stack->current_scope->text_pool = text_pool_create();
     
     return scope_stack;
 }
@@ -31,6 +32,11 @@ void scope_stack_destroy(ScopeStack* scope_stack)
         {
             symbol_table_destroy(scope->symbols);
         }
+        if (scope->text_pool)
+        {
+           text_pool_free(scope->text_pool);
+        }
+
         a89free(scope);
         scope = parent;
     }
@@ -51,9 +57,11 @@ void scope_push(ScopeStack* scope_stack)
     new_scope->scope_level = scope_stack->scope_level;
     new_scope->parent = scope_stack->current_scope;
     new_scope->symbols = symbol_table_create();
+    new_scope->text_pool = text_pool_create();
     
     if (!new_scope->symbols)
     {
+        text_pool_free(new_scope->text_pool);
         a89free(new_scope);
         scope_stack->scope_level--;  // Decrementa o nivel da pilha de escopos
         return;
@@ -79,6 +87,13 @@ void scope_pop(ScopeStack* scope_stack)
     {
         symbol_table_destroy(old_scope->symbols);
     }
+
+    // Libera o pool de Text, se houver
+    if (old_scope->text_pool)
+    {
+       text_pool_free(old_scope->text_pool);
+    }
+
     a89free(old_scope);
 }
 
@@ -109,6 +124,21 @@ Symbol* scope_lookup(ScopeStack* scope_stack, const char* name)
     
     return NULL;
 }
+
+// Adiciona Text object ao pool do escopo atual
+void scope_stack_add_text(ScopeStack* stack, Text* text)
+{
+    if (!stack || !text) return;
+    
+    // Pega o escopo atual 
+    Scope* current_scope = stack->current_scope;
+
+    if (!current_scope || !current_scope->text_pool) return;
+
+    // Adiciona ao pool do escopo
+    text_pool_add(current_scope->text_pool, text);
+}
+
 
 int scope_set_value(ScopeStack* stack, const char* name, EvaluatorResult result)
 {
@@ -247,6 +277,8 @@ int scope_get_array(ScopeStack* stack, const char* name, Array** out_array)
     
     return 0;  // Não encontrou em nenhum escopo
 }
+
+
 
 
 // Fim de scope.c
