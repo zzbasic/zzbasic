@@ -17,7 +17,12 @@
 //===================================================================
 // push(arr, 5)
 //===================================================================
-EvaluatorResult builtin_push(EvaluatorResult* args, int arg_count, int line, int column)
+EvaluatorResult builtin_push(
+    EvaluatorResult* args,
+    int arg_count,
+    int line,
+    int column,
+    ScopeStack* scope_stack)
 {
     // Valida argumentos
     if (arg_count != 2)
@@ -76,7 +81,12 @@ EvaluatorResult builtin_push(EvaluatorResult* args, int arg_count, int line, int
 //===================================================================
 // let x = pop(arr)
 //===================================================================
-EvaluatorResult builtin_pop(EvaluatorResult* args, int arg_count, int line, int column)
+EvaluatorResult builtin_pop(
+    EvaluatorResult* args,
+    int arg_count,
+    int line,
+    int column,
+    ScopeStack* scope_stack)
 {
     if (arg_count != 1)
     {
@@ -114,7 +124,12 @@ EvaluatorResult builtin_pop(EvaluatorResult* args, int arg_count, int line, int 
 //===================================================================
 // print len(arr) nl
 //===================================================================
-EvaluatorResult builtin_len(EvaluatorResult* args, int arg_count, int line, int column)
+EvaluatorResult builtin_len(
+    EvaluatorResult* args,
+    int arg_count,
+    int line,
+    int column,
+    ScopeStack* scope_stack)
 {
     if (arg_count != 1)
     {
@@ -151,7 +166,12 @@ EvaluatorResult builtin_len(EvaluatorResult* args, int arg_count, int line, int 
 //     print "Vazio!" nl
 // end if
 //===================================================================
-EvaluatorResult builtin_is_empty(EvaluatorResult* args, int arg_count, int line, int column)
+EvaluatorResult builtin_is_empty(
+    EvaluatorResult* args,
+    int arg_count,
+    int line,
+    int column,
+    ScopeStack* scope_stack)
 {
     if (arg_count != 1)
     {
@@ -174,7 +194,12 @@ EvaluatorResult builtin_is_empty(EvaluatorResult* args, int arg_count, int line,
 //===================================================================
 // print arr[3] nl    
 //===================================================================
-EvaluatorResult builtin_get(EvaluatorResult* args, int arg_count, int line, int column)
+EvaluatorResult builtin_get(
+    EvaluatorResult* args,
+    int arg_count,
+    int line,
+    int column,
+    ScopeStack* scope_stack)
 {
     if (arg_count != 2)
     {
@@ -207,7 +232,8 @@ EvaluatorResult builtin_get(EvaluatorResult* args, int arg_count, int line, int 
     void* element = array_get(arr, index);
     if (!element)
     {
-        return create_error_result_fmt(line, column, "Array error: could not get element");
+        //return create_error_result_fmt(line, column, "Array error: could not get element");
+        return create_success_result_empty(line, column);
     }
     
     // Converte de volta para double
@@ -219,7 +245,12 @@ EvaluatorResult builtin_get(EvaluatorResult* args, int arg_count, int line, int 
 //===================================================================
 // arr[0] = 100   
 //===================================================================
-EvaluatorResult builtin_set(EvaluatorResult* args, int arg_count, int line, int column)
+EvaluatorResult builtin_set(
+    EvaluatorResult* args,
+    int arg_count,
+    int line,
+    int column,
+    ScopeStack* scope_stack)
 {
     if (arg_count != 3)
     {
@@ -286,7 +317,12 @@ EvaluatorResult builtin_set(EvaluatorResult* args, int arg_count, int line, int 
 //===================================================================
 // insert(arr, 1, 50)  
 //===================================================================
-EvaluatorResult builtin_insert(EvaluatorResult* args, int arg_count, int line, int column)
+EvaluatorResult builtin_insert(
+    EvaluatorResult* args,
+    int arg_count,
+    int line,
+    int column,
+    ScopeStack* scope_stack)
 {
     if (arg_count != 3)
     {
@@ -339,7 +375,12 @@ EvaluatorResult builtin_insert(EvaluatorResult* args, int arg_count, int line, i
 //===================================================================
 // remove(arr, 1)
 //===================================================================
-EvaluatorResult builtin_remove(EvaluatorResult* args, int arg_count, int line, int column)
+EvaluatorResult builtin_remove(
+    EvaluatorResult* args,
+    int arg_count,
+    int line,
+    int column,
+    ScopeStack* scope_stack)
 {
     if (arg_count != 2)
     {
@@ -382,3 +423,116 @@ EvaluatorResult builtin_remove(EvaluatorResult* args, int arg_count, int line, i
     return create_success_result_number(1, line, column);
 }
 
+EvaluatorResult builtin_swap(
+    EvaluatorResult* args,
+    int arg_count,
+    int line,
+    int column,
+    ScopeStack* scope_stack)
+{
+    // Valida número de argumentos
+    if (arg_count != 3)
+    {
+        return create_error_result_fmt(line, column,
+            "Evaluator error: swap() expects 3 arguments (array, index1, index2), got %d",
+            arg_count);
+    }
+    
+    // Valida tipo do primeiro argumento (deve ser array)
+    if (args[0].type != RESULT_ARRAY)
+    {
+        return create_error_result_fmt(line, column,
+            "Evaluator error: swap() first argument must be array");
+    }
+    
+    // Valida tipos dos índices (devem ser números)
+    if (args[1].type != RESULT_NUMBER || args[2].type != RESULT_NUMBER)
+    {
+        return create_error_result_fmt(line, column,
+            "Evaluator error: swap() indices must be numbers");
+    }
+    
+    Array* arr = args[0].value.array;
+    int i = (int)args[1].value.number;
+    int j = (int)args[2].value.number;
+    
+    // Chama a função de troca
+    if (!array_swap(arr, i, j))
+    {
+        return create_error_result_fmt(line, column,
+            "Evaluator error: swap() index out of bounds");
+    }
+    
+    // Retorna o array modificado
+    return create_success_result_array(arr, line, column);
+}
+
+EvaluatorResult builtin_sort(
+    EvaluatorResult* args,
+    int arg_count,
+    int line,
+    int column,
+    ScopeStack* scope_stack)
+{
+    // Valida número de argumentos
+    if (arg_count != 1)
+    {
+        return create_error_result_fmt(line, column,
+            "Evaluator error: sort() expects 1 argument (array), got %d",
+            arg_count);
+    }
+    
+    // Valida tipo do argumento (deve ser array)
+    if (args[0].type != RESULT_ARRAY)
+    {
+        return create_error_result_fmt(line, column,
+            "Evaluator error: sort() argument must be array");
+    }
+    
+    Array* arr = args[0].value.array;
+    
+    // Chama a função de ordenação
+    if (!array_sort(arr))
+    {
+        return create_error_result_fmt(line, column,
+            "Evaluator error: sort() failed");
+    }
+    
+    // Retorna o array modificado
+    return create_success_result_array(arr, line, column);
+}
+
+EvaluatorResult builtin_rsort(
+    EvaluatorResult* args,
+    int arg_count,
+    int line,
+    int column,
+    ScopeStack* scope_stack)
+{
+    // Valida número de argumentos
+    if (arg_count != 1)
+    {
+        return create_error_result_fmt(line, column,
+            "Evaluator error: rsort() expects 1 argument (array), got %d",
+            arg_count);
+    }
+    
+    // Valida tipo do argumento (deve ser array)
+    if (args[0].type != RESULT_ARRAY)
+    {
+        return create_error_result_fmt(line, column,
+            "Evaluator error: rsort() argument must be array");
+    }
+    
+    Array* arr = args[0].value.array;
+    
+    // Chama a função de ordenação reversa
+    if (!array_rsort(arr))
+    {
+        return create_error_result_fmt(line, column,
+            "Evaluator error: rsort() failed");
+    }
+    
+    // Retorna o array modificado
+    return create_success_result_array(arr, line, column);
+}
