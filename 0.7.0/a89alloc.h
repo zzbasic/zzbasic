@@ -5,7 +5,7 @@
 
 #include <stddef.h>
 
-#define MAX_ALLOCATIONS 1000  // Configurável conforme necessidades
+#define MAX_ALLOCATIONS 5000  // Configurável conforme necessidades
 
 /********************************************************************
 Função principal de alocação com rastreamento
