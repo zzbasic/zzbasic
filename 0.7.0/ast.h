@@ -41,21 +41,10 @@ typedef enum
     NODE_SAVE,
     NODE_FUNCTION_CALL,
     NODE_ARRAY,
-    NODE_ARRAY_INDEX
+    NODE_ARRAY_INDEX,
+    NODE_EMPTY
 
 } NodeType;
-
-typedef enum
-{
-    TYPE_NULL,
-    TYPE_NUMBER,
-    TYPE_STRING,
-    TYPE_BOOL,
-    // Tipos futuros...
-    // TYPE_ARRAY,
-    // TYPE_FUNCTION,
-} VariableType;
-
 
 typedef enum
 {
@@ -368,6 +357,8 @@ void function_call_add_argument(ASTNode* node, ASTNode* argument);
 
 ASTNode* create_array_node(int line, int column);
 ASTNode* create_array_access_node(ASTNode* array, ASTNode* index, int line, int column);
+
+ASTNode* create_empty_node(int line, int column);
 
 void print_node_add_item(ASTNode* print_node, ASTNode* expr_node);
 void print_set_newline(ASTNode* print_node, int has_newline);
