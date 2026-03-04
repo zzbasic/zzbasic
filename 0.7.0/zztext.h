@@ -29,6 +29,24 @@ const char* text_get(const Text* txt);
 
 // Salva o conteúdo em arquivo
 int text_save(const Text* txt, const char* filename);
+ 
+// ============================================================================
+// TEXT POOL - Rastreia todos os Text objects de um escopo
+// ============================================================================
+
+typedef struct
+{
+    Text** texts;        // Array de ponteiros para Text
+    int count;          // Quantos Text objects
+    int capacity;       // Capacidade total
+} TextPool;
+
+// Funções do Text Pool
+TextPool* text_pool_create(void);
+void text_pool_add(TextPool* pool, Text* text);
+void text_pool_free(TextPool* pool);
+int text_pool_count(TextPool* pool);
+
 
 // =====================================================================
 // OPERAÇÕES FUTURAS (adicione quando precisar)
