@@ -10,6 +10,7 @@
 typedef enum
 {
     RESULT_ERROR,
+    RESULT_EMPTY,
     RESULT_NUMBER,
     RESULT_STRING,
     RESULT_BOOL,
@@ -48,11 +49,17 @@ EvaluatorResult create_success_result_text(Text* text, int line, int column);
 // Cria resultado de sucesso com Array
 EvaluatorResult create_success_result_array(Array* arr, int line, int column);
 
+// Cria resultado de sucesso com empty
+EvaluatorResult create_success_result_empty(int line, int column);
+
 // Cria resultado de erro com mensagem simples
 EvaluatorResult create_error_result(const char* message, int line, int column);
 
 // Cria resultado de erro com mensagem formatada (printf-style)
 EvaluatorResult create_error_result_fmt(int line, int column, 
                                        const char* format, ...);
+
+// Função auxiliar para converter ResultType para string
+const char* result_type_to_string(ResultType type);
 
 #endif // RESULT_H
