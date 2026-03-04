@@ -6,6 +6,7 @@
 #include <stdarg.h>  
 
 #include "zzdefs.h"
+#include "utils.h"
 #include "color.h"
 #include "a89alloc.h"
 #include "evaluator.h"
@@ -13,10 +14,9 @@
 #include "zzarray_wrapper.h"
 #include "result.h"
 #include "scope.h"
+#include "zztext_wrapper.h"
 
 //#include "debug.h"
-
-#define EPSILON 1e-12
 
 //===================================================================
 // VARIAVEIS GLOBAIS
@@ -33,7 +33,7 @@ static int colors_enabled_global = 1;
 typedef struct
 {
     const char* name;
-    EvaluatorResult (*func)(EvaluatorResult* args, int arg_count, int line, int column);
+    EvaluatorResult (*func)(EvaluatorResult* args, int arg_count, int line, int column,  ScopeStack* scope_stack);
 } BuiltinFunction;
 
 // Tabela com todas as funções built-in disponíveis
@@ -47,7 +47,16 @@ static BuiltinFunction builtins[] = {
     {"set",      builtin_set},
     {"insert",   builtin_insert},
     {"remove",   builtin_remove},
-    
+    {"swap",     builtin_swap},
+    {"sort",     builtin_sort},
+    {"rsort",    builtin_rsort},
+
+    // Funções de Text
+    {"text",   builtin_text},   
+    {"load",   builtin_load},    
+    {"save",   builtin_save},    
+
+
     // Futuro: Funções de String
     // {"upper",    builtin_upper},
     // {"lower",    builtin_lower},
@@ -537,14 +546,20 @@ static int evaluate_print_stmt_with_format(ASTNode* node, ExecutionContext* ctx)
         // CASO NORMAL: Expressão (número, string, variável, etc)
         // ======================================================
         EvaluatorResult result = evaluate_expr(item_node, ctx, CTX_ANY);
-        if (result.type == RESULT_ERROR) {
+
+        if (result.type == RESULT_ERROR)
+        {
             //printf("%s\n", result.error_message);
             return 0;
         }
         
         // Converte para string
         char buffer[BUFFER_SIZE];
-        if (result.type == RESULT_BOOL)
+        if(result.type == RESULT_EMPTY)
+        {
+            snprintf(buffer, sizeof(buffer), "empty");
+        }
+        else if (result.type == RESULT_BOOL)
         {
             // Trata booleano
             snprintf(buffer, sizeof(buffer), "%s", 
@@ -577,11 +592,16 @@ static int evaluate_print_stmt_with_format(ASTNode* node, ExecutionContext* ctx)
                 if (element)
                 {
                     double value = *(double*)element;
-                    if (fabs(value - (int)value) < EPSILON) {
+                    if (fabs(value - (int)value) < EPSILON)
+                    {
                         printf("%d", (int)value);
                     } else {
                         printf("%g", value);
                     }
+                }
+                else
+                {
+                    printf("empty");
                 }
             }
             printf("]");
@@ -640,9 +660,10 @@ static int evaluate_print_stmt_with_format(ASTNode* node, ExecutionContext* ctx)
     if (print_data->newline) {
         printf("\n");
     }
-    
+
     return printed_something ? 1 : 0;
 }
+// Fim de evaluate_print_stmt_with_format()
 
 // ==================================================================
 // FUNCOES PARA EXECUCAO (COM CONTEXTO)
@@ -651,7 +672,7 @@ static int evaluate_print_stmt_with_format(ASTNode* node, ExecutionContext* ctx)
 static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
 {
     if (!node || !ctx) return 0;
-    
+
     switch (node->type)
     {
         case NODE_ASSIGNMENT:
@@ -732,7 +753,12 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
                     // Atualiza o elemento do array
                     EvaluatorResult args[] = {array_result, index_result, value_result};
 
-                    EvaluatorResult set_result = builtin_set(args, 3, node->line, node->column);
+                    EvaluatorResult set_result = builtin_set(
+                        args,
+                        3,
+                        node->line,
+                        node->column,
+                        ctx->scope_stack);
 
                     if (set_result.type == RESULT_ERROR)
                     {
@@ -769,7 +795,12 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
                     // Atualiza o elemento do array
                     EvaluatorResult args[] = {array_result, index_result, value_result};
 
-                    EvaluatorResult set_result = builtin_set(args, 3, node->line, node->column);
+                    EvaluatorResult set_result = builtin_set(
+                        args,
+                        3,
+                        node->line,
+                        node->column,
+                        ctx->scope_stack);
 
                     if (set_result.type == RESULT_ERROR)
                     {
@@ -833,7 +864,9 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
         }
 
         case NODE_PRINT:
+        {
             return evaluate_print_stmt_with_ctx(node, ctx);
+        }
 
         case NODE_COLOR:
             // Comando nocolor sozinho (ex: "nocolor" como statement)
@@ -1105,7 +1138,12 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
                     // Atualiza o elemento do array
                     EvaluatorResult args[] = {array_result, index_result, value_result};
 
-                    EvaluatorResult set_result = builtin_set(args, 3, node->line, node->column);
+                    EvaluatorResult set_result = builtin_set(
+                        args,
+                        3,
+                        node->line,
+                        node->column,
+                        ctx->scope_stack);
 
                     if (set_result.type == RESULT_ERROR)
                     {
@@ -1142,7 +1180,12 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
                     // Atualiza o elemento do array
                     EvaluatorResult args[] = {array_result, index_result, value_result};
 
-                    EvaluatorResult set_result = builtin_set(args, 3, node->line, node->column);
+                    EvaluatorResult set_result = builtin_set(
+                        args,
+                        3,
+                        node->line,
+                        node->column,
+                        ctx->scope_stack);
 
                     if (set_result.type == RESULT_ERROR)
                     {
@@ -1162,6 +1205,7 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
             printf("Evaluator error: unsupported statement type: %d\n", node->type);
             return 0;
     } // Fim do switch (node->type)
+
 } // Fim de execute_stmt_with_ctx()
 
 static int execute_stmt_list_with_ctx(ASTNode* node, ExecutionContext* ctx)
@@ -1173,18 +1217,14 @@ static int execute_stmt_list_with_ctx(ASTNode* node, ExecutionContext* ctx)
     }
     
     StatementListData* list = &node->data.stmt_list;
-    int all_success = 1;
+    //int all_success = 1;
     
     // Executa cada statement em sequência
     for (int i = 0; i < list->count; i++)
     {
         ASTNode* stmt = list->statements[i];
+
         int success = execute_stmt_with_ctx(stmt, ctx);
-        
-        if (!success)
-        {
-            all_success = 0;
-        }
         
         // Se deve sair do loop (break) ou pular (continue), para a execução
         if (ctx->should_break || ctx->should_continue)
@@ -1193,8 +1233,9 @@ static int execute_stmt_list_with_ctx(ASTNode* node, ExecutionContext* ctx)
         }
     }
     
-    return all_success;
-}
+    return 1; 
+} 
+//Fim de execute_stmt_list_with_ctx() 
 
 static int execute_if_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
 {
@@ -1273,6 +1314,7 @@ static int execute_while_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
             has_evaluation_error = 1;
             printf("%s\n", cond_result.error_message);
             scope_pop(ctx->scope_stack);  // ← LIBERA ANTES DE SAIR!
+
             return 0;
         }
         
@@ -1404,7 +1446,7 @@ static int execute_for_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
         int success = execute_stmt_list_with_ctx(for_stmt->body, ctx);
 
         // Ao sair do escopo libera variáveis locais da iteração
-        scope_pop(ctx->scope_stack);   
+        scope_pop(ctx->scope_stack);  
 
         if (!success)
         {
@@ -1429,7 +1471,6 @@ static int execute_for_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
 
     // Libera escopo do for
     scope_pop(ctx->scope_stack);
-
     return 1;  
 }
 
@@ -1546,27 +1587,87 @@ EvaluatorResult evaluate_expr(ASTNode* node, ExecutionContext* ctx, EvalContext 
     switch (node->type)
 
     {
+        case NODE_EMPTY:
+        {
+            switch(eval_ctx)
+            {
+                case CTX_ANY:
+                    return create_success_result_empty(node->line, node->column);
+                
+                case CTX_BOOL:
+                    return create_error_result_fmt(node->line, node->column,
+                            "Evaluator error: empty cannot be used as boolean");
+                
+                case CTX_NUMBER:
+                    return create_error_result_fmt(node->line, node->column,
+                            "Evaluator error: empty cannot be used as number");
+                
+                case CTX_STRING:
+                    return create_error_result_fmt(node->line, node->column,
+                            "Evaluator error: empty cannot be used as string");
+                
+                case CTX_ARRAY:
+                    return create_error_result_fmt(node->line, node->column,
+                            "Evaluator error: empty cannot be used as array");
+                
+                default:
+                    return create_error_result_fmt(node->line, node->column,
+                            "Evaluator error: unknown context");
+            }
+        }
 
         case NODE_BOOL:
         {
-            if (eval_ctx == CTX_STRING)
+            switch (eval_ctx)
             {
-                return create_error_result_fmt(node->line, node->column,
-                     "Evaluator error: boolean cannot be used as string");
+                case CTX_ANY:
+                case CTX_BOOL:
+                    return create_success_result_bool(node->data.boolean.value, 
+                                                       node->line, node->column);
+                
+                case CTX_NUMBER:
+                    return create_error_result_fmt(node->line, node->column,
+                         "Evaluator error: boolean cannot be used as number");
+                
+                case CTX_STRING:
+                    return create_error_result_fmt(node->line, node->column,
+                         "Evaluator error: boolean cannot be used as string");
+                
+                case CTX_ARRAY:
+                    return create_error_result_fmt(node->line, node->column,
+                         "Evaluator error: boolean cannot be used as array");
+                
+                default:
+                    return create_error_result_fmt(node->line, node->column,
+                         "Evaluator error: unknown context");
             }
-            return create_success_result_bool(node->data.boolean.value, 
-                                               node->line, node->column);
         }
 
         case NODE_NUMBER:
         {
-            if (eval_ctx == CTX_STRING)
+            switch (eval_ctx)
             {
-                return create_error_result_fmt(node->line, node->column,
-                     "Evaluator error: number cannot be used as string");
+                case CTX_ANY:
+                case CTX_NUMBER:
+                    return create_success_result_number(node->data.number.value, 
+                                                       node->line, node->column);
+                
+                case CTX_BOOL:
+                    return create_error_result_fmt(node->line, node->column,
+                         "Evaluator error: number cannot be used as boolean");
+                
+                case CTX_STRING:
+                    return create_error_result_fmt(node->line, node->column,
+                         "Evaluator error: number cannot be used as string");
+                
+                case CTX_ARRAY:
+                    return create_error_result_fmt(node->line, node->column,
+                         "Evaluator error: number cannot be used as array");
+                
+                default:
+                    return create_error_result_fmt(node->line, node->column,
+                         "Evaluator error: unknown context");
             }
-            return create_success_result_number(node->data.number.value, 
-                                               node->line, node->column);
         }
             
         case NODE_VARIABLE:
@@ -1579,93 +1680,156 @@ EvaluatorResult evaluate_expr(ASTNode* node, ExecutionContext* ctx, EvalContext 
             double num_value;
             if (scope_get_number(ctx->scope_stack, var_name, &num_value))
             {
-                if (eval_ctx == CTX_STRING)
+                switch (eval_ctx)
                 {
-                    return create_error_result_fmt(node->line, node->column,
-                         "Evaluator error: variable '%s' is a number, cannot be used as string", 
-                         var_name);
+                    case CTX_ANY:
+                    case CTX_NUMBER:
+                        return create_success_result_number(num_value, node->line, node->column);
+                    
+                    case CTX_BOOL:
+                        return create_error_result_fmt(node->line, node->column,
+                             "Evaluator error: variable '%s' is a number, cannot be used as boolean", 
+                             var_name);
+                    
+                    case CTX_STRING:
+                        return create_error_result_fmt(node->line, node->column,
+                             "Evaluator error: variable '%s' is a number, cannot be used as string", 
+                             var_name);
+                    
+                    case CTX_ARRAY:
+                        return create_error_result_fmt(node->line, node->column,
+                             "Evaluator error: variable '%s' is a number, cannot be used as array", 
+                             var_name);
+                    
+                    default:
+                        return create_error_result_fmt(node->line, node->column,
+                             "Evaluator error: unknown context");
                 }
-                return create_success_result_number(num_value, node->line, node->column);
             }
             
             // Tenta como string
             char str_value[STRING_SIZE];
             if (scope_get_string(ctx->scope_stack, var_name, str_value, sizeof(str_value)))
             {
-                if (eval_ctx == CTX_NUMBER)
+                switch (eval_ctx)
                 {
-                    return create_error_result_fmt(node->line, node->column,
-                         "Evaluator error: variable '%s' is a string, cannot be used in mathematical operation", 
-                         var_name);
+                    case CTX_ANY:
+                    case CTX_STRING:
+                        return create_success_result_string(str_value, node->line, node->column);
+                    
+                    case CTX_NUMBER:
+                        return create_error_result_fmt(node->line, node->column,
+                             "Evaluator error: variable '%s' is a string, cannot be used in mathematical operation", 
+                             var_name);
+                    
+                    case CTX_BOOL:
+                        return create_error_result_fmt(node->line, node->column,
+                             "Evaluator error: variable '%s' is a string, cannot be used as boolean", 
+                             var_name);
+                    
+                    case CTX_ARRAY:
+                        return create_error_result_fmt(node->line, node->column,
+                             "Evaluator error: variable '%s' is a string, cannot be used as array", 
+                             var_name);
+                    
+                    default:
+                        return create_error_result_fmt(node->line, node->column,
+                             "Evaluator error: unknown context");
                 }
-                return create_success_result_string(str_value, node->line, node->column);
             }
 
             // Tenta como boolean
             int bool_value;
             if (scope_get_bool(ctx->scope_stack, var_name, &bool_value))
             {
-                if (eval_ctx == CTX_NUMBER)
+                switch (eval_ctx)
                 {
-                    return create_error_result_fmt(node->line, node->column,
-                         "Evaluator error: variable '%s' is a boolean, cannot be used in mathematical operation", 
-                         var_name);
+                    case CTX_ANY:
+                    case CTX_BOOL:
+                        return create_success_result_bool(bool_value, node->line, node->column);
+                    
+                    case CTX_NUMBER:
+                        return create_error_result_fmt(node->line, node->column,
+                             "Evaluator error: variable '%s' is a boolean, cannot be used in mathematical operation", 
+                             var_name);
+                    
+                    case CTX_STRING:
+                        return create_error_result_fmt(node->line, node->column,
+                             "Evaluator error: variable '%s' is a boolean, cannot be used as string", 
+                             var_name);
+                    
+                    case CTX_ARRAY:
+                        return create_error_result_fmt(node->line, node->column,
+                             "Evaluator error: variable '%s' is a boolean, cannot be used as array", 
+                             var_name);
+                    
+                    default:
+                        return create_error_result_fmt(node->line, node->column,
+                             "Evaluator error: unknown context");
                 }
-                if (eval_ctx == CTX_STRING)
-                {
-                    return create_error_result_fmt(node->line, node->column,
-                         "Evaluator error: variable '%s' is a boolean, cannot be used as string", 
-                         var_name);
-                }
-                return create_success_result_bool(bool_value, node->line, node->column);
             }
 
             // Tenta como text
             Text* text_value;
             if (scope_get_text(ctx->scope_stack, var_name, &text_value))
             {
-                if (eval_ctx == CTX_NUMBER)
+                switch (eval_ctx)
                 {
-                    return create_error_result_fmt(node->line, node->column,
-                         "Evaluator error: variable '%s' is Text, cannot be used as number", 
-                         var_name);
+                    case CTX_ANY:
+                    case CTX_STRING:
+                        return create_success_result_text(text_value, node->line, node->column);
+                    
+                    case CTX_NUMBER:
+                        return create_error_result_fmt(node->line, node->column,
+                             "Evaluator error: variable '%s' is Text, cannot be used as number", 
+                             var_name);
+                    
+                    case CTX_BOOL:
+                        return create_error_result_fmt(node->line, node->column,
+                             "Evaluator error: variable '%s' is Text, cannot be used as boolean", 
+                             var_name);
+                    
+                    case CTX_ARRAY:
+                        return create_error_result_fmt(node->line, node->column,
+                             "Evaluator error: variable '%s' is Text, cannot be used as array", 
+                             var_name);
+                    
+                    default:
+                        return create_error_result_fmt(node->line, node->column,
+                             "Evaluator error: unknown context");
                 }
-                if (eval_ctx == CTX_BOOL)
-                {
-                    return create_error_result_fmt(node->line, node->column,
-                         "Evaluator error: variable '%s' is Text, cannot be used as boolean", 
-                         var_name);
-                }
-                // Text é aceitável em CTX_ANY e CTX_STRING
-                return create_success_result_text(text_value, node->line, node->column);
-            } 
+            }
 
             // Tenta como array
             Array* array_value;
             if (scope_get_array(ctx->scope_stack, var_name, &array_value))
             {
-                if (eval_ctx == CTX_NUMBER)
+                switch (eval_ctx)
                 {
-                    return create_error_result_fmt(node->line, node->column,
-                         "Evaluator error: variable '%s' is an array, cannot be used as number", 
-                         var_name);
+                    case CTX_ANY:
+                    case CTX_ARRAY:
+                        return create_success_result_array(array_value, node->line, node->column);
+                    
+                    case CTX_NUMBER:
+                        return create_error_result_fmt(node->line, node->column,
+                             "Evaluator error: variable '%s' is an array, cannot be used as number", 
+                             var_name);
+                    
+                    case CTX_BOOL:
+                        return create_error_result_fmt(node->line, node->column,
+                             "Evaluator error: variable '%s' is an array, cannot be used as boolean", 
+                             var_name);
+                    
+                    case CTX_STRING:
+                        return create_error_result_fmt(node->line, node->column,
+                             "Evaluator error: variable '%s' is an array, cannot be used as string", 
+                             var_name);
+                    
+                    default:
+                        return create_error_result_fmt(node->line, node->column,
+                             "Evaluator error: unknown context");
                 }
-                if (eval_ctx == CTX_BOOL)
-                {
-                    return create_error_result_fmt(node->line, node->column,
-                         "Evaluator error: variable '%s' is an array, cannot be used as boolean", 
-                         var_name);
-                }
-                if (eval_ctx == CTX_STRING)
-                {
-                    return create_error_result_fmt(node->line, node->column,
-                         "Evaluator error: variable '%s' is an array, cannot be used as string", 
-                         var_name);
-                }
-                // Array é aceitável apenas em CTX_ANY
-                return create_success_result_array(array_value, node->line, node->column);
             }
-            
             // Não deve chegar aqui
             // Não encontrou em nenhum tipo
             return create_error_result_fmt(node->line, node->column,
@@ -1674,14 +1838,31 @@ EvaluatorResult evaluate_expr(ASTNode* node, ExecutionContext* ctx, EvalContext 
             
         case NODE_BINARY_OP:
         {
-            // Binary operations always expect numbers (for now)
-            if (eval_ctx == CTX_STRING)
+            // Operações binárias sempre retornam NUMBER
+            switch (eval_ctx)
             {
-                return create_error_result_fmt(node->line, node->column,
-                     "Evaluator error: mathematical operation cannot be used as string");
+                case CTX_ANY:
+                case CTX_NUMBER:
+                    break;  // Continua com a avaliação
+                
+                case CTX_BOOL:
+                    return create_error_result_fmt(node->line, node->column,
+                         "Evaluator error: mathematical operation cannot be used as boolean");
+                
+                case CTX_STRING:
+                    return create_error_result_fmt(node->line, node->column,
+                         "Evaluator error: mathematical operation cannot be used as string");
+                
+                case CTX_ARRAY:
+                    return create_error_result_fmt(node->line, node->column,
+                         "Evaluator error: mathematical operation cannot be used as array");
+                
+                default:
+                    return create_error_result_fmt(node->line, node->column,
+                         "Evaluator error: unknown context");
             }
-            
-            // Evaluate operands in number context
+
+            // Avalia operandos no contexto CTX_NUMBER
             EvaluatorResult left_result = evaluate_expr(node->data.binaryop.left,
                                                         ctx,
                                                         CTX_NUMBER);
@@ -1694,18 +1875,13 @@ EvaluatorResult evaluate_expr(ASTNode* node, ExecutionContext* ctx, EvalContext 
 
             if (right_result.type == RESULT_ERROR) return right_result;
             
-            // Both must be numbers
-            if (left_result.type == RESULT_STRING || right_result.type == RESULT_STRING )
+            // Verifica se ambos são NUMBERS (rejeita tudo mais)
+            if (left_result.type != RESULT_NUMBER || right_result.type != RESULT_NUMBER)
             {
-                return create_error_result("Evaluator error: mathematical operation with string", 
-                                         node->line, node->column);
-            }
-
-            // Both must be numbers
-            if (left_result.type == RESULT_BOOL || right_result.type == RESULT_BOOL )
-            {
-                return create_error_result("Evaluator error: mathematical operation with boolean", 
-                                         node->line, node->column);
+                return create_error_result_fmt(node->line, node->column,
+                     "Evaluator error: mathematical operation requires numbers, got %s and %s",
+                     result_type_to_string(left_result.type),
+                     result_type_to_string(right_result.type));
             }
             
             double result;
@@ -1738,11 +1914,29 @@ EvaluatorResult evaluate_expr(ASTNode* node, ExecutionContext* ctx, EvalContext 
             
         case NODE_UNARY_OP:
         {
-            // Unary operations always expect numbers
-            if (eval_ctx == CTX_STRING)
+            // Operação unária sempre retorna número
+            switch (eval_ctx)
             {
-                return create_error_result_fmt(node->line, node->column,
-                     "Evaluator error: unary operator cannot be applied to string");
+                case CTX_ANY:
+                case CTX_NUMBER:
+                    // Aceita em CTX_ANY e CTX_NUMBER
+                    break;  // Continua com a avaliação
+                
+                case CTX_BOOL:
+                    return create_error_result_fmt(node->line, node->column,
+                         "Evaluator error: unary operator cannot be applied to boolean");
+                
+                case CTX_STRING:
+                    return create_error_result_fmt(node->line, node->column,
+                         "Evaluator error: unary operator cannot be applied to string");
+                
+                case CTX_ARRAY:
+                    return create_error_result_fmt(node->line, node->column,
+                         "Evaluator error: unary operator cannot be applied to array");
+                
+                default:
+                    return create_error_result_fmt(node->line, node->column,
+                         "Evaluator error: unknown context");
             }
             
             EvaluatorResult operand_result = evaluate_expr(node->data.unaryop.operand,
@@ -1751,10 +1945,11 @@ EvaluatorResult evaluate_expr(ASTNode* node, ExecutionContext* ctx, EvalContext 
 
             if (operand_result.type == RESULT_ERROR)  return operand_result;
             
-            if (operand_result.type == RESULT_STRING )
+            if (operand_result.type != RESULT_NUMBER)
             {
-                return create_error_result("Evaluator error: unary operator '-' applied to string", 
-                                         node->line, node->column);
+                return create_error_result_fmt(node->line, node->column,
+                     "Evaluator error: unary operator requires number, got %s",
+                     result_type_to_string(operand_result.type));
             }
             
             double result;
@@ -1776,13 +1971,29 @@ EvaluatorResult evaluate_expr(ASTNode* node, ExecutionContext* ctx, EvalContext 
             
         case NODE_STRING:
         {
-            if (eval_ctx == CTX_NUMBER)
+            switch (eval_ctx)
             {
-                return create_error_result_fmt(node->line, node->column,
-                     "Evaluator error: string cannot be used as number");
+                case CTX_ANY:
+                case CTX_STRING:
+                    return create_success_result_string(node->data.string.value, 
+                                                       node->line, node->column);
+                
+                case CTX_NUMBER:
+                    return create_error_result_fmt(node->line, node->column,
+                         "Evaluator error: string cannot be used as number");
+                
+                case CTX_BOOL:
+                    return create_error_result_fmt(node->line, node->column,
+                         "Evaluator error: string cannot be used as boolean");
+                
+                case CTX_ARRAY:
+                    return create_error_result_fmt(node->line, node->column,
+                         "Evaluator error: string cannot be used as array");
+                
+                default:
+                    return create_error_result_fmt(node->line, node->column,
+                         "Evaluator error: unknown context");
             }
-            return create_success_result_string(node->data.string.value, 
-                                               node->line, node->column);
         }
 
         case NODE_STATEMENT_LIST:
@@ -1793,39 +2004,76 @@ EvaluatorResult evaluate_expr(ASTNode* node, ExecutionContext* ctx, EvalContext 
         {
             // Operações de comparação: ==, !=, <, >, <=, >=
             // Resultado é sempre booleano
+
+            int comparison_result = 0;
             
-            // Avalia lado esquerdo (pode ser número ou booleano)
+            // Avalia lado esquerdo (pode ser número, booleano, string, text ou empty)
             EvaluatorResult left_result = evaluate_expr(node->data.logicalop.left,
                                                         ctx,
                                                         CTX_ANY);
 
             if (left_result.type == RESULT_ERROR) return left_result;
             
-            // Avalia lado direito (pode ser número ou booleano)
+            // Avalia lado direito (pode ser número, booleano, string, text ou empty)
             EvaluatorResult right_result = evaluate_expr(node->data.logicalop.right,
                                                          ctx,
                                                          CTX_ANY);
 
             if (right_result.type == RESULT_ERROR) return right_result;
             
-            // Ambos devem ser do mesmo tipo (número ou booleano)
+            // Ambos devem ser do mesmo tipo (número, booleano ou empty)
             if (left_result.type != right_result.type)
             {
                 return create_error_result_fmt(node->line, node->column,
                      "Evaluator error: type mismatch in comparison: cannot compare %s with %s",
-                     (left_result.type == RESULT_NUMBER ? "number" : "boolean"),
-                     (right_result.type == RESULT_NUMBER ? "number" : "boolean"));
+                     result_type_to_string(left_result.type),
+                     result_type_to_string(right_result.type));
             }
             
-            // Strings não podem ser comparadas (por enquanto)
+            // Comparação de string
             if (left_result.type == RESULT_STRING)
             {
-                return create_error_result_fmt(node->line, node->column,
-                     "Evaluator error: string comparison not supported");
+                const char* left = left_result.value.string;
+                const char* right = right_result.value.string;
+                
+                switch (node->data.logicalop.operator)
+                {
+                    case OP_EQUAL:
+                        comparison_result = string_equals(left, right) ? 1 : 0;
+                        break;
+                    case OP_NOT_EQUAL:
+                        comparison_result = string_equals(left, right) ? 0 : 1;
+                        break;
+                    default:
+                        return create_error_result_fmt(node->line, node->column,
+                             "Evaluator error: operator not supported for strings");
+                }
+                return create_success_result_bool(comparison_result, 
+                                                  node->line, node->column);
             }
-            
-            int comparison_result = 0;
-            
+
+            // Comparação de text
+            if (left_result.type == RESULT_TEXT)
+            {
+                const char* left = left_result.value.text->data;
+                const char* right = right_result.value.text->data;
+                
+                switch (node->data.logicalop.operator)
+                {
+                    case OP_EQUAL:
+                        comparison_result = string_equals(left, right) ? 1 : 0;
+                        break;
+                    case OP_NOT_EQUAL:
+                        comparison_result = string_equals(left, right) ? 0 : 1;
+                        break;
+                    default:
+                        return create_error_result_fmt(node->line, node->column,
+                             "Evaluator error: operator not supported for Text");
+                }
+                return create_success_result_bool(comparison_result, 
+                                                  node->line, node->column);
+            }
+                
             // Comparação de números
             if (left_result.type == RESULT_NUMBER)
             {
@@ -1856,7 +2104,10 @@ EvaluatorResult evaluate_expr(ASTNode* node, ExecutionContext* ctx, EvalContext 
                         return create_error_result_fmt(node->line, node->column,
                              "Evaluator error: invalid comparison operator");
                 }
+                return create_success_result_bool(comparison_result, 
+                                                  node->line, node->column);
             }
+
             // Comparação de booleanos
             else if (left_result.type == RESULT_BOOL)
             {
@@ -1876,10 +2127,52 @@ EvaluatorResult evaluate_expr(ASTNode* node, ExecutionContext* ctx, EvalContext 
                         return create_error_result_fmt(node->line, node->column,
                              "Evaluator error: operator not supported for boolean values");
                 }
+                return create_success_result_bool(comparison_result, 
+                                                  node->line, node->column);
+            }
+
+            // Comparação de array
+            else if (left_result.type == RESULT_ARRAY)
+            {
+                Array* left = left_result.value.array;
+                Array* right = right_result.value.array;
+                
+                switch (node->data.logicalop.operator)
+                {
+                    case OP_EQUAL:
+                        comparison_result =  array_equals(left, right) ? 1 : 0;
+                        break;
+                    case OP_NOT_EQUAL:
+                        comparison_result = array_equals(left, right) ? 0 : 1;
+                        break;
+                    // Outros operadores não fazem sentido para arrays
+                    default:
+                        return create_error_result_fmt(node->line, node->column,
+                             "Evaluator error: operator not supported for arrays");
+                }
+                return create_success_result_bool(comparison_result, 
+                                                  node->line, node->column);
+            }
+
+            // Comparação de empty; se chegar aqui já se sabe que são dois empty
+            else 
+            {
+                switch (node->data.logicalop.operator)
+                {
+                    case OP_EQUAL:
+                        comparison_result = 1;
+                        break;
+                    case OP_NOT_EQUAL:
+                        comparison_result = 0;
+                        break;
+                    // Outros operadores não fazem sentido para empty
+                    default:
+                        return create_error_result_fmt(node->line, node->column,
+                             "Evaluator error: operator not supported for empty values");
+                }
             }
             
-            return create_success_result_bool(comparison_result, 
-                                             node->line, node->column);
+            //return create_success_result_bool(comparison_result, node->line, node->column);
         }
 
         case NODE_LOGICAL_OP:
@@ -1931,7 +2224,7 @@ EvaluatorResult evaluate_expr(ASTNode* node, ExecutionContext* ctx, EvalContext 
             {
                 return create_error_result_fmt(node->line, node->column,
                      "Evaluator error: logical operator expects boolean, got %s",
-                     (right_result.type == RESULT_NUMBER ? "number" : "string"));
+                        result_type_to_string(right_result.type));
             }
             
             int right = right_result.value.boolean;
@@ -1971,7 +2264,7 @@ EvaluatorResult evaluate_expr(ASTNode* node, ExecutionContext* ctx, EvalContext 
             {
                 return create_error_result_fmt(node->line, node->column,
                      "Evaluator error: NOT operator expects boolean, got %s",
-                     (operand_result.type == RESULT_NUMBER ? "number" : "string"));
+                        result_type_to_string(operand_result.type));
             }
             
             int operand = operand_result.value.boolean;
@@ -1989,43 +2282,6 @@ EvaluatorResult evaluate_expr(ASTNode* node, ExecutionContext* ctx, EvalContext 
             // Avalia a chamada de função
             const char* func_name = node->data.function_call.function_name;
             
-            // ============================================
-            // FUNÇÃO: text(string)
-            // ============================================
-            if (strcmp(func_name, "text") == 0)
-            {
-                if (node->data.function_call.arg_count != 1)
-                {
-                    return create_error_result_fmt(node->line, node->column,
-                        "Evaluator error: text() expects 1 argument, got %d",
-                        node->data.function_call.arg_count);
-                }
-                
-                // Avalia o argumento como string
-                EvaluatorResult arg_result = evaluate_expr(node->data.function_call.arguments[0],
-                                                           ctx,
-                                                           CTX_STRING);
-                
-                if (arg_result.type == RESULT_ERROR) return arg_result;
-                
-                if (arg_result.type != RESULT_STRING)
-                {
-                    return create_error_result_fmt(node->line, node->column,
-                        "Evaluator error: text() expects string argument");
-                }
-                
-                // Cria Text a partir da string
-                Text* txt = text_create_from_string(arg_result.value.string);
-                if (!txt)
-                {
-                    return create_error_result_fmt(node->line, node->column,
-                        "Evaluator error: could not create text object");
-                }
-                
-                return create_success_result_text(txt, node->line, node->column);
-            }
-
-
             // ============================================
             // FUNÇÃO: array(size)
             // ============================================
@@ -2091,7 +2347,8 @@ EvaluatorResult evaluate_expr(ASTNode* node, ExecutionContext* ctx, EvalContext 
                         args,
                         node->data.function_call.arg_count,
                         node->line,
-                        node->column
+                        node->column,
+                        ctx->scope_stack 
                     );
                     
                     a89free(args);
@@ -2128,14 +2385,20 @@ EvaluatorResult evaluate_expr(ASTNode* node, ExecutionContext* ctx, EvalContext 
             
             // Chama get()
             EvaluatorResult args[] = {arr_result, index_result};
-            return builtin_get(args, 2, node->line, node->column);
-        }    
+            return builtin_get(
+                        args,
+                        2,
+                        node->line,
+                        node->column,
+                        ctx->scope_stack);
+        }      
             
         default:
             return create_error_result_fmt(node->line, node->column,
                  "Evaluator error: unsupported node type: %d", node->type);
     }
 } // Fim de evaluate_expr()
+
 
 //===================================================================
 // FUNCOES PARA GERENCIAMENTO DE MODULOS
