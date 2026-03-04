@@ -117,7 +117,9 @@ typedef enum {
     TOKEN_SAVE,
 
     TOKEN_LBRACKET,  // [
-    TOKEN_RBRACKET,  // ]        
+    TOKEN_RBRACKET,  // ]  
+
+    TOKEN_EMPTY,     // representa valor vazio, sem nada     
 
     TOKEN_NOERROR
 } TokenType;
