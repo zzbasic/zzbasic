@@ -688,9 +688,7 @@ static ASTNode* parse_print_stmt(Parser* parser)
         }
         
         // Verifica tokens problemáticos: ;, :, ou palavras-chave
-        if (token.type == TOKEN_SEMICOLON ||
-            token.type == TOKEN_COLON ||
-            is_keyword_token(token.token_text))
+        if (token.type == TOKEN_SEMICOLON || token.type == TOKEN_COLON )
         {
             report_print_keyword_error(parser, token);
             free_ast(print_node);
@@ -712,6 +710,13 @@ static ASTNode* parse_print_stmt(Parser* parser)
             print_node_add_item(print_node, color_node);
             parser_advance(parser);  // Consome o token de cor
             continue;  // Continua para próximo item
+        }
+        // keyword
+        else if(is_keyword_token(token.token_text))
+        {
+            report_print_keyword_error(parser, token);
+            free_ast(print_node);
+            return NULL;
         }
         // 2. WIDTH
         else if(token.type == TOKEN_WIDTH)
@@ -2050,6 +2055,7 @@ static ASTNode* parse_postfix(Parser* parser)
 //                     | 'false' 
 //                     | function_call
 //                     | IDENTIFIER 
+//                     | 'empty'
 //                     | load_expr
 //                     | '(' logical_expr ')'
 //===================================================================
@@ -2120,6 +2126,13 @@ static ASTNode* parse_atom(Parser* parser)
             }
             parser_advance(parser);  // Consume ')'
             return node;
+        }
+        case TOKEN_EMPTY:
+        {
+            int line = parser->current_token.line;
+            int column = parser->current_token.column;
+            parser_advance(parser);
+            return create_empty_node(line, column);
         }
             
         default:            
