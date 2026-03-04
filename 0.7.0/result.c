@@ -64,6 +64,16 @@ EvaluatorResult create_success_result_array(Array* array, int line, int column)
     return result;
 }
 
+EvaluatorResult create_success_result_empty(int line, int column)
+{
+    EvaluatorResult result;
+    result.type = RESULT_EMPTY;
+    result.line = line;
+    result.column = column;
+    result.error_message[0] = '\0';
+    return result;
+}
+
 EvaluatorResult create_error_result(const char* message, int line, int column)
 {
     EvaluatorResult result;
@@ -105,4 +115,28 @@ EvaluatorResult create_error_result_fmt(int line, int column,
     }
 
     return create_error_result(message, line, column);
+}
+
+// Função auxiliar para converter ResultType para string
+const char* result_type_to_string(ResultType type)
+{
+    switch (type)
+    {
+        case RESULT_NUMBER:
+            return "number";
+        case RESULT_BOOL:
+            return "boolean";
+        case RESULT_STRING:
+            return "string";
+        case RESULT_EMPTY:
+            return "empty";
+        case RESULT_ARRAY:
+            return "array";
+        case RESULT_TEXT:
+            return "text";
+        case RESULT_ERROR:
+            return "error";
+        default:
+            return "unknown";
+    }
 }
