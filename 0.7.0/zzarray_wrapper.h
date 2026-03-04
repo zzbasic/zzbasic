@@ -9,28 +9,81 @@
 // WRAPPERS DE ARRAY
 // ============================================================
 
-EvaluatorResult builtin_push(EvaluatorResult* args, int arg_count, int line, int column);
-EvaluatorResult builtin_pop(EvaluatorResult* args, int arg_count, int line, int column);
-EvaluatorResult builtin_len(EvaluatorResult* args, int arg_count, int line, int column);
-EvaluatorResult builtin_is_empty(EvaluatorResult* args, int arg_count, int line, int column);
-EvaluatorResult builtin_get(EvaluatorResult* args, int arg_count, int line, int column);
-EvaluatorResult builtin_set(EvaluatorResult* args, int arg_count, int line, int column);
-EvaluatorResult builtin_insert(EvaluatorResult* args, int arg_count, int line, int column);
-EvaluatorResult builtin_remove(EvaluatorResult* args, int arg_count, int line, int column);
+EvaluatorResult builtin_push(
+	EvaluatorResult* args,
+	int arg_count,
+	int line,
+	int column,
+    ScopeStack* scope_stack);
 
-// ============================================================
-// WRAPPERS DE STRING (futuro)
-// ============================================================
+EvaluatorResult builtin_pop(
+	EvaluatorResult* args,
+	int arg_count,
+	int line,
+	int column,
+    ScopeStack* scope_stack);
 
-// EvaluatorResult builtin_upper(EvaluatorResult* args, int arg_count);
-// EvaluatorResult builtin_lower(EvaluatorResult* args, int arg_count);
-// EvaluatorResult builtin_trim(EvaluatorResult* args, int arg_count);
+EvaluatorResult builtin_len(
+	EvaluatorResult* args,
+	int arg_count,
+	int line,
+	int column,
+    ScopeStack* scope_stack);
 
-// ============================================================
-// WRAPPERS DE MATH (futuro)
-// ============================================================
+EvaluatorResult builtin_is_empty(
+	EvaluatorResult* args,
+	int arg_count,
+	int line,
+	int column,
+    ScopeStack* scope_stack);
 
-// EvaluatorResult builtin_sqrt(EvaluatorResult* args, int arg_count);
-// EvaluatorResult builtin_sin(EvaluatorResult* args, int arg_count);
+EvaluatorResult builtin_get(
+	EvaluatorResult* args,
+	int arg_count,
+	int line,
+	int column,
+    ScopeStack* scope_stack);
+
+EvaluatorResult builtin_set(
+	EvaluatorResult* args,
+	int arg_count,
+	int line,
+	int column,
+    ScopeStack* scope_stack);
+
+EvaluatorResult builtin_insert(
+	EvaluatorResult* args,
+	int arg_count,
+	int line,
+	int column,
+    ScopeStack* scope_stack);
+
+EvaluatorResult builtin_remove(
+	EvaluatorResult* args,
+	int arg_count,
+	int line,
+	int column,
+    ScopeStack* scope_stack);
+
+EvaluatorResult builtin_swap(
+	EvaluatorResult* args,
+	int arg_count,
+	int line,
+	int column,
+    ScopeStack* scope_stack);
+
+EvaluatorResult builtin_sort(
+	EvaluatorResult* args,
+	int arg_count,
+	int line,
+	int column,
+    ScopeStack* scope_stack);
+
+EvaluatorResult builtin_rsort(
+	EvaluatorResult* args,
+	int arg_count,
+	int line,
+	int column,
+    ScopeStack* scope_stack);
 
 #endif
