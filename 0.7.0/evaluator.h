@@ -40,7 +40,7 @@ typedef enum
     CTX_ANY,      // Qualquer tipo aceitável (para exibição: PRINT x)
     CTX_BOOL,     // Espera um booleano: true(1) ou false(0)
     CTX_NUMBER,   // Espera número (operações matemáticas: x + 5)
-    CTX_STRING,    // Espera string (concatenação futura: "Olá " + nome)
+    CTX_STRING,   // Espera string (concatenação futura: "Olá " + nome)
     CTX_ARRAY
 } EvalContext;
 
