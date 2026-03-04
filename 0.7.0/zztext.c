@@ -1,8 +1,13 @@
 // zztext.c
 
-#include "zztext.h"
 #include <string.h>
 #include <errno.h>
+
+#include "color.h"
+#include "utils.h"
+#include "zztext.h"
+#include "object_tracker.h"
+#include "debug.h"
 
 // Expande o Text para caber pelo menos 'min_capacity' bytes
 static int text_expand(Text* txt, size_t min_capacity)
@@ -58,7 +63,7 @@ Text* text_create(void)
     
     txt->data[0] = '\0';
     txt->size = 0;
-    
+
     return txt;
 }
 
@@ -82,7 +87,21 @@ Text* text_create_from_string(const char* str)
     memcpy(txt->data, str, len);
     txt->data[len] = '\0';
     txt->size = len;
-    
+
+    /*
+    // Insere objeto na tabela de rastreamento TrackedObject
+    int i = object_tracker_add(txt, "Text", str);
+    if(i == -1)
+    {
+        printf("%sErro ao tentar inserir Text em %p na tabela TrackedObject%s\n",
+               COLOR_WARNING, txt, COLOR_RESET);
+    }
+
+    // Exibe tabela de rastreamento de alocações na heap
+    object_tracker_display();
+    zzwait();
+    */
+
     return txt;
 }
 
@@ -136,14 +155,48 @@ Text* text_create_from_file(const char* filename)
     }
     
     fclose(file);
+
+    /*
+    // Insere objeto na tabela de rastreamento TrackedObject
+    int i = object_tracker_add(txt, "Text", filename);
+    if(i == -1)
+    {
+        printf("%sErro ao tentar inserir Text em %p na tabela TrackedObject%s\n",
+               COLOR_WARNING, txt, COLOR_RESET);
+    }
+
+    // Exibe tabela de rastreamento de alocações na heap
+    object_tracker_display();
+    zzwait();
+    */
+
     return txt;
 }
 
 void text_free(Text* txt)
 {
-    if (txt)
+    if (!txt)
+    { 
+        return;
+    }
+    else
     {
-        if (txt->data) a89free(txt->data);
+        /*
+        int i = find_object_by_pointer(txt);; // ID do objeto na tabela de rastreamento
+        if(i != -1)
+        {
+            object_tracker_remove(i);
+            // Exibe tabela de rastreamento de alocações na heap
+            object_tracker_display();
+            zzwait();
+        }
+        */
+ 
+        if (txt->data)
+        {
+            a89free(txt->data);
+        }
+
         a89free(txt);
     }
 }
@@ -175,4 +228,68 @@ int text_save(const Text* txt, const char* filename)
     
     return (written == txt->size);
 }
+
+// ============================================================================
+// TEXT POOL 
+// ============================================================================
+
+// Cria novo pool vazio
+TextPool* text_pool_create(void)
+{
+    TextPool* pool = A89ALLOC(sizeof(TextPool));
+    
+    pool->texts = A89ALLOC(10 * sizeof(Text*));
+    pool->count = 0;
+    pool->capacity = 10;
+    
+    return pool;
+}
+
+// Adiciona Text ao pool
+void text_pool_add(TextPool* pool, Text* text)
+{
+    if (!pool || !text) return;
+    
+    // Se cheio, expande a capacidade
+    if (pool->count >= pool->capacity)
+    {
+        pool->capacity *= 2;
+        pool->texts = A89REALLOC(pool->texts, 
+                                 pool->capacity * sizeof(Text*));
+    }
+    
+    // Adiciona o Text
+    pool->texts[pool->count] = text;
+    pool->count++;
+}
+
+// Libera todos os Text objects do pool
+void text_pool_free(TextPool* pool)
+{
+    if (!pool) return;
+    
+    // Libera cada Text object
+    for (int i = 0; i < pool->count; i++)
+    {
+        if (pool->texts[i])
+        {
+            text_free(pool->texts[i]);
+        }
+    }
+    
+    // Libera o array de ponteiros
+    a89free(pool->texts);
+    
+    // Libera o pool
+    a89free(pool);
+}
+
+// Retorna quantos Text objects estão no pool
+int text_pool_count(TextPool* pool)
+{
+    if (!pool) return 0;
+    return pool->count;
+}
+
+
 // Fim de zztext.c
