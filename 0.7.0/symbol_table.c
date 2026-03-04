@@ -96,11 +96,11 @@ void symbol_table_destroy(SymbolTable* table)
         Symbol* next = current->next;
 
         // Libera text se existir
-        if (current->type == SYM_TEXT && current->value.text_value)
-        {
-            //a89free(current->value.text_value);
-            text_free(current->value.text_value);
-        }
+        // if (current->type == SYM_TEXT && current->value.text_value)
+        // {
+        //     //a89free(current->value.text_value);
+        //     text_free(current->value.text_value);
+        // }
 
         if (current->type == SYM_ARRAY && current->value.array_value)
         {
