@@ -1,7 +1,9 @@
 // zzarray.c
 
-#include "zzarray.h"
 #include <string.h>
+#include <math.h>
+
+#include "zzarray.h"
 
 
 static int array_expand(Array* array, int min_capacity)
@@ -27,7 +29,6 @@ static int array_expand(Array* array, int min_capacity)
     
     // Realoca array de ponteiros
     void** new_elements = A89REALLOC(array->elements, new_cap * sizeof(void*));
-    if (!new_elements) return 0;
 
     // Inicializar novas posições com NULL
     memset(new_elements + array->capacity, 0, (new_cap - array->capacity) * sizeof(void*));
@@ -46,18 +47,11 @@ Array* array_create(void)
 Array* array_create_with_capacity(int capacity)
 {
     Array* array = A89ALLOC(sizeof(Array));
-    if (!array) return NULL;
     
     int cap = (capacity > 0) ? capacity : ARRAY_INITIAL_CAPACITY;
     
     array->capacity = cap;
     array->elements = A89ALLOC(array->capacity * sizeof(void*));
-    
-    if (!array->elements)
-    {
-        a89free(array);
-        return NULL;
-    }
     
     // Inicializar com NULL
     memset(array->elements, 0, array->capacity * sizeof(void*));
@@ -203,5 +197,168 @@ int array_is_empty(const Array* array)
 {
     return array ? (array->size == 0) : 1;
 }
+
+// Compara dois arrays
+// Retorna: 1 se iguais, 0 se diferentes
+// 
+// Semântica:
+// - NULL  == NULL   1 (ambos não existem, são iguais)
+// - NULL  == array  0 (um existe, outro não)
+// - array == NULL   0 (um existe, outro não)
+// - array == array  compara conteúdo
+//
+int array_equals(Array* arr1, Array* arr2)
+{
+    // Ambos NULL: iguais
+    if (!arr1 && !arr2) return 1;
+    
+    // Um é NULL, outro não: diferentes
+    if (!arr1 || !arr2) return 0;
+    
+    // Ambos não-NULL: compara tamanho
+    if (array_size(arr1) != array_size(arr2))
+    {
+        return 0;
+    }
+    
+    // Compara cada elemento
+    for (int i = 0; i < array_size(arr1); i++)
+    {
+        void* elem1 = array_get(arr1, i);
+        void* elem2 = array_get(arr2, i);
+        
+        // Se ambos são NULL (empty)
+        if (elem1 == NULL && elem2 == NULL)
+        {
+            continue;
+        }
+        
+        // Se um é NULL e outro não
+        if ((elem1 == NULL) != (elem2 == NULL))
+        {
+            return 0;
+        }
+        
+        // Compara valores numéricos
+        double val1 = *(double*)elem1;
+        double val2 = *(double*)elem2;
+        
+        if (fabs(val1 - val2) >= EPSILON)
+        {
+            return 0;
+        }
+    }
+    
+    return 1;  // Arrays são iguais
+}
+
+// Troca dois elementos de posição
+// Retorna: 1 se sucesso, 0 se erro
+int array_swap(Array* array, int i, int j)
+{
+    if (!array) return 0;
+    
+    // Valida índices
+    if (i < 0 || i >= array_size(array) || j < 0 || j >= array_size(array))
+    {
+        return 0;
+    }
+    
+    // Se índices são iguais, nada a fazer
+    if (i == j) return 1;
+    
+    // Troca os elementos
+    void* temp = array->elements[i];
+    array->elements[i] = array->elements[j];
+    array->elements[j] = temp;
+    
+    return 1;
+}
+
+// ============================================================================
+// INSERTION SORT - Versão Genérica com Flag
+// ============================================================================
+// Ordena array em ordem crescente ou decrescente
+// Retorna: 1 se sucesso, 0 se erro
+// Complexidade: O(n²) pior caso, O(n) melhor caso
+// Espaço: O(1)
+//
+// Parâmetros:
+//   array: Array a ser ordenado
+//   ascending: 1 para crescente, 0 para decrescente
+//
+static int array_sort_internal(Array* array, int ascending)
+{
+    if (!array || array_size(array) == 0) return 1;  // Array vazio é válido
+    
+    int n = array_size(array);
+    
+    // Insertion Sort
+    for (int i = 1; i < n; i++)
+    {
+        void* key_elem = array_get(array, i);
+        
+        // Se elemento é NULL (empty), pula
+        if (key_elem == NULL)
+            continue;
+        
+        double key = *(double*)key_elem;
+        int j = i - 1;
+        
+        // Move elementos de acordo com a direção
+        while (j >= 0)
+        {
+            void* elem_j = array_get(array, j);
+            
+            // Se elemento é NULL (empty), pula
+            if (elem_j == NULL)
+            {
+                j--;
+                continue;
+            }
+            
+            double val_j = *(double*)elem_j;
+            
+            // Condição de parada depende da direção
+            if (ascending)
+            {
+                // Crescente: para se val_j <= key
+                if (val_j <= key)
+                    break;
+            }
+            else
+            {
+                // Decrescente: para se val_j >= key
+                if (val_j >= key)
+                    break;
+            }
+            
+            // Move elemento para frente
+            if (!array_swap(array, j, j + 1))
+                return 0;
+            
+            j--;
+        }
+    }
+    
+    return 1;
+}
+
+// ============================================================================
+// WRAPPERS PÚBLICOS
+// ============================================================================
+
+// Ordena array em ordem crescente
+int array_sort(Array* array)
+{
+    return array_sort_internal(array, 1);  // ascending = 1
+}
+
+// Ordena array em ordem decrescente
+int array_rsort(Array* array)
+{
+    return array_sort_internal(array, 0);  // ascending = 0
+}
+
 
 // Fim de zzarray.c
