@@ -1,5 +1,5 @@
 # ========================================================
-# ZzBasic v0.6.0 
+# ZzBasic v0.7.0 
 # ========================================================
 
 # Camada 1: Utilitários Básicos
@@ -10,10 +10,11 @@ a89alloc.c
 
 # Camada 2: Infraestrutura
 symbol_table.c
+scope.c
 lexer.c
 result.c
-zztext.c
 zzarray.c
+zztext.c
 
 # Camada 3: Parsing
 ast.c
@@ -22,6 +23,7 @@ parser.c
 # Camada 4: Avaliação
 evaluator.c
 zzarray_wrapper.c
+zztext_wrapper.c
 
 # Camada 5: Aplicação
 zzbasic.c
