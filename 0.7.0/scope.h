@@ -9,6 +9,7 @@
 typedef struct Scope {
     int scope_level;           // Nível do escopo (0=global, 1+=local)
     SymbolTable* symbols;      // Símbolos deste escopo
+    TextPool* text_pool;       // pool de objetos Text 
     struct Scope* parent;      // Escopo pai (NULL se global)
 } Scope;
 
@@ -26,6 +27,7 @@ void scope_pop(ScopeStack* scope_stack);
 Scope* scope_get_current(ScopeStack* scope_stack);
 SymbolTable* scope_get_symbols(ScopeStack* scope_stack);
 Symbol* scope_lookup(ScopeStack* scope_stack, const char* name);
+void scope_stack_add_text(ScopeStack* stack, Text* text);
 int scope_set_value(ScopeStack* scope_stack, const char* name, EvaluatorResult value);
 
 // Funções de leitura que fazem lookup em todos os escopos
