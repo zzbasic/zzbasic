@@ -5,7 +5,8 @@
 #include <sys/stat.h>
 #include <ctype.h>
 
-#include "help.h"  
+#include "zzdefs.h" 
+#include "help.h"
 #include "color.h"  
 #include "utils.h"
 #include "zzbasic.h"
