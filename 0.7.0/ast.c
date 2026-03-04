@@ -487,6 +487,12 @@ ASTNode* create_array_access_node(ASTNode* array, ASTNode* index, int line, int 
     return node;
 }
 
+ASTNode* create_empty_node(int line, int column)
+{
+    ASTNode* node = create_node(NODE_EMPTY, line, column);
+    return node;
+}
+
 
 //===================================================================
 // LIBERACAO DA MEMORIA
@@ -678,6 +684,7 @@ void free_ast(ASTNode* node)
         case NODE_BREAK:
         case NODE_CONTINUE:
         case NODE_NULL:
+        case NODE_EMPTY:
             // No children to free
             break;
 
