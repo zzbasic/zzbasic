@@ -8,6 +8,8 @@
 #define ZZ_VERSION "0.7.0"
 #define ZZ_PROMPT ">> "
 
+#define EPSILON 1e-12
+
 // TAMANHO MAXIMO
 #define BUFFER_SIZE       	256    // Para mensagens de erro LONGAS
 #define NUMBER_SIZE 		24
