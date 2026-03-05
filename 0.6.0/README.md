@@ -138,7 +138,6 @@ save conteudo "saida.txt"
 | `-` | Subtração | `10 - 4` | `6` |
 | `*` | Multiplicação | `6 * 7` | `42` |
 | `/` | Divisão | `20 / 4` | `5` |
-| `%` | Módulo (resto) | `17 % 5` | `2` |
 
 ### Precedência de Operadores
 
@@ -146,7 +145,7 @@ save conteudo "saida.txt"
 
 1. Parênteses `( )`
 2. Unário `+`, `-`
-3. Multiplicação `*`, Divisão `/`, Módulo `%`
+3. Multiplicação `*`, Divisão `/`
 4. Adição `+`, Subtração `-`
 
 **Exemplos:**
@@ -169,8 +168,8 @@ let resultado = -5 + 3           // = -2
 **Exemplo:**
 ```basic
 let numero = 10
-let negativo = -numero  // = -10
-let positivo = +numero  // = 10
+let negativo = -numero  # = -10
+let positivo = +numero  # = 10
 ```
 
 ### Divisão por Zero
@@ -178,7 +177,7 @@ let positivo = +numero  // = 10
 **Comportamento:** Retorna erro e interrompe a execução.
 
 ```basic
-let resultado = 10 / 0  // ❌ Erro: division by zero
+let resultado = 10 / 0  # ❌ Erro: division by zero
 ```
 
 ---
@@ -1072,7 +1071,7 @@ OBSERVAÇÃO: Funcionalidades iniciadas ainda precisam de ajustes ou implementa�
 
 ## Limitações conhecidas
 
-1. Prompt do `input`: tamanho máximo 512 caracteres
+1. Prompt do `input`: tamanho máximo 256 caracteres
 2. Linha de programa: tamanho maximo 128 caracteres
 3. Tipo string: tamanho máximo 128 caracteres
 4. Nome de variável: tamanho maximo 32 caracteres
