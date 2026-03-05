@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <ctype.h>
+#include <errno.h>
 
 #include "zzdefs.h" 
 #include "help.h"
