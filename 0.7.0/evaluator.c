@@ -3,7 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
-#include <stdarg.h>  
+#include <stdarg.h>
+#include <errno.h>
 
 #include "zzdefs.h"
 #include "utils.h"
@@ -745,7 +746,7 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
                     // Para depois de zero não há problema porque o array é dinâmico
                     if (index < 0 )
                     {
-                        printf("Evaluator error: array index out of bounds (index=%d)\n", 
+                        printf("Evaluator error: array index out of bounds (index=%d; array size=%d\n", 
                                index, array->size);
                         return 0;
                     }
@@ -787,7 +788,7 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
                     // Para depois de zero não há problema porque o array é dinâmico
                     if (index < 0)
                     {
-                        printf("Evaluator error: array index out of bounds (index=%d)\n", 
+                        printf("Evaluator error: array index out of bounds (index=%d; array size=%d)\n", 
                                index, array->size);
                         return 0;
                     }
@@ -1130,7 +1131,7 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
                     // Não precisa verificar o limite positivo pois o array dinâmico
                     if (index < 0)
                     {
-                        printf("Evaluator error: array index out of bounds (index=%d)\n", 
+                        printf("Evaluator error: array index out of bounds (index=%d; array size=%d)\n", 
                                index, array->size);
                         return 0;
                     }
@@ -1172,7 +1173,7 @@ static int execute_stmt_with_ctx(ASTNode* node, ExecutionContext* ctx)
                     // Não precisa verificar limite positivo pois o array é dinâmico
                     if (index < 0)
                     {
-                        printf("Evaluator error: array index out of bounds (index=%d, size=%d)\n", 
+                        printf("Evaluator error: array index out of bounds (index=%d; array size=%d)\n", 
                                index, array->size);
                         return 0;
                     }
